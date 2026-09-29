@@ -11,9 +11,14 @@ public final class SessionStore {
         self.context = context
     }
 
-    public static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
+    /// `url` places the store elsewhere (UI tests that must survive a relaunch).
+    public static func makeContainer(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
         let schema = Schema([DriveSession.self, Marker.self])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        let configuration = if let url {
+            ModelConfiguration(schema: schema, url: url)
+        } else {
+            ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        }
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 

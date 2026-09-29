@@ -5,6 +5,17 @@ import SwiftData
 import SwiftUI
 import UIKit
 
+/// Navigation destination for Replay. The stack re-evaluates destinations whenever its toolbar preferences change,
+/// and `ReplayView` (with `@Query` / `@Environment`) never compares equal — so without this equatable boundary the
+/// pushed view re-rendered in a tight loop (100 % CPU on the main thread).
+struct ReplayDestination: View, Equatable {
+    let sessionID: UUID
+
+    var body: some View {
+        ReplayView(sessionID: sessionID)
+    }
+}
+
 /// Timeline Replay (PLAN §11 row 5, mock artboard 5): map following the car, HUD readout, speed sparkline,
 /// scrubber, marker jumps and playback speed. Pushed from Session Detail.
 struct ReplayView: View {
@@ -16,10 +27,11 @@ struct ReplayView: View {
     @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Query private var sessions: [DriveSession]
     @State private var player = ReplayPlayer()
-    @State private var topInset: CGFloat = 0
 
     /// Mock map height, measured from the top of the screen (it runs under the status bar).
     private static let mapHeight: CGFloat = 380
+    /// The map extends under the status bar (`ReplayMap` ignores the top safe area); Dynamic Island iPhones ≈ 62 pt.
+    private static let statusBarAllowance: CGFloat = 62
     /// Mock width of the lower panel; the panel's width beside the map in landscape.
     private static let panelWidth: CGFloat = 390
 
@@ -38,7 +50,6 @@ struct ReplayView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
-        .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.top } action: { topInset = $0 }
         .toolbar(.hidden, for: .navigationBar)
         .toolbarVisibility(.hidden, for: .tabBar)
         .onChange(of: scenePhase) { _, phase in
@@ -58,8 +69,9 @@ struct ReplayView: View {
         let landscape = verticalSizeClass == .compact
         let layout = landscape ? AnyLayout(HStackLayout(alignment: .top, spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
         return layout {
+            // Fixed frame: measuring the safe-area inset and feeding it back into the layout looped during the push.
             ReplayMap(player: player, previewRoute: session.routePreview) { dismiss() }
-                .frame(height: landscape ? nil : max(Self.mapHeight - topInset, 200))
+                .frame(height: landscape ? nil : Self.mapHeight - Self.statusBarAllowance)
                 .frame(maxHeight: landscape ? .infinity : nil)
             VStack(spacing: 14) {
                 ReplayReadout(player: player)

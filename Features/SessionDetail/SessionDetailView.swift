@@ -20,6 +20,7 @@ struct SessionDetailView: View {
     @State private var isConfirmingDelete = false
     @State private var isDeleted = false
     @State private var deleteError: String?
+    @State private var showsReplay = false
 
     private static let mapHeight: CGFloat = 340
 
@@ -40,6 +41,8 @@ struct SessionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbarVisibility(.hidden, for: .tabBar)
+        // On the root, not the bottom inset: destinations inside a safe-area inset are ignored.
+        .navigationDestination(isPresented: $showsReplay) { ReplayDestination(sessionID: sessionID).equatable() }
         // Outside `content`: the alert must survive the session disappearing from the query.
         .alert(
             "Could not delete the session",
@@ -288,10 +291,10 @@ struct SessionDetailView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Replay arrives in S5, Export in S6.
+    /// Export arrives in S6.
     private var actionButtons: some View {
         HStack(spacing: 12) {
-            Button {} label: {
+            Button { showsReplay = true } label: {
                 Label("Replay", systemImage: "play.fill")
                     .font(.system(size: 15, weight: .semibold))
                     .frame(maxWidth: .infinity, minHeight: 56)
@@ -308,10 +311,10 @@ struct SessionDetailView: View {
                     .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Theme.dividerStrong, lineWidth: 1.5))
             }
             .accessibilityIdentifier("exportButton")
+            .disabled(true)
+            .opacity(0.4)
         }
         .buttonStyle(.plain)
-        .disabled(true)
-        .opacity(0.4)
         .padding(.horizontal, 20)
         .padding(.top, 8)
         .padding(.bottom, 8)

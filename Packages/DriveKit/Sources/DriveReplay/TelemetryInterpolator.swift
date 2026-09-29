@@ -86,7 +86,9 @@ public struct TelemetryInterpolator: Sendable {
         let ta = clock.elapsed(unixTime: fa.timestamp), tb = clock.elapsed(unixTime: fb.timestamp)
         let span = tb - ta
         let f = span > 0 ? min(max((t - ta) / span, 0), 1) : 0
-        let courseA = fa.hasValidCourse ? Double(fa.course) : Double(fb.course)
+        // Stopped fixes report course -1: hold the last valid heading instead of snapping north.
+        let held = lastValidCourse(atOrBefore: a) ?? (fb.hasValidCourse ? Double(fb.course) : 0)
+        let courseA = fa.hasValidCourse ? Double(fa.course) : held
         let courseB = fb.hasValidCourse ? Double(fb.course) : courseA
         var course = courseA + Units.headingDelta(from: courseA, to: courseB) * f
         if course < 0 { course += 360 }
@@ -107,6 +109,17 @@ public struct TelemetryInterpolator: Sendable {
             frame.lateralG = speed * -Units.headingDelta(from: Double(fa.course), to: Double(fb.course)) * .pi / 180 / span / Units.g
         }
         return frame
+    }
+
+    /// Scans back a bounded number of fixes (a long stop just keeps the last known heading).
+    private func lastValidCourse(atOrBefore index: Int) -> Double? {
+        let fixes = reader.locations
+        var i = index
+        while i >= 0, index - i < 600 {
+            if fixes[i].hasValidCourse { return Double(fixes[i].course) }
+            i -= 1
+        }
+        return nil
     }
 
     private func smoothedSpeed(_ index: Int) -> Double {
