@@ -4,7 +4,14 @@
 **Target:** iOS 27 / Xcode 27.2 / Swift 6.4 / SwiftUI
 **Bundle ID:** `com.miquottty.DriveScope`
 **Team ID:** `3X6HG4QJA8`
-**Design mock:** https://claude.ai/artifact/AFmN9QtGv2Yo15gxyZfBte
+**Design mock:** https://claude.ai/artifact/AFmN9QtGv2Yo15gxyZfBte（スナップショット: `design/mock/`）
+**Distribution:** 個人利用のみ（App Store / 外部配布なし）
+
+### 配布前提: 個人利用（App Store 非公開）
+- Xcode から自分の端末へ直接インストールする（有料 Developer Program の署名、プロファイル有効期限 1 年。期限前に再インストール）。必要なら TestFlight の内部テストも可。
+- App Review Guidelines への適合（審査向けの説明文・スクリーンショット・プライバシー栄養ラベル等）は対象外。
+- ただし OS が強制するものは引き続き必要: 位置情報・モーション等の利用目的文言（Info.plist）、Background Mode 宣言、ユーザー許可フロー。
+- **Apple が個別付与する管理対象の権限（CarPlay 等）は、個人利用でも実機では承認なしに使えない**。本プロジェクトでは申請しない（§19）。
 
 iPhone 単体で車載 Vlog 向けテレメトリ（位置・速度・高度・姿勢・加速度）を記録し、走行後にルートと HUD を時系列再生・エクスポートする。将来の動画 HUD オーバーレイの基盤になる。
 
@@ -17,6 +24,7 @@ iPhone 単体で車載 Vlog 向けテレメトリ（位置・速度・高度・�
 | ターゲット | 未指定 | iOS 27 / Xcode 27.2 | 最新 API（Live Activity 横向き / StandBy、SwiftData Codable 属性、Swift 6.4）を使う |
 | サンプル永続化 | SwiftData `@Model` | **追記型バイナリファイル**（セッションごと） | 20〜100 Hz × 数時間を SwiftData に入れると fetch・メモリ・削除が破綻する。追記型はクラッシュ耐性も高い |
 | Motion 更新周期 | 20 Hz | **50 Hz 既定**（GPS Only / Eco / Vlog 25 / Logger 50 / Lab 100 の 5 プリセット） | 20 Hz では横 G ピークが潰れる。iPhone の上限は 100 Hz（`CMBatchedSensorManager` は watchOS 専用）。電池重視の GPS Only / Eco を用意 |
+| 配布 | 未定義 | **個人利用のみ（App Store 非公開）** | 審査対応は不要。Apple 管理の権限（CarPlay）は申請しないためシミュレータ検証に留める |
 | Live Activities | V2 | **MVP** | 画面 OFF・StandBy・CarPlay・Watch で「記録中」が見えることは信頼性そのもの |
 | Apple Watch | V2 | **MVP は Smart Stack 表示 + Double Tap MARK（Watch アプリなし）**、Watch アプリは V1.1、心拍は V2 検討 | 最小コストで「ハンドルを握ったまま MARK」を実現 |
 | Recording 画面のミニ Map | あり | **なし** | 描画コストが高く、ロガー用途では数値 HUD に集中すべき。Map は Detail / Replay で見せる |
@@ -506,12 +514,13 @@ DriveScope/
   - **START は堅牢モード（Always 権限）時のみ**（iPhone をバックグラウンドから記録開始させるため）
   - **SYNC は iPhone のみ**。Watch → iPhone の通信遅延（100〜500 ms 程度でばらつく）は動画同期基準に不十分。Watch 起点の操作は Watch 時刻と iPhone 受信時刻の両方を保存し、MARK（±1 s で十分）用途に限定
 - LZFSE アーカイブ
-- **CarPlay Driving Task アプリ**（`com.apple.developer.carplay-driving-task`、Apple 承認制。**申請は S0 と並行して早期に提出**）
-  - テンプレートのみ: グリッドで START / STOP / MARK / SYNC、情報テンプレートで REC 状態（経過・距離・GPS 精度）、直近セッション一覧
-  - iOS 27 の Voice Control テンプレート（オーバーレイ）で音声 MARK
-  - 独自描画（速度 HUD・G メーター・地図）は不可。走行中の Replay も不可
-  - 審査リスク: 「運転を助ける作業」であることの説明が必要（視線を外さず開始・停止・マークできる安全性を根拠にする）
-  - MVP の CarPlay 対応は Live Activity `.small`（CarPlay Dashboard）のみ
+- **CarPlay Driving Task アプリ — シミュレータ検証のみ**
+  - **権限（`com.apple.developer.carplay-driving-task`）は申請しない**。CarPlay 権限は Apple 管理の権限で、個人利用でも実機（Mac の CarPlay Simulator アプリ経由・実車とも）では承認なしに動かない。
+  - Xcode の iOS シミュレータ + CarPlay 外部ディスプレイでは、`.entitlements` にキーを書くだけで表示できる見込み（開発者報告ベース。着手時に最初に確認し、不可ならこの項目は中止）。
+  - 試作範囲（テンプレートのみ）: グリッドで START / STOP / MARK / SYNC、情報テンプレートで REC 状態（経過・距離・GPS 精度）、直近セッション一覧、iOS 27 の Voice Control テンプレート（オーバーレイ）で音声 MARK。
+  - 独自描画（速度 HUD・G メーター・地図）と走行中の Replay はテンプレートの制約上不可。
+  - 位置づけ: 実車では使えないため、UI・操作フローの検証と将来の申請判断の材料とする。**実車での CarPlay 対応は MVP の Live Activity `.small`（CarPlay Dashboard、権限不要）のみ**。
+  - 承認のない権限を実機ビルドの entitlements に含めると署名エラーになるため、CarPlay 用 entitlements はシミュレータ向けのビルド構成（`[sdk=iphonesimulator*]` 条件付き設定）にだけ入れる。
 - **CarPlay 接続で自動 START**（オプション）
   - 接続・切断を検知して events に記録（`carPlayConnected / carPlayDisconnected`、これは MVP の events に含めてよい）
   - 自動 START はバックグラウンドからの開始になるため Always 権限が必要 → 堅牢モードとセット
@@ -520,8 +529,9 @@ DriveScope/
 - **Apple Watch 心拍（W4）**
   - Vlog HUD に運転者の心拍を表示する用途
   - Watch 上で `HKWorkoutSession` を実行し iPhone へミラーリング受信（iOS 17+）、`heartrate.bin`（1 Hz × 16 B、容量は無視できる）
-  - **審査リスク**: HealthKit データを健康・フィットネス目的以外（運転 Vlog の演出）に使うことの可否がグレー。事前に App Review Guidelines 5.1.3 を確認
-  - プライバシー設計: Health にワークアウトを保存しない終了処理、Export 時の健康データはオプトイン
+  - 個人利用のため App Review（HealthKit の用途制限）は対象外。判断材料は実装コストのみ（Watch アプリ + `HKWorkoutSession` + ミラーリング + HealthKit 権限）。
+  - HealthKit 権限（Capability）は Apple 承認不要で、個人の開発チームでも実機で使える。
+  - 自分用でも守る設計: Health アプリに運転をワークアウトとして保存しない終了処理（Activity リング等を汚さない）、Export 時の心拍データはオプトイン（動画・ファイル共有時に意図せず出さない）
   - 腕の加速度は車両 G と無関係、Watch の GPS は iPhone より良くないため、どちらも採用しない
 
 ## 20. 参考
