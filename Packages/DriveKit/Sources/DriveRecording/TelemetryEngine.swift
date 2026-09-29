@@ -60,6 +60,11 @@ public actor TelemetryEngine {
     private var snapshot = TelemetrySnapshot()
     private var tasks: [Task<Void, Never>] = []
     private var lastFixUptime: TimeInterval
+    /// Unix time this run (START or resume) began. Core Location hands over its cached fix first — on a device
+    /// seen 2 minutes old — which is not part of the drive: it would start the route wherever the phone was then.
+    private let runStartedAt: TimeInterval
+    /// Fixes stamped this long before the run are still accepted (a fix computed just before START).
+    static let staleFixTolerance: TimeInterval = 2
     private var baroRelativeAtBaseline: Double?
     private var lastRelativeAltitude: Double?
 
@@ -83,6 +88,7 @@ public actor TelemetryEngine {
         watchdog = RecordingWatchdog(policy: watchdogPolicy)
         // Silence is measured from (re)start, so a session that never gets a fix still escalates.
         let now = suite.clock.uptime
+        runStartedAt = suite.clock.now.timeIntervalSince1970
         lastFixUptime = now
         lastMotionUptime = manifest.preset.motion == .none ? nil : now
         self.statistics = statistics ?? SessionStatistics(clock: manifest.clock, expectedMotionHz: manifest.preset.motion.hz)
@@ -140,6 +146,9 @@ public actor TelemetryEngine {
     // MARK: - Streams
 
     private func handle(_ location: LocationSample) async {
+        // Not recorded at all: a cached fix from before the run is not a sample of this drive (and not a sign
+        // that GPS is alive, so the watchdog doesn't count it either).
+        guard location.timestamp >= runStartedAt - Self.staleFixTolerance else { return }
         await writer.append(location, to: .location)
         (suite.motion as? any LocationFed)?.feed(location)
         (suite.altimeter as? any LocationFed)?.feed(location)
