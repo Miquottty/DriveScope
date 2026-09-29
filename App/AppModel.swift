@@ -18,6 +18,7 @@ final class AppModel {
     let filesRoot: URL
     let sensorEnvironment: SensorEnvironment
     private let liveActivity: LiveActivityController
+    private let watchLink: WatchLink
     private let notifications: RecordingNotifications
     private let deviceEvents: DeviceEventMonitor
     let battery: BatteryMonitor
@@ -69,6 +70,8 @@ final class AppModel {
         liveActivity = LiveActivityController(recorder: recorder)
         recorder.addObserver(liveActivity)
         LiveActivityController.endLeftoversAtLaunch()
+        watchLink = WatchLink(recorder: recorder)
+        recorder.addObserver(watchLink)
         notifications = RecordingNotifications(recorder: recorder)
         recorder.addObserver(notifications)
         deviceEvents = DeviceEventMonitor(recorder: recorder)
