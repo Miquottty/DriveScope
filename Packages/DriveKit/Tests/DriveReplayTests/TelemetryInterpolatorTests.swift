@@ -42,6 +42,45 @@ struct TelemetryInterpolatorTests {
         #expect(cornersChecked > 5)
     }
 
+    /// V1.1: between 1 Hz fixes speed follows the calibrated longitudinal acceleration — closer to the truth than a
+    /// straight line through the light stop and the hairpins, equal to GPS at the fixes, never negative.
+    /// GPS Only (no motion) keeps the straight line.
+    @Test func fusedSpeedFollowsAccelerationBetweenFixes() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeFusion-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let script = DriveScript.akagi
+        let built = try await ScriptedSessionBuilder.write(script: script, preset: .logger, duration: 600, root: root)
+        let reader = try TelemetryReader(files: SessionFiles(root: root, sessionID: built.manifest.sessionID))
+        #expect(reader.manifest.calibration != nil)
+        let fused = TelemetryInterpolator(reader: reader)
+        let linear = TelemetryInterpolator(reader: reader, options: .init(speedFusion: false))
+
+        var fusedError = 0.0, linearError = 0.0, n = 0.0
+        for k in 0..<6000 where k % 10 != 5 { // 10 Hz, skipping the points nearest the fixes
+            let t = Double(k) / 10
+            let truth = script.state(at: t)
+            guard !truth.inTunnel else { continue }
+            let f = fused.frame(at: t).speed, l = linear.frame(at: t).speed
+            #expect(f >= 0, "t=\(t)")
+            fusedError += (f - truth.speed) * (f - truth.speed)
+            linearError += (l - truth.speed) * (l - truth.speed)
+            n += 1
+        }
+        let fusedRMSE = (fusedError / n).squareRoot(), linearRMSE = (linearError / n).squareRoot()
+        #expect(fusedRMSE < 0.6 * linearRMSE, "fused \(fusedRMSE) vs linear \(linearRMSE) m/s")
+
+        let fix = reader.locations[200]
+        let atFix = reader.clock.elapsed(unixTime: fix.timestamp)
+        #expect(abs(fused.frame(at: atFix).speed - linear.frame(at: atFix).speed) < 1e-9)
+
+        let gpsOnly = try await ScriptedSessionBuilder.write(script: script, preset: .gpsOnly, duration: 120, root: root)
+        let gpsReader = try TelemetryReader(files: SessionFiles(root: root, sessionID: gpsOnly.manifest.sessionID))
+        let a = TelemetryInterpolator(reader: gpsReader), b = TelemetryInterpolator(reader: gpsReader, options: .init(speedFusion: false))
+        for t in stride(from: 10.05, to: 110, by: 3.3) {
+            #expect(a.frame(at: t).speed == b.frame(at: t).speed)
+        }
+    }
+
     /// Course interpolates the short way around north.
     @Test func courseInterpolatesAcrossNorth() async throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeReplay-\(UUID())")
