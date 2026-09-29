@@ -4,9 +4,12 @@ import SwiftUI
 struct SettingsView: View {
     @Environment(AppLanguage.self) private var appLanguage
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openURL) private var openURL
+    let permission: LocationPermission
     // Same key Home reads to start the next session.
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @AppStorage("locationBackend") private var locationBackend = SensorEnvironment.LocationBackend.locationManager.rawValue
+    @AppStorage(RobustMode.defaultsKey) private var robustMode = false
     // Read by `AppModel.archiveAfterDays`; 0 = off.
     @AppStorage("archiveAfterDays") private var archiveAfterDays = 30
     #if DEBUG
@@ -63,6 +66,24 @@ struct SettingsView: View {
                     Text("Recording")
                 } footer: {
                     Text("Applies to the next START. Compared in real-car test B.")
+                }
+                Section {
+                    Toggle("Robust mode", isOn: $robustMode)
+                        .tint(Theme.accent)
+                        .accessibilityIdentifier("robustModeToggle")
+                        .listRowBackground(Theme.surface)
+                        .onChange(of: robustMode) { _, on in
+                            if on { permission.requestAlways() }
+                        }
+                    if robustMode, !permission.isAlways {
+                        Button("Allow location access \"Always\" in Settings") {
+                            if let url = URL(string: UIApplication.openSettingsURLString) { openURL(url) }
+                        }
+                        .foregroundStyle(Theme.accent)
+                        .listRowBackground(Theme.surface)
+                    }
+                } footer: {
+                    Text("If DriveScope is closed mid-drive (crash, low memory), iOS reopens it in the background and recording continues in the same session within 30 minutes. Needs location access \"Always\".")
                 }
                 Section {
                     Picker("Compress old sessions", selection: $archiveAfterDays) {

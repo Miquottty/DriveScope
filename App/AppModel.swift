@@ -19,6 +19,7 @@ final class AppModel {
     let sensorEnvironment: SensorEnvironment
     private let liveActivity: LiveActivityController
     private let watchLink: WatchLink
+    private let robustMode: RobustMode
     private let notifications: RecordingNotifications
     private let deviceEvents: DeviceEventMonitor
     let battery: BatteryMonitor
@@ -69,7 +70,14 @@ final class AppModel {
         AppDependencyManager.shared.add(dependency: recorder)
         liveActivity = LiveActivityController(recorder: recorder)
         recorder.addObserver(liveActivity)
-        LiveActivityController.endLeftoversAtLaunch()
+        // Robust mode (PLAN §9.5): iOS relaunched the app in the background after the process died mid-drive →
+        // continue the unfinished session without UI. Any other launch leaves it to the recovery sheet.
+        let robustMode = RobustMode()
+        self.robustMode = robustMode
+        recorder.addObserver(robustMode)
+        let continuing = RobustMode.isActive && UIApplication.shared.applicationState == .background
+            ? Set(recorder.unfinishedSessions().map(\.id)) : []
+        LiveActivityController.endLeftoversAtLaunch(keeping: continuing)
         watchLink = WatchLink(recorder: recorder)
         recorder.addObserver(watchLink)
         notifications = RecordingNotifications(recorder: recorder)
@@ -101,6 +109,17 @@ final class AppModel {
             Task { @MainActor in await finalizer.retryPending() }
         }
         network.start(queue: DispatchQueue(label: "DriveScope.network"))
+
+        // After every observer is registered, so the resumed session reaches the Live Activity, notifications, …
+        if continuing.isEmpty {
+            robustMode.disarm()
+        } else {
+            Task {
+                guard await !recorder.autoResume() else { return }
+                await LiveActivityController.endLeftovers()
+                robustMode.disarm()
+            }
+        }
 
         #if DEBUG
         Task { [store, filesRoot] in await DebugSeed.seedIfRequested(store: store, filesRoot: filesRoot) }
@@ -185,7 +204,7 @@ struct SensorEnvironment {
     private func makeLocationSource() -> any LocationSource {
         switch locationBackend {
         case .locationManager: CLLocationManagerSource()
-        case .liveUpdates: LiveUpdatesLocationSource()
+        case .liveUpdates: LiveUpdatesLocationSource(always: RobustMode.isActive)
         }
     }
 }

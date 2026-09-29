@@ -560,6 +560,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/DriveScope-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = DriveScope;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "DriveScope uses your location in the background to reopen and continue a recording that was interrupted mid-drive (robust mode).";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "DriveScope records your route, speed and altitude while you drive.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "DriveScope records acceleration and attitude to measure g-forces.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -586,6 +587,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Config/DriveScope-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = DriveScope;
+				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "DriveScope uses your location in the background to reopen and continue a recording that was interrupted mid-drive (robust mode).";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "DriveScope records your route, speed and altitude while you drive.";
 				INFOPLIST_KEY_NSMotionUsageDescription = "DriveScope records acceleration and attitude to measure g-forces.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -23,6 +23,9 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
 
     var isPrecise: Bool { accuracy == .fullAccuracy }
 
+    /// Robust mode needs Always (PLAN §9.5).
+    var isAlways: Bool { authorizationStatus == .authorizedAlways }
+
     var canRecord: Bool {
         authorizationStatus == .authorizedWhenInUse || authorizationStatus == .authorizedAlways
     }
@@ -40,6 +43,13 @@ final class LocationPermission: NSObject, CLLocationManagerDelegate {
         manager.requestWhenInUseAuthorization()
         await withCheckedContinuation { statusWaiters.append($0) }
         return authorizationStatus
+    }
+
+    /// Robust mode: asks to upgrade to Always. iOS shows this prompt at most once; the answer arrives through the
+    /// observed `authorizationStatus` (a declined upgrade changes nothing, so there is nothing to await).
+    func requestAlways() {
+        guard authorizationStatus != .authorizedAlways else { return }
+        manager.requestAlwaysAuthorization()
     }
 
     /// When the user granted only approximate location, asks for temporary full accuracy for this session.
