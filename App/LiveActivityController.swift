@@ -5,6 +5,7 @@ import DriveRecording
 import DriveStorage
 import Foundation
 import OSLog
+import UIKit
 
 /// Drives the recording's Live Activity (PLAN §10): starts it with the session, pushes the HUD snapshot every
 /// `preset.liveActivityInterval` seconds when something visible changed, reflects the watchdog (GPS searching,
@@ -16,7 +17,7 @@ final class LiveActivityController: RecordingObserver {
     nonisolated static let log = Logger(subsystem: "com.miquottty.DriveScope", category: "LiveActivity")
 
     /// Without an update for this long the activity is marked stale (the app is probably suspended).
-    private static let staleAfter: TimeInterval = 60
+    private static let staleAfter: TimeInterval = 30
 
     private let recorder: RecordingController
     /// The in-app language is read on every update so a change in Settings reaches the activity.
@@ -27,10 +28,33 @@ final class LiveActivityController: RecordingObserver {
     private var lastPush = Date.distantPast
     private var timerStart = Date()
     private var gpsDegraded = false
+    private var terminateObserver: (any NSObjectProtocol)?
 
     init(recorder: RecordingController, language: @escaping () -> AppLanguage = { AppLanguage() }) {
         self.recorder = recorder
         self.language = language
+        Self.current = self
+    }
+
+    // MARK: - MARK from the activity
+
+    /// The one controller of the app process, reached by the intents.
+    private static weak var current: LiveActivityController?
+    private static var lastIntentMark = Date.distantPast
+    /// Each press from the Watch reached `MarkIntent` twice, 0–0.1 s apart (events.bin of a device session, iOS 27.2).
+    private static let intentMarkDebounce: TimeInterval = 0.5
+
+    /// Whether a MARK from the activity is a new press rather than the duplicate delivery of the previous one.
+    static func acceptIntentMark() -> Bool {
+        let now = Date()
+        guard now.timeIntervalSince(lastIntentMark) >= intentMarkDebounce else { return false }
+        lastIntentMark = now
+        return true
+    }
+
+    /// Shows the new MARK count now instead of at the next 2–5 s update — the Watch has no other feedback.
+    static func markAdded() async {
+        await current?.push(force: true)
     }
 
     // MARK: - RecordingObserver
@@ -41,35 +65,32 @@ final class LiveActivityController: RecordingObserver {
         lastPush = .distantPast
         timerStart = session.startedAt
         let state = makeState()
-        let existing = Activity<DriveActivityAttributes>.activities
-        // A resumed session keeps the activity that survived the process; anything else is stale.
-        let adopted = resumed ? existing.first { $0.attributes.sessionID == session.id } : nil
-        for stale in existing where stale.id != adopted?.id {
-            Task { await stale.end(nil, dismissalPolicy: .immediate) }
+        // Anything still around belongs to a process that is gone — a resumed session included: it gets a fresh
+        // activity rather than adopting one that launch cleanup (`endLeftovers`) may be ending concurrently.
+        for leftover in Activity<DriveActivityAttributes>.activities {
+            Task { await leftover.end(nil, dismissalPolicy: .immediate) }
         }
-        if let adopted {
-            activity = adopted
-            Task { await push(force: true) }
-        } else {
-            guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-                Self.log.info("Live Activities are disabled")
-                return
-            }
-            let attributes = DriveActivityAttributes(
-                sessionID: session.id, startedAt: session.startedAt, preset: session.preset.rawValue
-            )
-            do {
-                activity = try Activity.request(
-                    attributes: attributes, content: content(state), pushType: nil
-                )
-                lastState = state
-                lastPush = Date()
-            } catch {
-                Self.log.error("Activity.request failed: \(String(describing: error), privacy: .public)")
-                return
-            }
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            Self.log.info("Live Activities are disabled")
+            return
+        }
+        let attributes = DriveActivityAttributes(
+            sessionID: session.id, startedAt: session.startedAt, preset: session.preset.rawValue
+        )
+        do {
+            activity = try Activity.request(attributes: attributes, content: content(state), pushType: nil)
+            lastState = state
+            lastPush = Date()
+        } catch {
+            Self.log.error("Activity.request failed: \(String(describing: error), privacy: .public)")
+            return
         }
         startUpdates(interval: session.preset.liveActivityInterval)
+        terminateObserver = NotificationCenter.default.addObserver(
+            forName: UIApplication.willTerminateNotification, object: nil, queue: .main
+        ) { [weak self] _ in
+            MainActor.assumeIsolated { self?.endBeforeTermination() }
+        }
     }
 
     func recordingWatchdog(_ action: RecordingWatchdog.Action, session: DriveSession) {
@@ -105,6 +126,7 @@ final class LiveActivityController: RecordingObserver {
     func recordingDidStop(_ session: DriveSession) {
         updates?.cancel()
         updates = nil
+        removeTerminateObserver()
         guard let activity else { return }
         self.activity = nil
         var state = makeState(session: session)
@@ -115,6 +137,53 @@ final class LiveActivityController: RecordingObserver {
         Task {
             await activity.end(ActivityContent(state: state, staleDate: nil), dismissalPolicy: .after(.now + 60))
         }
+    }
+
+    // MARK: - Leftovers
+
+    /// iOS keeps a Live Activity after its process dies (force quit, crash, jetsam). A new process never owns a
+    /// running recording, so every activity it finds is a leftover: ended at launch, and by MARK / STOP pressed on
+    /// one while nothing records. (After a force quit iOS does not launch the app for those intents at all — seen on
+    /// iOS 27.2 — hence the widget turns STOP into an open-app link once the activity goes stale.)
+    static func endLeftovers() async {
+        await end(Activity<DriveActivityAttributes>.activities)
+    }
+
+    /// At launch the list is taken synchronously, before anything can start a recording, so a session resumed while
+    /// the leftovers are still being ended keeps its new activity.
+    static func endLeftoversAtLaunch() {
+        let leftovers = Activity<DriveActivityAttributes>.activities
+        guard !leftovers.isEmpty else { return }
+        Task { await end(leftovers) }
+    }
+
+    private static func end(_ activities: [Activity<DriveActivityAttributes>]) async {
+        for activity in activities where activity.activityState == .active || activity.activityState == .stale {
+            log.info("Ending leftover activity \(activity.id, privacy: .public)")
+            await activity.end(nil, dismissalPolicy: .immediate)
+        }
+    }
+
+    /// Best effort on force quit while running in the background: the app gets a moment in `willTerminate`, so the
+    /// activity goes away with it. Not guaranteed (a suspended app is killed without notice) — the widget's
+    /// interrupted look and `endLeftovers` at the next launch cover that.
+    private func endBeforeTermination(timeout: TimeInterval = 1) {
+        updates?.cancel()
+        updates = nil
+        removeTerminateObserver()
+        guard let activity else { return }
+        self.activity = nil
+        let done = DispatchSemaphore(value: 0)
+        Task.detached {
+            await activity.end(nil, dismissalPolicy: .immediate)
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + timeout)
+    }
+
+    private func removeTerminateObserver() {
+        if let terminateObserver { NotificationCenter.default.removeObserver(terminateObserver) }
+        terminateObserver = nil
     }
 
     // MARK: - Updates

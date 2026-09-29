@@ -60,8 +60,8 @@ iPhone 単体で車載 Vlog 向けテレメトリ（位置・速度・高度・�
 - [x] 気圧高度を保存 — ✅（シミュレータは派生値、📱 で実センサー確認）
 - [x] Map にルート表示、Timeline で Map と HUD が同期 — ✅
 - [x] JSON / CSV / GPX が外部共有できる — ✅（共有シート →「ファイルに保存」、`jq` / `xmllint`）
-- [ ] Live Activity（Lock Screen / Dynamic Island 縦横 / StandBy / small / Watch Smart Stack） — ✅ Lock Screen / Dynamic Island 縦、MARK / STOP／📱 横・StandBy・small・Watch
-- [ ] Watch の Double Tap で MARK — 📱（`.handGestureShortcut(.primaryAction)` 実装済み）
+- [ ] Live Activity（Lock Screen / Dynamic Island 縦横 / StandBy / small / Watch Smart Stack） — ✅ Lock Screen / Dynamic Island 縦、MARK / STOP／📱 Lock Screen・Dynamic Island 縦横・Watch Smart Stack（2026-09-29）、残り StandBy・CarPlay small
+- [x] Watch の Double Tap で MARK — 📱 Series 9 で確認（2026-09-29、events の source = liveActivity）
 - [x] Watchdog 通知が停止時に届く — ✅（GPS 途絶通知、強制終了後のデッドマン通知）
 - [x] 日本語 / 英語 UI、アプリ内切替 — ✅
 - [ ] 実車テスト A〜D 完走 — 📱

@@ -12,7 +12,7 @@
 #   scripts/xc.sh <anything else>  Run it with the pinned toolchain (e.g. `scripts/xc.sh xcrun simctl list`)
 set -euo pipefail
 
-export DEVELOPER_DIR="${DRIVESCOPE_DEVELOPER_DIR:-/Applications/Xcode-beta 27.2.app/Contents/Developer}"
+export DEVELOPER_DIR="${DRIVESCOPE_DEVELOPER_DIR:-/Applications/Xcode-beta.app/Contents/Developer}"
 ROOT="${0:A:h:h}"
 PROJECT="$ROOT/DriveScope.xcodeproj"
 SIM_NAME="${DRIVESCOPE_SIM:-iPhone 18 Pro}"

@@ -64,6 +64,7 @@ final class AppModel {
         AppDependencyManager.shared.add(dependency: recorder)
         liveActivity = LiveActivityController(recorder: recorder)
         recorder.addObserver(liveActivity)
+        LiveActivityController.endLeftoversAtLaunch()
         notifications = RecordingNotifications(recorder: recorder)
         recorder.addObserver(notifications)
         deviceEvents = DeviceEventMonitor(recorder: recorder)

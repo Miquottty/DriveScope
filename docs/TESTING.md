@@ -61,18 +61,34 @@ UI テスト（2 本）:
 
 ## 3. 実機チェックリスト（シミュレータで確認できないもの）
 
-- [ ] **実センサー**: Core Motion 25/50/100 Hz・加速度 10 Hz の実効レートと欠落率、気圧高度
+- [ ] **実センサー**: Core Motion 25/50/100 Hz・加速度 10 Hz の実効レートと欠落率、気圧高度 — 50 Hz は確認済み（§3.1）
 - [ ] **デッドマン通知のタップで記録再開**（シミュレータはカバーシートへのタップ注入が効かない）
 - [ ] **画面 OFF 30 分**でルート欠落ゼロ（S2 完了条件）
-- [ ] **Apple Watch**: Smart Stack に Live Activity、Double Tap で MARK（events の source を確認）
+- [x] **Apple Watch**: Smart Stack に Live Activity、Double Tap で MARK（events の source を確認）
 - [ ] **StandBy**（充電中・横向き）の表示
-- [ ] **Dynamic Island 横向き**（`isDynamicIslandLimitedInWidth`）と Recording HUD 横向き
+- [x] **Dynamic Island 横向き**（`isDynamicIslandLimitedInWidth`）と Recording HUD 横向き
 - [ ] **CarPlay Dashboard** の `.small`
 - [ ] **電池**: バッテリー 20% 未満・非充電での提案、batterySnapshot と %/h
 - [ ] **位置情報の権限**: While Using、Precise オフ → 一時 Full Accuracy の要求
 - [ ] **CLLocationManager と liveUpdates の比較**（Settings → Recording → Location backend、Test B）
 - [ ] **オフライン STOP** → 「地名は保留中」→ 復帰後にタイトル生成
 - [ ] Export の共有（Files / AirDrop / Mac で開く）
+
+### 3.1 実機で確認済み（2026-09-29、机上）
+
+端末: iPhone 14 Pro / iPhone 16 Pro Max（iOS 27.2 beta 24B5089g）、Apple Watch Series 9。Debug ビルド。
+Live Activity の強制終了まわりは実機の XCUITest（一時的なテスト、未コミット）でも確認した。
+
+| 項目 | 結果 |
+|---|---|
+| 権限ダイアログ（位置情報・モーション・通知・Live Activity） | OK |
+| Lock Screen の Live Activity、MARK / STOP（記録中） | OK（MARK 件数バッジ、STOP → SAVED → 詳細） |
+| Dynamic Island 横向き・Recording HUD 横向き | OK |
+| Watch Smart Stack | `.small` が枠からはみ出していた → 約 76 pt に収まるよう修正して OK |
+| Watch Double Tap で MARK | OK。1 回の操作で `MarkIntent` が 2 回届いていた（0–0.1 秒差）→ 0.5 秒以内の重複を無視。Watch のバッジ反映は約 1 秒（Watch ↔ iPhone の往復） |
+| 強制終了後の Live Activity | REC のまま残っていた → 起動時に終了、終了直前（`willTerminate`）に終了、stale で `NO DATA` 表示。SIGKILL 後に `NO DATA` になるまで約 90 秒（staleDate 30 秒に対し iOS の反映が遅い） |
+| 強制終了後の Live Activity の MARK / STOP | 反応しない: iOS は強制終了されたアプリを intent のために起動しない → `NO DATA` 状態の STOP はアプリを開くリンク（開くと消えて復旧シート） |
+| Core Motion 50 Hz（Logger、iPhone 16 Pro Max、9 セッション） | 実効 49.76 Hz（dt 20.1 ms）、欠落 0、時刻の逆行 0、NaN 0。手で強く振って userAcc 最大 12.0 g、回転 最大 26.0 rad/s。飽和なし、\|gravity\| と \|q\| は常に 1.000 |
 
 ## 4. 実車テスト（PLAN §17）
 

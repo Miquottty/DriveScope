@@ -74,7 +74,7 @@ struct StatusDot: View {
     private var color: Color {
         switch status {
         case .recording, .gpsSearching: WidgetTheme.rec
-        case .saving: WidgetTheme.textMuted
+        case .saving, .interrupted: WidgetTheme.textMuted
         case .saved: WidgetTheme.good
         }
     }
@@ -113,13 +113,14 @@ struct StatusLabel: View {
         case .recording, .gpsSearching: "REC"
         case .saving: "SAVING"
         case .saved: "SAVED"
+        case .interrupted: "NO DATA"
         }
     }
 
     private var wordColor: Color {
         switch state.status {
         case .recording, .gpsSearching: WidgetTheme.rec
-        case .saving: WidgetTheme.textSecondary
+        case .saving, .interrupted: WidgetTheme.textSecondary
         case .saved: WidgetTheme.good
         }
     }
@@ -180,40 +181,60 @@ struct MetricColumn: View {
 }
 
 /// MARK (flag, dark) and STOP (red, white square) — `LiveActivityIntent`s run in the app process.
+/// An interrupted activity keeps STOP only, which then opens the app (see below).
 struct ActivityActionButtons: View {
-    let markCount: Int
+    let state: DriveActivityState
 
     var body: some View {
         HStack(spacing: 8) {
-            Button(intent: MarkIntent()) {
-                Image(systemName: "flag")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(WidgetTheme.textPrimary)
-                    .frame(width: 44, height: 44)
-                    .background(WidgetTheme.dividerStrong, in: Circle())
-                    .overlay(alignment: .topTrailing) { countBadge }
+            if state.status.isLive {
+                Button(intent: MarkIntent()) {
+                    Image(systemName: "flag")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WidgetTheme.textPrimary)
+                        .frame(width: 44, height: 44)
+                        .background(WidgetTheme.dividerStrong, in: Circle())
+                        .overlay(alignment: .topTrailing) { MarkCountBadge(count: state.markCount) }
+                }
+                .buttonStyle(.plain)
+                // Apple Watch Double Tap (PLAN §10.1 W2).
+                .handGestureShortcut(.primaryAction)
+                .accessibilityLabel(Text("Add Marker"))
             }
-            .buttonStyle(.plain)
-            // Apple Watch Double Tap (PLAN §10.1 W2).
-            .handGestureShortcut(.primaryAction)
-            .accessibilityLabel(Text("Add Marker"))
 
-            Button(intent: StopRecordingIntent()) {
-                RoundedRectangle(cornerRadius: 3)
-                    .fill(WidgetTheme.onRec)
-                    .frame(width: 14, height: 14)
-                    .frame(width: 44, height: 44)
-                    .background(WidgetTheme.rec, in: Circle())
+            if state.status == .interrupted {
+                // The process that owned this activity is gone, and iOS does not launch a force-quit app in the
+                // background for an intent — StopRecordingIntent would do nothing. Opening the app does: launch
+                // ends the leftover activity and offers the unfinished session for recovery.
+                Link(destination: Self.openAppURL) { stopFace }
+                    .accessibilityLabel(Text("Open DriveScope"))
+            } else {
+                Button(intent: StopRecordingIntent()) { stopFace }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(Text("Stop Recording"))
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(Text("Stop Recording"))
         }
     }
 
-    /// Confirms a MARK landed: the Live Activity is otherwise unchanged by it.
-    @ViewBuilder private var countBadge: some View {
-        if markCount > 0 {
-            Text(verbatim: "\(markCount)")
+    private static let openAppURL = URL(string: "drivescope://recovery")!
+
+    private var stopFace: some View {
+        RoundedRectangle(cornerRadius: 3)
+            .fill(WidgetTheme.onRec)
+            .frame(width: 14, height: 14)
+            .frame(width: 44, height: 44)
+            .background(WidgetTheme.rec, in: Circle())
+    }
+
+}
+
+/// Confirms a MARK landed: the Live Activity is otherwise unchanged by it.
+struct MarkCountBadge: View {
+    let count: Int
+
+    var body: some View {
+        if count > 0 {
+            Text(verbatim: "\(count)")
                 .font(.hudNumber(size: 10, weight: .semibold))
                 .foregroundStyle(WidgetTheme.hudBackground)
                 .padding(.horizontal, 4)

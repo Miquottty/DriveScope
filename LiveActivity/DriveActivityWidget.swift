@@ -6,9 +6,9 @@ import WidgetKit
 struct DriveActivityWidget: Widget {
     var body: some WidgetConfiguration {
         ActivityConfiguration(for: DriveActivityAttributes.self) { context in
-            LockScreenActivityView(state: context.state, isStale: context.isStale)
+            LockScreenActivityView(state: context.state.displayed(isStale: context.isStale))
         } dynamicIsland: { context in
-            let state = context.state
+            let state = context.state.displayed(isStale: context.isStale)
             return DynamicIsland {
                 DynamicIslandExpandedRegion(.leading) {
                     StatusLabel(state: state, fontSize: 11)
@@ -23,7 +23,7 @@ struct DriveActivityWidget: Widget {
                         .environment(\.locale, state.locale)
                 }
                 DynamicIslandExpandedRegion(.bottom) {
-                    ExpandedBottomRow(state: state, isStale: context.isStale)
+                    ExpandedBottomRow(state: state)
                         .environment(\.locale, state.locale)
                 }
             } compactLeading: {
@@ -42,7 +42,6 @@ struct DriveActivityWidget: Widget {
 /// Mock 10 (expanded): speed large, DIST / GPS, MARK / STOP.
 private struct ExpandedBottomRow: View {
     let state: DriveActivityState
-    let isStale: Bool
 
     var body: some View {
         HStack(alignment: .bottom) {
@@ -55,16 +54,16 @@ private struct ExpandedBottomRow: View {
                     .foregroundStyle(WidgetTheme.textSecondary)
             }
             .lineLimit(1)
-            .opacity(isStale && state.status.isLive ? 0.45 : 1)
+            .opacity(state.status == .interrupted ? 0.45 : 1)
             Spacer(minLength: 6)
             HStack(spacing: 16) {
                 MetricColumn(label: "DIST", value: "\(ActivityFormat.distance(state.distanceKm)) km", labelSize: 9, valueSize: 15)
                 MetricColumn(label: "GPS", value: state.gpsText, valueColor: state.gpsColor, labelSize: 9, valueSize: 15)
             }
-            .opacity(isStale && state.status.isLive ? 0.45 : 1)
+            .opacity(state.status == .interrupted ? 0.45 : 1)
             Spacer(minLength: 6)
-            if state.status.isLive {
-                ActivityActionButtons(markCount: state.markCount)
+            if state.status.isLive || state.status == .interrupted {
+                ActivityActionButtons(state: state)
             }
         }
         .padding(.horizontal, 6)
