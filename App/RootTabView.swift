@@ -3,6 +3,8 @@ import DriveRecording
 import SwiftUI
 
 struct RootTabView: View {
+    let permission: LocationPermission
+
     private enum AppTab: Hashable {
         case record, sessions, quality
     }
@@ -10,13 +12,12 @@ struct RootTabView: View {
     @Environment(RecordingController.self) private var recorder
     @State private var selection = AppTab.record
     @State private var sessionsNavigation = SessionsNavigation()
-    @State private var locationPermission = LocationPermission()
 
     var body: some View {
         TabView(selection: $selection) {
             Tab("Record", systemImage: "record.circle", value: AppTab.record) {
                 HomeView(
-                    permission: locationPermission,
+                    permission: permission,
                     onOpenSession: { showSession($0) },
                     onShowAllSessions: { selection = .sessions }
                 )

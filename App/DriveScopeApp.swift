@@ -8,7 +8,7 @@ struct DriveScopeApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootTabView()
+            AdaptiveRootView()
                 .environment(appLanguage)
                 .environment(model)
                 .environment(model.recorder)
