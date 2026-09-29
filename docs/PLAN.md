@@ -294,6 +294,7 @@ AltimeterSource─┘         │
 ```
 - `RecordingController` が唯一の状態管理元。状態: `idle → preparing → recording → stopping → finalizing → stopped`、例外: `recording → interrupted → recovered | discarded`。
 - センサーコールバックは MainActor に乗せない。HUD への反映は 10 Hz に間引く。
+- Core Location は開始直後にキャッシュ済みの古い fix を渡してくる（実機で 2 分前・別の場所）。そのラン（START / 再開）の開始より 2 秒以上古い fix は記録しない（ルート始点の飛び・距離の過大を防ぐ。ウォッチドッグの「fix あり」にも数えない）。
 
 ---
 
