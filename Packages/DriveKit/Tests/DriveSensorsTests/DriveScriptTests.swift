@@ -29,6 +29,9 @@ struct DriveScriptTests {
         #expect(maxLateral > 0.2 * Units.g)
         #expect(sawStop)
         #expect(sawTunnel)
+        // Parked after the end: no lingering braking.
+        let parked = script.state(at: script.duration + 600)
+        #expect(parked.speed == 0 && parked.longitudinalAcceleration == 0 && parked.yawRate == 0)
     }
 
     @Test func portraitMountReportsGravityDownScreenY() throws {

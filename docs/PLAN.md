@@ -49,20 +49,22 @@ iPhone 単体で車載 Vlog 向けテレメトリ（位置・速度・高度・�
 7. 後から Action Camera 映像と同期できる時刻情報（絶対時刻 + elapsed + SYNC マーカー）
 
 ### 完成条件（Definition of Done）
-- [ ] 30〜60 分以上の連続記録
-- [ ] 画面 OFF / バックグラウンドで GPS・Motion・Altimeter が継続
-- [ ] 強制終了・クラッシュ後に直前 2 秒までのログが復旧できる
-- [ ] Location（座標・速度・高度・方位・4 種精度）を保存
-- [ ] Motion 50 Hz（userAcc / gravity / rotationRate / attitude / mag）を保存
-- [ ] 5 プリセット（GPS Only / Eco / Vlog / Logger / Lab）で記録・再生でき、プリセット別の電池消費 %/h を実測済み
-- [ ] 気圧高度を保存
-- [ ] Map にルート表示、Timeline で Map と HUD が同期
-- [ ] JSON / CSV / GPX が外部共有できる
-- [ ] Live Activity（Lock Screen / Dynamic Island 縦横 / StandBy / small / Watch Smart Stack）
-- [ ] Watch の Double Tap で MARK
-- [ ] Watchdog 通知が停止時に届く
-- [ ] 日本語 / 英語 UI、アプリ内切替
-- [ ] 実車テスト A〜D 完走
+状態（2026-09-29）: ✅ = シミュレータ / 自動テストで確認済み、📱 = 実機で確認（`docs/TESTING.md` §3 のチェックリスト）
+
+- [x] 30〜60 分以上の連続記録 — ✅ スクリプト走行 72 分（30 倍速）、メモリ横ばい（約 293 MB）
+- [ ] 画面 OFF / バックグラウンドで GPS・Motion・Altimeter が継続 — ✅ バックグラウンド継続（シミュレータ GPS）／📱 画面 OFF 30 分・実センサー
+- [x] 強制終了・クラッシュ後に直前 2 秒までのログが復旧できる — ✅ 単体テスト（kill → recover / resume）+ UI テスト
+- [x] Location（座標・速度・高度・方位・4 種精度）を保存 — ✅
+- [x] Motion 50 Hz（userAcc / gravity / rotationRate / attitude / mag）を保存 — ✅（72 分で 227,030 件、欠落 ≈ 0%）
+- [ ] 5 プリセット（GPS Only / Eco / Vlog / Logger / Lab）で記録・再生でき、プリセット別の電池消費 %/h を実測済み — ✅ 記録・再生（単体テスト）／📱 電池 %/h 実測（Test E）
+- [x] 気圧高度を保存 — ✅（シミュレータは派生値、📱 で実センサー確認）
+- [x] Map にルート表示、Timeline で Map と HUD が同期 — ✅
+- [x] JSON / CSV / GPX が外部共有できる — ✅（共有シート →「ファイルに保存」、`jq` / `xmllint`）
+- [ ] Live Activity（Lock Screen / Dynamic Island 縦横 / StandBy / small / Watch Smart Stack） — ✅ Lock Screen / Dynamic Island 縦、MARK / STOP／📱 横・StandBy・small・Watch
+- [ ] Watch の Double Tap で MARK — 📱（`.handGestureShortcut(.primaryAction)` 実装済み）
+- [x] Watchdog 通知が停止時に届く — ✅（GPS 途絶通知、強制終了後のデッドマン通知）
+- [x] 日本語 / 英語 UI、アプリ内切替 — ✅
+- [ ] 実車テスト A〜D 完走 — 📱
 
 ---
 
