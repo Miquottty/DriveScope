@@ -31,3 +31,23 @@ struct SessionStatisticsTests {
         #expect(summary.peakLateralG == 0)
     }
 }
+
+struct BatteryUsageTests {
+    /// %/h from 5-minute snapshots, split by screen state; charging and unknown levels are excluded.
+    @Test func drainPerHourByScreenState() {
+        let unplugged = BatteryUsage.unpluggedState
+        let events = [
+            EventRecord(kind: .batterySnapshot, aux: unplugged, elapsed: 0, value: 0.90),
+            EventRecord(kind: .batterySnapshot, aux: unplugged, elapsed: 600, value: 0.88), // on: 2 % / 10 min
+            EventRecord(kind: .screenOff, elapsed: 700),
+            EventRecord(kind: .batterySnapshot, aux: unplugged, elapsed: 1800, value: 0.87), // off: 1 % / 20 min
+            EventRecord(kind: .batterySnapshot, aux: 2, elapsed: 2400, value: 0.95), // charging: ignored
+            EventRecord(kind: .batterySnapshot, aux: unplugged, elapsed: 3000, value: -1), // unknown: ignored
+        ]
+        let usage = BatteryUsage(events: events)
+        #expect(abs((usage.screenOn ?? 0) - 12) < 1e-9)
+        #expect(abs((usage.screenOff ?? 0) - 3) < 1e-9)
+        #expect(abs((usage.overall ?? 0) - 6) < 1e-9)
+        #expect(BatteryUsage(events: []).overall == nil)
+    }
+}
