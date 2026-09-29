@@ -114,7 +114,10 @@ public actor TelemetryEngine {
 
     /// Forces buffered samples to disk (app backgrounding / termination, PLAN §4.1).
     public func flush() async {
-        await writer.flush(sync: true)
+        // Called on backgrounding / termination: must complete even if the calling task is cancelled.
+        await withTaskCancellationShield {
+            await writer.flush(sync: true)
+        }
     }
 
     public var elapsed: TimeInterval { suite.clock.uptime - manifest.clock.startUptime }

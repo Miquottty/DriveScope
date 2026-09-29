@@ -18,6 +18,7 @@ final class AppModel {
     let sensorEnvironment: SensorEnvironment
     private let liveActivity: LiveActivityController
     private let notifications: RecordingNotifications
+    private let deviceEvents: DeviceEventMonitor
 
     init() {
         sensorEnvironment = SensorEnvironment.current()
@@ -34,9 +35,15 @@ final class AppModel {
             deviceModel: Self.hardwareModel(),
             osVersion: "\(device.systemName) \(device.systemVersion)"
         )
-        let sensors = sensorEnvironment
+        // Re-read at every START so Settings changes (location backend) apply to the next session.
         let recorder = RecordingController(store: store, filesRoot: filesRoot, environment: environment) {
-            sensors.makeSuite()
+            SensorEnvironment.current().makeSuite()
+        }
+        recorder.prepareForStart = { recorder in
+            #if DEBUG
+            let fast = UserDefaults.standard.bool(forKey: "debugFastWatchdog")
+            recorder.watchdogPolicy = fast ? RecordingWatchdog.Policy().accelerated(by: 10) : RecordingWatchdog.Policy()
+            #endif
         }
         self.recorder = recorder
         // Live Activity MARK / STOP intents run in this process and reach the recorder through @Dependency.
@@ -45,6 +52,8 @@ final class AppModel {
         recorder.addObserver(liveActivity)
         notifications = RecordingNotifications(recorder: recorder)
         recorder.addObserver(notifications)
+        deviceEvents = DeviceEventMonitor(recorder: recorder)
+        recorder.addObserver(deviceEvents)
     }
 
     private static func hardwareModel() -> String {

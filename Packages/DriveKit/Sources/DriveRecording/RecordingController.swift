@@ -66,6 +66,8 @@ public final class RecordingController {
     private var observers: [any RecordingObserver] = []
     /// Debug builds may shorten the watchdog thresholds (Settings → Debug).
     public var watchdogPolicy = RecordingWatchdog.Policy()
+    /// Applied at every START / resume, so settings changed since launch take effect.
+    public var prepareForStart: (@MainActor (RecordingController) -> Void)?
 
     public init(
         store: SessionStore, filesRoot: URL, environment: AppEnvironment,
@@ -88,6 +90,7 @@ public final class RecordingController {
         guard phase == .idle || phase == .stopped else { return }
         phase = .preparing
         lastError = nil
+        prepareForStart?(self)
         let suite = makeSuite()
         let clock = SessionClock(startedAt: suite.clock.now, startUptime: suite.clock.uptime)
         let manifest = SessionManifest(
@@ -176,9 +179,21 @@ public final class RecordingController {
         await engine.record(EventRecord(kind: .marker, source: source, aux: kind == .sync ? 1 : 0, elapsed: elapsed))
     }
 
-    /// App lifecycle hook: push buffered samples to disk now (backgrounding / termination).
+    /// App lifecycle hook: push buffered samples to disk now (backgrounding).
     public func flush() async {
         await engine?.flush()
+    }
+
+    /// `willTerminate`: the main thread may block briefly, so flush on the engine's executor and wait for it.
+    /// The engine and writer are actors off the main actor, so waiting here cannot deadlock.
+    public func flushBeforeTermination(timeout: TimeInterval = 1.5) {
+        guard let engine else { return }
+        let done = DispatchSemaphore(value: 0)
+        Task.detached {
+            await engine.flush()
+            done.signal()
+        }
+        _ = done.wait(timeout: .now() + timeout)
     }
 
     public func record(_ kind: EventKind, value: Double = 0, aux: UInt32 = 0, source: EventSource = .system) async {
@@ -238,6 +253,7 @@ public final class RecordingController {
     public func resume(_ unfinished: DriveSession) async {
         guard canResume(unfinished) else { return }
         phase = .preparing
+        prepareForStart?(self)
         let files = SessionFiles(root: filesRoot, sessionID: unfinished.id)
         do {
             let manifest = try files.readManifest()
