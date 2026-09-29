@@ -767,6 +767,54 @@
         }
       }
     },
+    "Export failed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export failed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書き出しに失敗しました"
+          }
+        }
+      }
+    },
+    "Export type": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Export type"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書き出しの種類"
+          }
+        }
+      }
+    },
+    "Exporting…": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exporting…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "書き出し中…"
+          }
+        }
+      }
+    },
     "Fair": {
       "localizations": {
         "en": {
@@ -1161,6 +1209,22 @@
         }
       }
     },
+    "Lossless master with all raw streams, events and places": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lossless master with all raw streams, events and places"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ロスレスのマスター。全ての生データ・イベント・地名を含む"
+          }
+        }
+      }
+    },
     "Low Power Mode changed": {
       "localizations": {
         "en": {
@@ -1427,6 +1491,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "GPS を %lld 分間受信できていません。記録は継続中です。"
+          }
+        }
+      }
+    },
+    "No SYNC marker — t = 0 at session start": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No SYNC marker — t = 0 at session start"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SYNC マーカーなし — t = 0 はセッション開始"
           }
         }
       }
@@ -2357,6 +2437,22 @@
         }
       }
     },
+    "Share": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Share"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "共有"
+          }
+        }
+      }
+    },
     "Simulated": {
       "localizations": {
         "en": {
@@ -2565,6 +2661,22 @@
         }
       }
     },
+    "Track and markers, for maps and other apps": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Track and markers, for maps and other apps"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "軌跡とマーカー。地図や他のアプリ向け"
+          }
+        }
+      }
+    },
     "Unavailable": {
       "localizations": {
         "en": {
@@ -2625,6 +2737,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "経由地"
+          }
+        }
+      }
+    },
+    "Vlog track at 10 Hz, smaller files": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vlog track at 10 Hz, smaller files"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vlog トラック 10 Hz。ファイルが小さい"
+          }
+        }
+      }
+    },
+    "Vlog track at 30 fps, one row per video frame": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vlog track at 30 fps, one row per video frame"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Vlog トラック 30 fps。動画のフレームごとに 1 行"
           }
         }
       }
@@ -2705,6 +2849,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "最高 %@"
+          }
+        }
+      }
+    },
+    "t = 0 at SYNC %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t = 0 at SYNC %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "t = 0 は SYNC %@ の位置"
           }
         }
       }
