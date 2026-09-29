@@ -1,0 +1,51 @@
+import SwiftUI
+
+/// HUD readout: small tracked label over a monospaced value with a trailing unit (ALT / COURSE / DIST / G).
+/// Labels are English abbreviations in every language (PLAN §13), hence verbatim text.
+struct TelemetryValue: View {
+    struct Style {
+        var valueSize: CGFloat
+        var unitSize: CGFloat
+        var unitGap: CGFloat = 3
+        var labelSize: CGFloat = 11
+        /// Label-to-value spacing.
+        var spacing: CGFloat = 4
+
+        /// Portrait metric row (ALT / COURSE / DIST).
+        static let metric = Style(valueSize: 26, unitSize: 13)
+        /// Landscape right column.
+        static let metricLarge = Style(valueSize: 34, unitSize: 14, unitGap: 4, spacing: 0)
+        /// G readouts next to the meter.
+        static let gForce = Style(valueSize: 28, unitSize: 12, spacing: 0)
+        static let gForceLarge = Style(valueSize: 30, unitSize: 12, spacing: 0)
+    }
+
+    var label: String
+    var value: String
+    var unit: String?
+    var style: Style
+    var valueColor: Color = Theme.textPrimary
+    var alignment: HorizontalAlignment = .center
+
+    var body: some View {
+        VStack(alignment: alignment, spacing: style.spacing) {
+            Text(verbatim: label)
+                .font(.system(size: style.labelSize))
+                .tracking(style.labelSize * 0.1)
+                .foregroundStyle(Theme.textSecondary)
+            HStack(alignment: .firstTextBaseline, spacing: style.unitGap) {
+                Text(verbatim: value)
+                    .font(.hudNumber(size: style.valueSize, weight: .medium))
+                    .foregroundStyle(valueColor)
+                if let unit {
+                    Text(verbatim: unit)
+                        .font(.hudNumber(size: style.unitSize))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
