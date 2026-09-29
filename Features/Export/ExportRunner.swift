@@ -39,7 +39,7 @@ nonisolated enum ExportRunner {
     @concurrent
     static func prepare(files: SessionFiles) async -> Int {
         try? FileManager.default.removeItem(at: directory)
-        return files.byteSize()
+        return files.rawByteSize()
     }
 
     @concurrent
