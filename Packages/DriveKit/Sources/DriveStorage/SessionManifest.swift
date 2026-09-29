@@ -18,6 +18,8 @@ public struct SessionManifest: Codable, Sendable, Equatable {
     public var osVersion: String
     /// GPS altitude (m) used as the barometric baseline (PLAN §2.3). Set once the first good fix arrives.
     public var altitudeBaseline: Double?
+    /// Latest mount calibration, so file-only recovery / replay can use it (PLAN §7).
+    public var calibration: MountCalibration?
     public var endedAt: Date?
 
     public init(

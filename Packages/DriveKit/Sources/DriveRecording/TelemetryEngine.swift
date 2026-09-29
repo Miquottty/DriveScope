@@ -30,6 +30,8 @@ public struct TelemetrySnapshot: Sendable, Equatable {
     public var longitudinalG: Double = 0
     public var locationCount = 0
     public var motionCount = 0
+    /// Vehicle-frame G is available (mount calibrated). Before that, G is GPS-estimated (lateral only).
+    public var isCalibrated = false
     public var lastLocation: RoutePoint?
 
     public init() {}
@@ -45,6 +47,13 @@ public actor TelemetryEngine {
     private let onSnapshot: @Sendable (TelemetrySnapshot) -> Void
     private let onWatchdog: @Sendable (RecordingWatchdog.Action) -> Void
     private var watchdog: RecordingWatchdog
+    private let onCalibration: @Sendable (MountCalibration) -> Void
+    private var calibrator = MountCalibrator()
+    private var calibration: MountCalibration?
+    /// Eco: low-passed raw acceleration ≈ gravity (device frame).
+    private var ecoGravity: Vector3?
+    /// Display / peak filter for vehicle G (~0.2 s time constant) — rejects road vibration.
+    private var filteredG = (long: 0.0, lat: 0.0)
     private var lastMotionUptime: TimeInterval?
     private var hasFix = false
     private var statistics: SessionStatistics
@@ -59,7 +68,8 @@ public actor TelemetryEngine {
         statistics: SessionStatistics? = nil,
         watchdogPolicy: RecordingWatchdog.Policy = .init(),
         onSnapshot: @escaping @Sendable (TelemetrySnapshot) -> Void,
-        onWatchdog: @escaping @Sendable (RecordingWatchdog.Action) -> Void = { _ in }
+        onWatchdog: @escaping @Sendable (RecordingWatchdog.Action) -> Void = { _ in },
+        onCalibration: @escaping @Sendable (MountCalibration) -> Void = { _ in }
     ) {
         self.suite = suite
         self.writer = writer
@@ -67,6 +77,9 @@ public actor TelemetryEngine {
         self.manifest = manifest
         self.onSnapshot = onSnapshot
         self.onWatchdog = onWatchdog
+        self.onCalibration = onCalibration
+        calibration = manifest.calibration
+        snapshot.isCalibrated = manifest.calibration != nil
         watchdog = RecordingWatchdog(policy: watchdogPolicy)
         // Silence is measured from (re)start, so a session that never gets a fix still escalates.
         let now = suite.clock.uptime
@@ -133,6 +146,7 @@ public actor TelemetryEngine {
         statistics.add(location)
         lastFixUptime = suite.clock.uptime
         hasFix = true
+        if let updated = calibrator.add(location, elapsed: elapsed) { await apply(updated) }
 
         if manifest.altitudeBaseline == nil, location.verticalAccuracy > 0, location.verticalAccuracy <= 20 {
             manifest.altitudeBaseline = location.altitude
@@ -151,19 +165,59 @@ public actor TelemetryEngine {
     }
 
     private func handle(_ event: MotionEvent) async {
+        let userAcceleration: Vector3
+        let timestamp: Double
         switch event {
         case .deviceMotion(let sample):
             lastMotionUptime = suite.clock.uptime
             await writer.append(sample, to: .motion)
-            statistics.addMotion(timestamp: sample.timestamp)
+            timestamp = sample.timestamp
+            userAcceleration = sample.userAcceleration
+            if let updated = calibrator.add(sample, elapsed: manifest.clock.elapsed(uptime: timestamp)) { await apply(updated) }
         case .acceleration(let sample):
             lastMotionUptime = suite.clock.uptime
             await writer.append(sample, to: .accel)
-            statistics.addMotion(timestamp: sample.timestamp)
+            timestamp = sample.timestamp
+            let hz = manifest.preset.motion.hz
+            let alpha = Float(min(1, 1 / (2 * hz)))
+            let gravity = ecoGravity.map { $0 + (sample.acceleration - $0) * alpha } ?? sample.acceleration
+            ecoGravity = gravity
+            userAcceleration = sample.acceleration - gravity
+            if let updated = calibrator.add(sample, elapsed: manifest.clock.elapsed(uptime: timestamp), sampleRate: hz) {
+                await apply(updated)
+            }
         }
+        statistics.addMotion(timestamp: timestamp)
         snapshot.motionCount = statistics.motionCount
-        // Vehicle-frame G needs the mount calibration (S3); until then the HUD shows GPS-estimated lateral g.
-        snapshot.lateralG = statistics.gpsLateralG
+
+        guard let calibration else {
+            snapshot.lateralG = statistics.gpsLateralG
+            return
+        }
+        let vehicle = calibration.apply(userAcceleration)
+        let alpha = min(1, 1 / (0.2 * manifest.preset.motion.hz))
+        filteredG.long += (Double(vehicle.x) - filteredG.long) * alpha
+        filteredG.lat += (Double(vehicle.y) - filteredG.lat) * alpha
+        statistics.add(lateralG: filteredG.lat)
+        snapshot.longitudinalG = filteredG.long
+        snapshot.lateralG = filteredG.lat
+    }
+
+    private func apply(_ updated: MountCalibration) async {
+        calibration = updated
+        manifest.calibration = updated
+        try? files.writeManifest(manifest)
+        snapshot.isCalibrated = true
+        await writer.append(EventRecord(
+            kind: .calibrationUpdated, source: updated.method == .manual ? .phone : .system,
+            aux: updated.method == .manual ? 1 : 0, elapsed: elapsed, value: updated.confidence
+        ), to: .events)
+        onCalibration(updated)
+    }
+
+    /// Manual "rotate 90°" from the Recording screen (PLAN §7-4).
+    public func rotateMountManually() async {
+        if let updated = calibrator.rotateManually(elapsed: elapsed) { await apply(updated) }
     }
 
     private func handle(_ altitude: AltitudeSample) async {

@@ -26,7 +26,7 @@ struct RecordingControllerTests {
 
         try await Task.sleep(for: .seconds(1.5))
         await controller.mark(.sync)
-        try await Task.sleep(for: .seconds(0.5))
+        try await Task.sleep(for: .seconds(1.0))
         #expect(controller.live.snapshot.locationCount > 100)
         await controller.stop()
         #expect(controller.phase == .stopped)
@@ -37,9 +37,9 @@ struct RecordingControllerTests {
         let motion = try files.deviceMotion()
         let events = try files.events()
 
-        // ~200 s of drive at 1 Hz GPS and 50 Hz motion.
+        // ~250 s of drive at 1 Hz GPS and 50 Hz motion.
         #expect(session.state == .stopped)
-        #expect((150...260).contains(locations.count))
+        #expect((200...320).contains(locations.count))
         #expect(session.locationSampleCount == locations.count)
         #expect(Double(motion.count) > session.duration * 50 * 0.9)
         #expect(session.motionDropRate < 0.1)
@@ -51,5 +51,9 @@ struct RecordingControllerTests {
         #expect(abs(session.distance - scripted) < scripted * 0.1 + 30)
         #expect(!session.routePreview.isEmpty)
         #expect(try files.readManifest().altitudeBaseline != nil)
+        // The scripted stop-and-go at ~1 km lets the engine calibrate the mount (persisted in both places).
+        #expect(session.calibration != nil)
+        #expect(try files.readManifest().calibration == session.calibration)
+        #expect(events.contains { $0.kind == .calibrationUpdated })
     }
 }

@@ -123,7 +123,8 @@ public final class RecordingController {
             suite: suite, writer: writer, files: files, manifest: manifest, statistics: statistics,
             watchdogPolicy: watchdogPolicy,
             onSnapshot: { snapshot in Task { @MainActor in live.apply(snapshot) } },
-            onWatchdog: { [weak self] action in Task { @MainActor in self?.handle(action) } }
+            onWatchdog: { [weak self] action in Task { @MainActor in self?.handle(action) } },
+            onCalibration: { [weak self] calibration in Task { @MainActor in self?.persist(calibration) } }
         )
         self.files = files
         self.engine = engine
@@ -131,6 +132,17 @@ public final class RecordingController {
         live.reset()
         await engine.start()
         phase = .recording
+    }
+
+    private func persist(_ calibration: MountCalibration) {
+        guard let session else { return }
+        session.calibration = calibration
+        try? store.save()
+    }
+
+    /// Recording screen: the auto calibration picked the wrong axis; turn "forward" by 90°.
+    public func rotateMount() async {
+        await engine?.rotateMountManually()
     }
 
     private func handle(_ action: RecordingWatchdog.Action) {
