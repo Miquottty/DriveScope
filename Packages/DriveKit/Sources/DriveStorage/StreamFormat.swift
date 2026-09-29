@@ -110,4 +110,6 @@ public enum StreamFormatError: Error, Equatable {
     case unknownStream
     case recordSizeMismatch(expected: Int, found: Int)
     case wrongStream(expected: StreamKind, found: StreamKind)
+    /// The stream is archived (compressed); nothing may append to it.
+    case archived
 }

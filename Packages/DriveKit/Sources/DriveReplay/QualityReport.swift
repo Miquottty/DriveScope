@@ -27,6 +27,9 @@ public struct QualityReport: Sendable {
     public var maxThermalState: Int?
     public var events: [EventRecord] = []
     public var bytesOnDisk = 0
+    /// Size of the streams uncompressed; equals `bytesOnDisk` unless the session is archived.
+    public var rawBytes = 0
+    public var isArchived = false
 
     public static func make(files: SessionFiles) throws -> QualityReport {
         let manifest = try files.readManifest()
@@ -54,6 +57,8 @@ public struct QualityReport: Sendable {
         report.battery = BatteryUsage(events: report.events)
         report.maxThermalState = report.events.filter { $0.kind == .thermalStateChanged }.map { Int($0.aux) }.max()
         report.bytesOnDisk = files.byteSize()
+        report.rawBytes = files.rawByteSize()
+        report.isArchived = files.isArchived
         return report
     }
 
