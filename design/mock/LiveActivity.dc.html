@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Lock Screen Live Activity</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;background:#0B0D10;color:#E8ECF0}
+a{color:#F2A33A;text-decoration:none}a:hover{color:#FFC067}
+.mono{font-family:"IBM Plex Mono","SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 390px; height: 200px; box-sizing: border-box; background: #0B0D10; display: flex; flex-direction: column; gap: 12px; padding: 14px 16px">
+  <div style="font-size: 10px; letter-spacing: 0.1em; color: #5C6670">LOCK SCREEN · ACTIVITYKIT</div>
+  <div style="border-radius: 22px; background: #14181D; padding: 14px 16px; display: flex; flex-direction: column; gap: 10px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <div style="display: flex; align-items: center; gap: 8px">
+        <span style="width: 9px; height: 9px; border-radius: 5px; background: #E5484D"></span>
+        <span style="font-size: 12px; font-weight: 600; letter-spacing: 0.08em; color: #E5484D">REC</span>
+        <span style="font-size: 12px; color: #8A94A0">DriveScope</span>
+      </div>
+      <span class="mono" style="font-size: 22px; font-weight: 500">00:24:38</span>
+    </div>
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <div style="display: flex; gap: 18px">
+        <div style="display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: 0.1em; color: #8A94A0">SPEED</span><span class="mono" style="font-size: 18px; font-weight: 500">72 km/h</span></div>
+        <div style="display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: 0.1em; color: #8A94A0">DIST</span><span class="mono" style="font-size: 18px; font-weight: 500">18.4 km</span></div>
+        <div style="display: flex; flex-direction: column"><span style="font-size: 10px; letter-spacing: 0.1em; color: #8A94A0">GPS</span><span class="mono" style="font-size: 18px; font-weight: 500; color: #7BD88F">±3 m</span></div>
+      </div>
+      <div style="display: flex; gap: 8px">
+        <button type="button" aria-label="Mark" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #2A323B; color: #E8ECF0; display: flex; align-items: center; justify-content: center"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3v18M6 4h11l-2 4 2 4H6"></path></svg></button>
+        <button type="button" aria-label="Stop" style="width: 44px; height: 44px; border-radius: 22px; border: none; background: #E5484D; color: #FFFFFF; display: flex; align-items: center; justify-content: center"><span style="width: 14px; height: 14px; border-radius: 3px; background: #FFFFFF"></span></button>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":200}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

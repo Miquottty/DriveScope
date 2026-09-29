@@ -1,0 +1,130 @@
+{
+  "v": 3,
+  "attachments": {},
+  "boards": {
+    "Detail.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "4 · Session Detail",
+      "w": 390,
+      "x": 1410,
+      "y": 0
+    },
+    "DynamicIsland.dc.html": {
+      "h": 260,
+      "title": "10 · Dynamic Island compact / expanded · CarPlay small",
+      "w": 844,
+      "x": 0,
+      "y": 1934
+    },
+    "LiveActivity.dc.html": {
+      "h": 200,
+      "title": "6 · Lock Screen Live Activity",
+      "w": 390,
+      "x": 0,
+      "y": 964
+    },
+    "Main.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "1 · Home / Ready",
+      "w": 390,
+      "x": 0,
+      "y": 0
+    },
+    "Recording.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "2 · Recording HUD",
+      "w": 390,
+      "x": 470,
+      "y": 0
+    },
+    "RecordingLandscape.dc.html": {
+      "h": 390,
+      "is_interactive": true,
+      "title": "8 · Recording HUD · Landscape (car mount)",
+      "w": 844,
+      "x": 0,
+      "y": 1424
+    },
+    "Recovery.dc.html": {
+      "h": 200,
+      "title": "7 · Crash Recovery Sheet",
+      "w": 390,
+      "x": 470,
+      "y": 964
+    },
+    "Replay.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "5 · Timeline Replay",
+      "w": 390,
+      "x": 1880,
+      "y": 0
+    },
+    "Sessions.dc.html": {
+      "h": 844,
+      "is_interactive": true,
+      "title": "3 · Sessions",
+      "w": 390,
+      "x": 940,
+      "y": 0
+    },
+    "StandBy.dc.html": {
+      "h": 390,
+      "title": "9 · StandBy (charging + landscape, Live Activity ×2)",
+      "w": 844,
+      "x": 924,
+      "y": 1424
+    }
+  },
+  "createdOnFiles": {
+    "at": "2026-09-29T05:10:00Z",
+    "v": 1
+  },
+  "designSystems": [],
+  "launch": {
+    "view": "canvas"
+  },
+  "notes": {
+    "t1": {
+      "kind": "title1",
+      "maxW": 2270,
+      "text": "DriveScope — iOS 27 / SwiftUI  ·  Drive Telemetry Logger",
+      "w": 240,
+      "x": 0,
+      "y": -280
+    },
+    "t2": {
+      "fill": "gray",
+      "size": 24,
+      "text": "Flow: Home → START → Recording HUD (screen may lock; Live Activity keeps REC visible) → STOP → Sessions → Detail → Replay / Export",
+      "w": 1100,
+      "x": 0,
+      "y": -110
+    },
+    "t3": {
+      "kind": "title1",
+      "maxW": 1768,
+      "text": "iOS 27 additions — landscape HUD · StandBy · Dynamic Island (portrait / landscape-limited) · CarPlay small family",
+      "w": 240,
+      "x": 0,
+      "y": 1200
+    }
+  },
+  "order": [
+    "Main.dc.html",
+    "Recording.dc.html",
+    "Sessions.dc.html",
+    "Detail.dc.html",
+    "Replay.dc.html",
+    "LiveActivity.dc.html",
+    "Recovery.dc.html",
+    "RecordingLandscape.dc.html",
+    "StandBy.dc.html",
+    "DynamicIsland.dc.html"
+  ],
+  "pages": [],
+  "title": "DriveScope Mock"
+}

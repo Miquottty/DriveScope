@@ -1,0 +1,534 @@
+# DriveScope — 実装計画
+
+**Version:** 1.0 (2026-09-29)
+**Target:** iOS 27 / Xcode 27.2 / Swift 6.4 / SwiftUI
+**Bundle ID:** `com.miquottty.DriveScope`
+**Team ID:** `3X6HG4QJA8`
+**Design mock:** https://claude.ai/artifact/AFmN9QtGv2Yo15gxyZfBte
+
+iPhone 単体で車載 Vlog 向けテレメトリ（位置・速度・高度・姿勢・加速度）を記録し、走行後にルートと HUD を時系列再生・エクスポートする。将来の動画 HUD オーバーレイの基盤になる。
+
+---
+
+## 0. 元プラン（v0.1）からの主な変更点
+
+| 項目 | v0.1 | v1.0 | 理由 |
+|---|---|---|---|
+| ターゲット | 未指定 | iOS 27 / Xcode 27.2 | 最新 API（Live Activity 横向き / StandBy、SwiftData Codable 属性、Swift 6.4）を使う |
+| サンプル永続化 | SwiftData `@Model` | **追記型バイナリファイル**（セッションごと） | 20〜100 Hz × 数時間を SwiftData に入れると fetch・メモリ・削除が破綻する。追記型はクラッシュ耐性も高い |
+| Motion 更新周期 | 20 Hz | **50 Hz 既定**（GPS Only / Eco / Vlog 25 / Logger 50 / Lab 100 の 5 プリセット） | 20 Hz では横 G ピークが潰れる。iPhone の上限は 100 Hz（`CMBatchedSensorManager` は watchOS 専用）。電池重視の GPS Only / Eco を用意 |
+| Live Activities | V2 | **MVP** | 画面 OFF・StandBy・CarPlay・Watch で「記録中」が見えることは信頼性そのもの |
+| Apple Watch | V2 | **MVP は Smart Stack 表示 + Double Tap MARK（Watch アプリなし）**、Watch アプリは V1.1、心拍は V2 検討 | 最小コストで「ハンドルを握ったまま MARK」を実現 |
+| Recording 画面のミニ Map | あり | **なし** | 描画コストが高く、ロガー用途では数値 HUD に集中すべき。Map は Detail / Replay で見せる |
+| SYNC / MARK | V1.1 | **MVP**（Recording 常設） | 実装は数行で、Vlog 同期の中核 |
+| 時刻基準 | elapsedTime のみ | **`startedAt(Date)` + `startUptime(systemUptime)` ペアを保存** | Motion の timestamp は boot 基準。絶対時刻に戻せないと動画同期ができない |
+| Mount Calibration | 「基準姿勢を記録」 | **重力で pitch/roll + 発進加速で yaw 自動決定 + 90° 手動補正** | 重力だけでは前方向が決まらない |
+| 地名 | 未定義 | STOP 時に `MKReverseGeocodingRequest` で代表点を逆ジオコーディングし保存 | `CLGeocoder` は iOS 26 で非推奨 |
+| 停止検知 | なし | **RecordingWatchdog（2 段）+ events ストリーム** | 更新停止・サスペンドをユーザーに通知し、記録として残す |
+| ローカライズ | 未定義 | **日本語 / 英語**、既定は OS 言語、アプリ内で切替可 | — |
+
+---
+
+## 1. MVP のゴールと完成条件
+
+### ゴール
+1. START でテレメトリ記録開始（フォアグラウンドで開始）
+2. バックグラウンド・画面ロック中も記録継続
+3. 走行中 HUD（縦・横・Live Activity・StandBy）
+4. STOP でセッション確定・地名メタ付与
+5. セッション一覧・詳細・Timeline Replay
+6. JSON / CSV / GPX エクスポート
+7. 後から Action Camera 映像と同期できる時刻情報（絶対時刻 + elapsed + SYNC マーカー）
+
+### 完成条件（Definition of Done）
+- [ ] 30〜60 分以上の連続記録
+- [ ] 画面 OFF / バックグラウンドで GPS・Motion・Altimeter が継続
+- [ ] 強制終了・クラッシュ後に直前 2 秒までのログが復旧できる
+- [ ] Location（座標・速度・高度・方位・4 種精度）を保存
+- [ ] Motion 50 Hz（userAcc / gravity / rotationRate / attitude / mag）を保存
+- [ ] 5 プリセット（GPS Only / Eco / Vlog / Logger / Lab）で記録・再生でき、プリセット別の電池消費 %/h を実測済み
+- [ ] 気圧高度を保存
+- [ ] Map にルート表示、Timeline で Map と HUD が同期
+- [ ] JSON / CSV / GPX が外部共有できる
+- [ ] Live Activity（Lock Screen / Dynamic Island 縦横 / StandBy / small / Watch Smart Stack）
+- [ ] Watch の Double Tap で MARK
+- [ ] Watchdog 通知が停止時に届く
+- [ ] 日本語 / 英語 UI、アプリ内切替
+- [ ] 実車テスト A〜D 完走
+
+---
+
+## 2. 取得するセンサーデータ
+
+### 2.1 Core Location
+```swift
+manager.desiredAccuracy = kCLLocationAccuracyBestForNavigation
+manager.distanceFilter = kCLDistanceFilterNone
+manager.activityType = .automotiveNavigation
+manager.pausesLocationUpdatesAutomatically = false
+manager.allowsBackgroundLocationUpdates = true
+manager.showsBackgroundLocationIndicator = true
+```
+- iPhone 内蔵 GNSS は実質 **1 Hz 上限・不定期**。固定レートを前提にしない。
+- `LocationSource` プロトコルの裏に `CLLocationManager` 実装と `CLLocationUpdate.liveUpdates(.automotiveNavigation)` + `CLBackgroundActivitySession` 実装を両方置き、Test B の実測（間隔・精度 P95・欠落・背景継続）で採用を決める。
+- START 前に `accuracyAuthorization == .fullAccuracy` を確認。`.reducedAccuracy` なら `requestTemporaryFullAccuracyAuthorization(withPurposeKey:)`。
+
+保存項目: `timestamp, lat, lon, altitude, speed, course, hAcc, vAcc, speedAcc, courseAcc, flags(sourceInfo)`
+
+### 2.2 Core Motion
+- `CMMotionManager.startDeviceMotionUpdates(using:)`、参照フレームは `.xArbitraryCorrectedZVertical` を既定とし、`.xMagneticNorthZVertical` と車内で比較（磁気ノイズ）。
+- 保存項目（device motion）: `timestamp(uptime), userAcc xyz, gravity xyz, rotationRate xyz, attitude quaternion wxyz, magneticField xyz + accuracy`
+- 保存項目（加速度のみ、Eco）: `timestamp(uptime), acceleration xyz`（重力込みの生値。重力方向は低域通過で推定）
+- **Raw は端末座標系のまま保存**。車両座標系への変換（Calibration）は再生・派生時に適用する。
+
+### 2.2.1 キャプチャプリセット
+| プリセット | GPS | Motion | 失うもの | Live Activity 更新 |
+|---|---|---|---|---|
+| **GPS Only** | 1 Hz | なし | G の実測値。代わりに **GPS 推定横 G**（速度 × course 変化率 / g、1 Hz なのでピークは鈍る）を表示・派生 | 5 秒 |
+| **Eco** | 1 Hz | **加速度のみ 10 Hz（`startAccelerometerUpdates`、ジャイロ OFF）** | 姿勢（roll / pitch / yaw）、角速度。前後 G・横 G は Calibration 後に算出可 | 5 秒 |
+| Vlog | 1 Hz | device motion 25 Hz | — | 2 秒 |
+| **Logger（既定）** | 1 Hz | device motion 50 Hz | — | 2 秒 |
+| Lab | 1 Hz | device motion 100 Hz | — | 2 秒 |
+
+- GPS の精度設定（BestForNavigation）はどのプリセットでも下げない（ロガーの本体）。
+- プリセットは**セッション単位で固定**（MVP では記録途中の変更不可。データ形式の混在を避ける）。
+- 電池残量 20% 未満かつ非充電時、START 前と記録中に「Eco / GPS Only に切り替えますか」を**提案のみ**（自動切替しない。記録中の提案は次回セッションへの推奨として表示）。
+
+### 2.2.2 電池消費の見込み（推定、S3 で実測して置き換える）
+| 消費源 | 目安 |
+|---|---|
+| 画面（HUD 表示） | 1〜2 W（最大要因） |
+| GPS（BestForNavigation） | 0.15〜0.3 W |
+| Motion 50 Hz（ジャイロ + フュージョン + CPU 起床） | 0.03〜0.08 W |
+| 気圧・書き込み・Live Activity | 0.01〜0.03 W |
+
+| 状態（電池 約 15 Wh 換算） | Logger 50 Hz | GPS Only | 差 |
+|---|---|---|---|
+| 画面 ON | 約 13〜15 %/h | 約 12〜14 %/h | 約 1 %/h |
+| 画面 OFF | 約 2.5〜3 %/h | 約 2〜2.5 %/h | 相対 15〜25% 減 |
+
+電池対策の優先順位: ① 画面 OFF / HUD 減光（StandBy・Live Activity 運用）② ジャイロ停止 ③ Motion 周期低下 ④ Live Activity 更新間隔 ⑤ GPS 精度低下（プリセットには入れない）。
+
+### 2.3 CMAltimeter
+- `relativeAltitude`, `pressure`。開始時 GPS 高度を baseline としてセッションに保存し、表示用「気圧補正高度 = baseline + relative」を派生する。
+
+### 2.4 記録しないもの（V2 以降）
+OBD-II / CAN / 外部 GNSS / Apple Watch をセンサーとして使うこと（心拍・腕の Motion）/ HealthKit / カメラ撮影 / 動画 import・同期・HUD レンダリング / iCloud / CarPlay アプリ本体 / Lap timer / Map matching / ナビ
+
+---
+
+## 3. 時刻設計
+
+```
+Session
+  startedAt   : Date            (絶対時刻, UTC)
+  startUptime : TimeInterval    (ProcessInfo.systemUptime, Motion 基準)
+  timeZone    : String
+
+Location sample : timestamp(Date) → elapsed = timestamp - startedAt
+Motion sample   : timestamp(uptime) → elapsed = timestamp - startUptime
+Altitude sample : 同上（CMLogItem）
+Marker / Event  : elapsed + Date の両方
+```
+- 全ストリームを `elapsed` に正規化して合成する。絶対時刻は `startedAt + elapsed` で復元。
+- 動画同期は SYNC マーカーの `elapsed` を t=0 とするオフセット方式（VlogTrack 参照）。
+
+---
+
+## 4. データ保存設計
+
+### 4.1 方針
+- **SwiftData** = セッションメタ・統計・地名・Marker・Calibration（`@Attribute(.codable)`）。一覧・検索・並べ替えに使う。
+- **バイナリファイル** = サンプル本体。セッションごとのフォルダに追記型・固定長レコードで保存。
+
+```
+Application Support/Sessions/<sessionID>/
+  manifest.json      … schema version, record sizes, startedAt/startUptime, preset
+  location.bin       … 72 B / record
+  motion.bin         … 72 B / record (device motion, Float32, timestamp Double)
+                       または 20 B / record (Eco: 加速度のみ)。manifest に形式を記録。GPS Only では作らない
+  altitude.bin       … 16 B / record
+  events.bin         … 24 B / record (kind, elapsed, value)
+```
+- 各 `.bin` は 32 B ヘッダ（magic, version, recordSize）+ レコード列。**復旧可能件数 = (fileSize - header) / recordSize**。
+- 書き込みは `SampleWriter` actor が担当。メモリバッファ → **2 秒ごと、または 256 レコードごとに `write(2)` + `fsync` は 10 秒ごと**。
+- STOP・`willTerminate`・`didEnterBackground` の最終 flush は `withTaskCancellationShield` で保護。
+- ファイル保護は既定（`completeUntilFirstUserAuthentication`）のまま。`.complete` はロック中に書けないので禁止。
+- 再生時は `mmap`（`Data(contentsOf:options:.alwaysMapped)`）→ `Span` で配列化。2 時間ログでも即時に開く。
+
+### 4.2 SwiftData モデル
+```swift
+@Model final class DriveSession {
+    var id: UUID
+    var startedAt: Date
+    var startUptime: TimeInterval
+    var endedAt: Date?
+    var timeZoneID: String
+    var state: RecordingState          // recording / stopped / recovered / discarded
+    var preset: CapturePreset          // gpsOnly / eco / vlog / logger / lab
+    var batteryUsagePerHour: Double?   // 実測 %/h（events の電池記録から算出）
+    var title: String                  // 自動生成 → ユーザー編集可
+    var titleIsUserEdited: Bool
+    var notes: String?
+    var appVersion: String
+    var deviceModel: String
+    var osVersion: String
+
+    // 統計（STOP 時に確定、Recovery 時に再計算）
+    var duration: TimeInterval
+    var distance: Double
+    var maxSpeed: Double
+    var avgSpeed: Double
+    var elevationGain: Double
+    var peakLateralG: Double
+    var gpsAccuracyP50: Double
+    var gpsAccuracyP95: Double
+    var maxLocationGap: TimeInterval
+    var motionSampleCount: Int
+    var motionDropRate: Double
+
+    @Attribute(.codable) var calibration: MountCalibration?
+    @Attribute(.codable) var startPlace: PlaceMeta?
+    @Attribute(.codable) var endPlace: PlaceMeta?
+    @Attribute(.codable) var viaPlaces: [PlaceMeta]
+    var geocodePending: Bool
+
+    @Relationship(deleteRule: .cascade) var markers: [Marker]
+}
+
+@Model final class Marker {
+    var id: UUID
+    var kind: MarkerKind               // sync / mark
+    var elapsed: TimeInterval
+    var date: Date
+    var label: String?
+}
+
+struct PlaceMeta: Codable {
+    var name: String?                  // POI / 道路名（取れないことが多い）
+    var locality: String?              // 市区町村
+    var subLocality: String?
+    var administrativeArea: String?    // 都道府県
+    var fullAddress: String?
+    var mapItemIdentifier: String?     // MKMapItem.Identifier.rawValue
+    var latitude: Double
+    var longitude: Double
+    var role: PlaceRole                // start / end / maxAltitude / peakG
+}
+
+struct MountCalibration: Codable {
+    var rotation: [Double]             // 3x3 device→vehicle
+    var method: String                 // auto / manual
+    var confidence: Double
+    var calibratedAtElapsed: TimeInterval
+}
+```
+
+### 4.3 データ量（1 時間あたり）
+
+| ストリーム | レコード | レート | 1 時間 |
+|---|---|---|---|
+| Location | 72 B | 1 Hz | 0.26 MB |
+| Altitude | 16 B | ~1 Hz | 0.06 MB |
+| Motion（device motion） | 72 B | 25 / 50 / 100 Hz | 6.5 / 13.0 / 25.9 MB |
+| Motion（加速度のみ） | 20 B | 10 Hz | 0.72 MB |
+
+| プリセット | 合計 / 時間 | 2 時間 | 100 走行（1.5 h 平均） |
+|---|---|---|---|
+| GPS Only | 0.3 MB | 0.6 MB | 0.05 GB |
+| Eco（加速度 10 Hz） | 1.0 MB | 2.1 MB | 0.16 GB |
+| Vlog 25 Hz | 6.8 MB | 13.6 MB | 1.0 GB |
+| Logger 50 Hz | 13.3 MB | 26.6 MB | 2.0 GB |
+| Lab 100 Hz | 26.2 MB | 52.4 MB | 3.9 GB |
+
+JSON Export はバイナリの約 8〜10 倍。CSV 10 Hz 統合出力は約 4 MB/h。アーカイブ時に LZFSE で Motion は 40〜60% 縮む。制約はサイズより書き込み頻度・CPU・発熱。
+
+---
+
+## 5. Raw と派生データの棲み分け
+
+```
+Capture（Raw: 端末座標系・未平滑・プリセットで Hz だけ選ぶ）
+   ├─► Logger 成果物 = Raw そのもの（JSON lossless / GPX / Quality レポート）
+   └─► VlogTrack（派生・いつでも再生成可能）
+         - 30 fps に一定周期リサンプル（GPS は補間、course は circular）
+         - Calibration 適用済み車両座標 G
+         - 表示用平滑化（速度 3〜5 sample 移動平均、G は低域通過）
+         - SYNC マーカー基準の t=0 オフセット
+         - CSV / 将来の動画 HUD レンダラーの入力
+```
+- 取得段階で間引かない。Vlog 用は派生物として扱い、Export 画面で「Logger」「Vlog」タブに分ける。
+- `ReplayTelemetryFrame` は VlogTrack と同じ合成ロジック（`TelemetryInterpolator`）から生成する。
+
+---
+
+## 6. Telemetry パイプライン
+
+```
+LocationSource ─┐
+MotionSource   ─┼─► TelemetryEngine (nonisolated actor) ─► SampleWriter (actor) ─► *.bin
+AltimeterSource─┘         │
+                          ├─► LiveTelemetry (@Observable, @MainActor, 10 Hz throttle) ─► HUD
+                          ├─► LiveActivityUpdater (2 s)
+                          ├─► RecordingWatchdog
+                          └─► RunningStatistics
+```
+- `RecordingController` が唯一の状態管理元。状態: `idle → preparing → recording → stopping → finalizing → stopped`、例外: `recording → interrupted → recovered | discarded`。
+- センサーコールバックは MainActor に乗せない。HUD への反映は 10 Hz に間引く。
+
+---
+
+## 7. Mount Calibration
+1. START 直後: 重力ベクトルから pitch / roll を決定（端末の「下」）。
+2. 最初の発進（GPS speed が 0 → 15 km/h 超、かつ userAcceleration の水平成分が 0.15 G 超）で加速方向を「前」と決定。
+3. yaw の 4 象限あいまい性は GPS course の変化と横 G の符号で検証。
+4. 結果を `MountCalibration` としてセッションに保存。Recording 画面に「90° 回転」の手動補正を用意。
+5. ホルダー内で端末が動いた場合は再キャリブレーション（Vlog 側では Marker として残す）。
+
+---
+
+## 8. 地名メタ（STOP 時）
+```
+SessionFinalizer
+  1. 代表点: 開始 / 終了 / 最高標高 / 最大横G（最大 6 点）
+  2. MKReverseGeocodingRequest を各点に実行（MapKit, iOS 26+）
+  3. PlaceMeta として保存。失敗時は geocodePending = true
+  4. 自動タイトル: "前橋市 → 沼田市" / 出発≒到着なら "前橋市 · Loop"
+     titleIsUserEdited == true なら上書きしない
+  5. NWPathMonitor でネット復帰時に pending を再試行
+```
+- 通称（例: "赤城峠"）は逆ジオコーディングでは取れない。ユーザー編集で上書きする前提。
+- JSON Export に `places` ブロックとして含める。
+
+---
+
+## 9. バックグラウンド動作
+
+### 9.1 前提
+- `UIBackgroundModes = [location]`。位置更新を購読している間はプロセスが起き続け、Core Motion / Altimeter / 書き込み / Live Activity 更新も継続する。
+- 権限は **While Using で十分**（START はフォアグラウンド）。Always は V1.1 の「堅牢モード」でのみ要求。
+- 画面ロックはバックグラウンドと同じ扱い。
+
+### 9.2 止まるケース
+| ケース | 対処 |
+|---|---|
+| ユーザーが強制終了 | 起動時 Recovery シート |
+| システムによる終了 | 2 秒 flush + Recovery |
+| GPS 長時間途絶（トンネル）→ サスペンド | Watchdog 2 段目（デッドマンスイッチ） |
+| 低電力モード | Home のセンサー状態に警告 |
+| バックグラウンドで START | 不可。UI で防ぐ |
+
+### 9.3 RecordingWatchdog（2 段）
+**1 段目（プロセス生存中）**
+```
+最終 Location からの経過
+   > 15 s  → HUD / Live Activity に GPS SEARCHING（通知なし）
+   > 60 s  → Live Activity を alertConfiguration 付きで更新
+   > 120 s → 即時ローカル通知「GPS を 2 分間受信できていません。記録は継続中です」
+最終 Motion からの経過 > 10 s → 同様の段階通知
+```
+**2 段目（デッドマンスイッチ）**
+```
+START: UNTimeIntervalNotificationTrigger(180 s), id = "recording.deadman"
+Location / flush ごと（15 s に 1 回に間引く）: 同 id で再登録して延期
+STOP: removePendingNotificationRequests
+```
+サスペンド・クラッシュ・強制終了のどれでも、最終延期から 180 秒後に OS が単独で通知。通知タップでアプリ復帰 → `state == .recording` のセッションを再開・同じファイルに追記。
+
+### 9.4 events ストリーム
+`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested` を elapsed 付きで記録。Quality 画面と JSON Export に出す。
+
+---
+
+## 10. Live Activity（ActivityKit）
+- 1 つの `DriveActivityAttributes` から Lock Screen / Dynamic Island（compact 縦・横・minimal・expanded）/ StandBy / `.small`（CarPlay Dashboard・Watch）を描く。
+- `ContentState = { elapsed, speedKmh, distanceKm, gpsAccuracyM, lateralG, status }`。更新は 2 秒間隔。
+- `isDynamicIslandLimitedInWidth` で横向き compact は「REC ドット + 速度」に縮退。
+- `.supplementalActivityFamilies([.small])`、`activityBackgroundTint(.black)`。
+- `LiveActivityIntent` で MARK / STOP をロック画面と expanded から実行。
+- 言語はアプリ内設定に従う（§13）。
+
+### 10.1 Apple Watch（MVP 範囲: Watch アプリなし）
+- **W1 Smart Stack 表示**: iPhone の Live Activity は watchOS 11+ で Watch アプリなしに Smart Stack / 文字盤へ表示される。Watch 側は Dynamic Island の compact / expanded の内容から描かれるため、compact（REC + 経過 / 速度）と expanded を Watch でも読める密度で作る。`.small` family は CarPlay と共通。
+- **W2 Double Tap で MARK**: MARK ボタンに `.handGestureShortcut(.primaryAction)` を付与し、ハンドルを握ったまま指の Double Tap（Series 9 / Ultra 2 以降）で MARK できるようにする。watchOS 27 の Single Tap でも Smart Stack から選択可能。
+- **要検証（S2）**: Watch 上の iPhone Live Activity から押したボタンで iPhone 側の `LiveActivityIntent` が確実に実行されるか。不可なら W3（V1.1 の Watch アプリ）で実現する。
+- Watch から実行された MARK は events に `source = watch` を付けて記録する。
+
+---
+
+## 11. 画面構成（モック準拠）
+
+| # | 画面 | 要点 |
+|---|---|---|
+| 1 | Home / Ready | センサー状態（GPS 精度・Precise・Motion Hz・気圧・給電・背景許可）、START、最近のセッション、タブ（Record / Sessions / Quality） |
+| 2 | Recording HUD（縦） | 速度 132pt、ALT / COURSE / DIST、G メーター、MARK / SYNC、STOP。ミニ Map なし |
+| 8 | Recording HUD（横） | 同じ情報を 3 カラム配置。横幅クラスで `VStack` / `HStack` を切り替える 1 つの View |
+| 3 | Sessions | `@Query(sectionBy:)` で月別、ルートサムネ、RECOVERED バッジ |
+| 4 | Session Detail | Map（開始 / 終了 / MARK）、6 指標、Log Quality 行、Replay / Export |
+| 5 | Timeline Replay | Map 追従、速度スパークライン（Swift Charts）、スライダー、SYNC / MARK ジャンプ、再生速度 |
+| 6 | Lock Screen Live Activity | REC・経過・速度・距離・GPS、MARK / STOP |
+| 7 | Crash Recovery Sheet | item-binding の alert / sheet |
+| 9 | StandBy | 200% 拡大、ボタンなし |
+| 10 | Dynamic Island / CarPlay small | 5 パターン |
+| — | Quality（Debug） | サンプル数・平均間隔・最大ギャップ・精度 P50/P95・Motion 実効 Hz・欠落・thermal・**電池消費 %/h（画面 ON / OFF 別）**・events |
+| — | Settings | プリセット（5 種、電池・データ量の目安付き）、単位、言語、堅牢モード（V1.1） |
+
+デザイン: ダーク単一テーマ、数値は等幅（SF Mono 相当）、アクセントは琥珀 1 色 + REC 赤 + GPS 良好の緑。Liquid Glass はタブバー・ボタンのシステム標準に任せ、HUD 本体はフラットな黒。
+
+---
+
+## 12. Replay / 補間 / Export
+- `TelemetryInterpolator`: Location は線形（course は circular）、Motion は最近傍または線形。共通 API。
+- `ReplayTelemetryFrame { time, lat, lon, speed, altitude, course, lateralG, longitudinalG, verticalG, roll, pitch, yaw, gpsAccuracy }`。
+- Export
+  - **JSON** = Master（lossless、session / places / markers / events / location / motion / altitude）
+  - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）
+  - **GPX** = 互換（`<trkpt>` + extensions: speed / course / hAcc）
+  - `ShareLink` / `UIActivityViewController`
+
+---
+
+## 13. ローカライズ（日本語 / 英語）
+- **String Catalog（`Localizable.xcstrings`）**に ja / en。開発言語は en、Base は使わない。
+- 既定は OS 言語。**アプリ内の言語設定**（System / 日本語 / English）を `AppStorage("appLanguage")` に保持し、OS 言語に依存せず切替可能。再起動不要。
+- 実装
+  - `@Observable AppLanguage { var locale: Locale; var bundle: Bundle }`
+  - SwiftUI: ルートで `.environment(\.locale, appLanguage.locale)`。`Text` の String Catalog 参照はこの locale で解決される。
+  - 非 View コード（通知文・Export ラベル・自動タイトル）: `String(localized:table:bundle:locale:)` に `appLanguage` を渡す。
+  - Live Activity / Widget: `ContentState` に `languageCode` を含め、Widget 側でも `.environment(\.locale, …)`。
+  - `AppleLanguages` の UserDefaults 書き換えは再起動が必要なので使わない。
+- 数値・単位は `Measurement` + `MeasurementFormatter` を locale 付きで。数字は両言語とも Latin 数字・等幅。
+- 日本語 UI でも HUD のラベル（ALT / COURSE / DIST / LAT G）は英略語のまま。説明文・設定・通知・タイトルは翻訳。
+
+---
+
+## 14. 技術スタック
+
+| 項目 | 選定 |
+|---|---|
+| 言語 / ツール | Swift 6.4、Xcode 27.2、`.xcproj`（JSON プロジェクト形式）を採用 |
+| UI | SwiftUI、Observation（`@Observable`）、Swift Charts |
+| 並行性 | App ターゲット: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` + Approachable Concurrency（Xcode 既定）。**Sensors / Recording / Storage / Replay / Export はローカル SwiftPM パッケージに分離し `nonisolated` 既定** |
+| 位置 | Core Location（`CLLocationManager` と `liveUpdates` を Test B で比較）、`CLServiceSession` |
+| Motion | Core Motion `CMMotionManager`（≤100 Hz） |
+| 気圧 | `CMAltimeter` |
+| Map | MapKit for SwiftUI、`MapPolyline`、`MKReverseGeocodingRequest` |
+| 永続化 | SwiftData（メタ）+ 追記型バイナリ（サンプル） |
+| 背景 | `UIBackgroundModes: location`、`CLBackgroundActivitySession`、ActivityKit |
+| 通知 | `UserNotifications`（Watchdog）、Live Activity alert |
+| Export | Foundation / XMLCoder 不使用の手書き GPX |
+| テスト | Swift Testing。センサーは protocol + Fake。記録済み `.bin` を流し込むリプレイテスト |
+| ローカライズ | String Catalog、ja / en |
+
+---
+
+## 15. プロジェクト構成
+```
+DriveScope/
+├── DriveScope.xcproj
+├── App/                         DriveScopeApp, RootTabView, AppState, AppLanguage
+├── Features/
+│   ├── Home/
+│   ├── Recording/               RecordingView (portrait/landscape), GMeterView, TelemetryValue
+│   ├── Sessions/
+│   ├── SessionDetail/
+│   ├── Replay/
+│   ├── Quality/
+│   ├── Settings/
+│   └── Recovery/
+├── LiveActivity/                DriveActivityAttributes, DriveActivityWidget (extension target)
+├── Packages/
+│   ├── DriveDomain/             Session, Marker, Sample structs, TelemetryFrame, Units, PlaceMeta
+│   ├── DriveSensors/            LocationSource, MotionSource, AltimeterSource (+ CL/CM impls, Fakes)
+│   ├── DriveRecording/          RecordingController, TelemetryEngine, SampleWriter, Watchdog, MountCalibrator, SessionFinalizer
+│   ├── DriveStorage/            SessionStore (SwiftData), TelemetryFileStore (bin I/O), Recovery, Manifest
+│   ├── DriveReplay/             TelemetryReader, Interpolator, ReplayPlayer, Statistics, VlogTrack
+│   └── DriveExport/             JSONExporter, CSVExporter, GPXExporter
+├── Resources/                   Localizable.xcstrings, Assets
+├── docs/                        PLAN.md, TESTING.md（実車テスト記録）
+└── Tests/                       各パッケージの Swift Testing + Fixtures/*.bin
+```
+
+---
+
+## 16. スプリント計画
+
+| Sprint | 内容 | Exit criteria |
+|---|---|---|
+| **S0 Bootstrap** | `.xcproj` 作成、Bundle ID / Team、パッケージ分割、Background Mode、権限文字列、String Catalog（ja/en）、AppLanguage、CI（ビルド + テスト） | 実機起動、言語切替が動く |
+| **S1 縦切り** | 権限フロー（Precise 判定）、`LocationSource`（両実装）、`RecordingController`、`location.bin` 書込、Home + Recording HUD（縦・横）+ STOP、Sessions 一覧、Detail の Map ルート | 実車で START → 走行 → STOP → 軌跡表示 |
+| **S2 信頼性** | `CLBackgroundActivitySession`、Live Activity（全サーフェス、Watch Smart Stack 含む）、MARK の Double Tap 対応、2 秒 flush、Recovery、**RecordingWatchdog（2 段）**、**events ストリーム**、Quality 画面 | 画面 OFF 30 分でルート欠落ゼロ、強制終了後に復旧、通知が届く、Watch の Double Tap で MARK が iPhone に記録される |
+| **S3 Motion + プリセット** | `MotionSource`（device motion 25/50/100 Hz と加速度のみ 10 Hz の 2 実装）、`motion.bin`（2 形式）、`MountCalibrator`（加速度のみでも動作）、G メーター、GPS 推定横 G、MARK / SYNC、5 プリセット設定、電池記録（batterySnapshot）と %/h 算出、残量低下時の提案 | 30 分で Motion 欠落率 < 0.1%、横 G の符号がコーナーで正しい、全プリセットで記録・再生できる |
+| **S4 Altimeter + 統計 + 地名** | `altitude.bin`、baseline、6 指標、`SessionFinalizer`（逆ジオコーディング・自動タイトル）、rename / delete | 峠で Gain が妥当、タイトルが自動生成される |
+| **S5 Replay** | `TelemetryReader`（mmap）、`Interpolator`、`ReplayTelemetryFrame`、Replay 画面、Swift Charts | スライダーで Map と HUD が同期、2 時間ログでも即開く |
+| **S6 Export** | JSON / CSV（VlogTrack）/ GPX、ShareLink、Export 画面の Logger / Vlog タブ | Files / AirDrop / Mac で開ける |
+| **S7 仕上げ** | Settings、Liquid Glass 調整、iPad / リサイズ対応確認、実車テスト A〜D、docs/TESTING.md | Definition of Done 全項目 |
+
+各スプリントは「1 コミット単位で動く状態」を保つ。S1 終了時点で実車テストを 1 回挟む。
+
+---
+
+## 17. 実車テスト計画
+| Test | 条件 | 確認 |
+|---|---|---|
+| A 静止 | 10 分停車 | GPS ドリフト、距離が増えない、G ノイズ、高度ドリフト |
+| B 市街地 | 20〜30 分 | 信号停止、建物誤差、背景 / ロック継続、`CLLocationManager` vs `liveUpdates` 比較 |
+| C 峠 | 30〜60 分 | 高低差、横 G、course、GPS vs 気圧高度、Calibration、トンネル時の Watchdog |
+| D 長時間 | 2 時間以上 | memory、storage、battery、thermal、欠落、Recovery |
+| E 電池比較 | 同一ルート 60 分 × 3 回（GPS Only / Eco / Logger）、画面 OFF・非充電 | プリセット別 %/h を実測し §2.2.2 の推定値を置き換える。Eco の G と Logger の G の差、GPS 推定横 G の誤差も比較 |
+
+結果は `docs/TESTING.md` に日付・端末・OS・プリセット付きで記録する。
+
+---
+
+## 18. 設計上の最重要ルール
+1. Raw sensor data を可能な限り残す（端末座標系・未平滑）
+2. 表示 / Vlog 用フィルタと保存用データを分離する
+3. GPS / Motion / Altimeter / Events を独立した time-series として扱う
+4. すべてを session elapsed time と絶対時刻の両方に変換可能にする
+5. 固定 1 Hz GPS を前提にしない
+6. 背景動作と停止検知を初期スプリントから検証する
+7. UI より先にロギングの信頼性を作る
+8. GPX を内部マスター形式にしない。JSON を lossless export とする
+9. Replay Engine（Interpolator / Frame）を将来の Video HUD Engine として再利用する
+10. サンプル本体を SwiftData に入れない
+
+---
+
+## 19. V1.1 候補
+- 堅牢モード（Always 権限 + Significant Location Change による自動復旧）
+- Motion 補助による速度の 10 Hz 補間（GPS 1 Hz の間を加速度積分で埋める）
+- Replay 区間解析（コーナー・登り / 下り）→ `sections[]`
+- **Apple Watch コンパニオンアプリ（W3）**
+  - 画面: 大きな MARK（`handGestureShortcut(.primaryAction)`）、REC 状態・経過・速度、STOP
+  - 通信: `WatchConnectivity`（Watch からの送信で iPhone アプリがバックグラウンドで起動・処理）
+  - MARK 時の触覚フィードバック。Watchdog のローカル通知は OS が自動で Watch に転送
+  - **START は堅牢モード（Always 権限）時のみ**（iPhone をバックグラウンドから記録開始させるため）
+  - **SYNC は iPhone のみ**。Watch → iPhone の通信遅延（100〜500 ms 程度でばらつく）は動画同期基準に不十分。Watch 起点の操作は Watch 時刻と iPhone 受信時刻の両方を保存し、MARK（±1 s で十分）用途に限定
+- LZFSE アーカイブ
+- **CarPlay Driving Task アプリ**（`com.apple.developer.carplay-driving-task`、Apple 承認制。**申請は S0 と並行して早期に提出**）
+  - テンプレートのみ: グリッドで START / STOP / MARK / SYNC、情報テンプレートで REC 状態（経過・距離・GPS 精度）、直近セッション一覧
+  - iOS 27 の Voice Control テンプレート（オーバーレイ）で音声 MARK
+  - 独自描画（速度 HUD・G メーター・地図）は不可。走行中の Replay も不可
+  - 審査リスク: 「運転を助ける作業」であることの説明が必要（視線を外さず開始・停止・マークできる安全性を根拠にする）
+  - MVP の CarPlay 対応は Live Activity `.small`（CarPlay Dashboard）のみ
+- **CarPlay 接続で自動 START**（オプション）
+  - 接続・切断を検知して events に記録（`carPlayConnected / carPlayDisconnected`、これは MVP の events に含めてよい）
+  - 自動 START はバックグラウンドからの開始になるため Always 権限が必要 → 堅牢モードとセット
+
+## 19.1 V2 検討項目
+- **Apple Watch 心拍（W4）**
+  - Vlog HUD に運転者の心拍を表示する用途
+  - Watch 上で `HKWorkoutSession` を実行し iPhone へミラーリング受信（iOS 17+）、`heartrate.bin`（1 Hz × 16 B、容量は無視できる）
+  - **審査リスク**: HealthKit データを健康・フィットネス目的以外（運転 Vlog の演出）に使うことの可否がグレー。事前に App Review Guidelines 5.1.3 を確認
+  - プライバシー設計: Health にワークアウトを保存しない終了処理、Export 時の健康データはオプトイン
+  - 腕の加速度は車両 G と無関係、Watch の GPS は iPhone より良くないため、どちらも採用しない
+
+## 20. 参考
+- WWDC26: SwiftUI guide https://developer.apple.com/wwdc26/guides/swiftui/
+- WWDC26 223 Live Activities essentials https://developer.apple.com/videos/play/wwdc2026/223/
+- WWDC26 274 What's new in SwiftData https://developer.apple.com/videos/play/wwdc2026/274/
+- WWDC24 What's new in location authorization https://developer.apple.com/videos/play/wwdc2024/10212/
+- MKReverseGeocodingRequest https://developer.apple.com/documentation/mapkit/mkreversegeocodingrequest
+- CLBackgroundActivitySession https://developer.apple.com/documentation/corelocation/clbackgroundactivitysession
+- CMMotionManager https://developer.apple.com/documentation/coremotion/cmmotionmanager
