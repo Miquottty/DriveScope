@@ -74,8 +74,9 @@ public struct RecordingWatchdog: Sendable {
         if let lastMotion {
             step(.motion, stage: &motionStage, peak: &motionPeakSilence, silence: now - lastMotion, degradedAfter: policy.motionStalled, into: &actions)
         }
-        // Re-arm only while GPS is healthy: if the process is suspended, the last arm fires on its own.
-        if gpsStage == .ok, lastDeadmanArm.map({ now - $0 >= policy.deadmanRefresh }) ?? true {
+        // Evaluation only happens while the process runs, so re-arming proves liveness: once the process is
+        // suspended or killed, the last armed notification fires on its own (a tunnel alone is stage 1's job).
+        if lastDeadmanArm.map({ now - $0 >= policy.deadmanRefresh }) ?? true {
             lastDeadmanArm = now
             actions.append(.rearmDeadman)
         }
