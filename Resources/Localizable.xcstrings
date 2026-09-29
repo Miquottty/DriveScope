@@ -695,6 +695,54 @@
         }
       }
     },
+    "Climb": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Climb"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登り"
+          }
+        }
+      }
+    },
+    "Climbs": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Climbs"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "登り"
+          }
+        }
+      }
+    },
+    "Corners": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Corners"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "コーナー"
+          }
+        }
+      }
+    },
     "Could not delete the session": {
       "localizations": {
         "en": {
@@ -803,6 +851,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "拒否"
+          }
+        }
+      }
+    },
+    "Descent": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descent"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下り"
+          }
+        }
+      }
+    },
+    "Descents": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descents"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "下り"
           }
         }
       }
@@ -1419,6 +1499,22 @@
         }
       }
     },
+    "Jumps to this section": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jumps to this section"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この区間へ移動します"
+          }
+        }
+      }
+    },
     "Language": {
       "localizations": {
         "en": {
@@ -1447,6 +1543,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "空にすると自動の名前に戻ります。"
+          }
+        }
+      }
+    },
+    "Left corner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Left corner"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "左コーナー"
           }
         }
       }
@@ -2695,6 +2807,22 @@
         }
       }
     },
+    "Right corner": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Right corner"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "右コーナー"
+          }
+        }
+      }
+    },
     "Robust mode": {
       "localizations": {
         "en": {
@@ -2845,6 +2973,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "スクリプト走行"
+          }
+        }
+      }
+    },
+    "Sections": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sections"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "区間"
           }
         }
       }
@@ -3105,6 +3249,22 @@
         }
       }
     },
+    "Stop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
+          }
+        }
+      }
+    },
     "Stop Recording": {
       "localizations": {
         "en": {
@@ -3117,6 +3277,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "記録を停止"
+          }
+        }
+      }
+    },
+    "Stops": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stops"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "停止"
           }
         }
       }
