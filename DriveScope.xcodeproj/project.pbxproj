@@ -80,6 +80,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		4220A4B6306C064A00D06BB2 /* WatchShared */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = WatchShared;
+			sourceTree = "<group>";
+		};
 		425FDFF6306C03E100FFD1AA /* Watch */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Watch;
@@ -170,6 +175,7 @@
 				D5C0DE000000000000000007 /* Frameworks */,
 				D5C0DE000000000000000005 /* Products */,
 				425FDFF6306C03E100FFD1AA /* Watch */,
+				4220A4B6306C064A00D06BB2 /* WatchShared */,
 			);
 			sourceTree = "<group>";
 		};
@@ -218,6 +224,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
+				4220A4B6306C064A00D06BB2 /* WatchShared */,
 				425FDFF6306C03E100FFD1AA /* Watch */,
 			);
 			name = DriveScopeWatch;
@@ -244,6 +251,7 @@
 				4299E583306C03EC00D92D41 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
+				4220A4B6306C064A00D06BB2 /* WatchShared */,
 				D5C0DE000000000000000008 /* App */,
 				D5C0DE000000000000000009 /* Features */,
 				D5C0DE00000000000000000A /* Resources */,
