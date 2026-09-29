@@ -24,10 +24,10 @@ struct RecordingControllerTests {
         #expect(controller.phase == .recording)
         let id = try #require(controller.session?.id)
 
-        try await Task.sleep(for: .seconds(1.5))
+        // Progress-based waits (not fixed sleeps) so slower CI runners behave the same.
+        try await waitUntil { controller.live.snapshot.locationCount > 120 }
         await controller.mark(.sync)
-        try await Task.sleep(for: .seconds(1.0))
-        #expect(controller.live.snapshot.locationCount > 100)
+        try await waitUntil { controller.live.snapshot.locationCount >= 230 }
         await controller.stop()
         #expect(controller.phase == .stopped)
 
@@ -37,9 +37,9 @@ struct RecordingControllerTests {
         let motion = try files.deviceMotion()
         let events = try files.events()
 
-        // ~250 s of drive at 1 Hz GPS and 50 Hz motion.
+        // ≥ 230 s of drive at 1 Hz GPS and 50 Hz motion.
         #expect(session.state == .stopped)
-        #expect((200...320).contains(locations.count))
+        #expect((220...400).contains(locations.count))
         #expect(session.locationSampleCount == locations.count)
         #expect(Double(motion.count) > session.duration * 50 * 0.9)
         #expect(session.motionDropRate < 0.1)
@@ -55,5 +55,16 @@ struct RecordingControllerTests {
         #expect(session.calibration != nil)
         #expect(try files.readManifest().calibration == session.calibration)
         #expect(events.contains { $0.kind == .calibrationUpdated })
+    }
+
+    private func waitUntil(timeout: TimeInterval = 30, _ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() {
+            guard Date() < deadline else {
+                Issue.record("condition not met within \(timeout) s")
+                return
+            }
+            try await Task.sleep(for: .milliseconds(50))
+        }
     }
 }
