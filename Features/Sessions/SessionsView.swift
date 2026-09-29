@@ -146,6 +146,16 @@ private struct SessionRow: View {
     let open: () -> Void
 
     var body: some View {
+        // A session deleted from the detail screen: this row (off-screen under the pushed detail) can be re-evaluated
+        // before the query drops it, and reading a deleted model traps.
+        if session.isDeleted || session.modelContext == nil {
+            EmptyView()
+        } else {
+            row
+        }
+    }
+
+    private var row: some View {
         Button(action: open) {
             HStack(spacing: 12) {
                 RouteThumbnail(points: session.routePreview, dashed: session.state == .recovered)

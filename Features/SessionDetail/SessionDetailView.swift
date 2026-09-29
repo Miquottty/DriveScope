@@ -1,4 +1,5 @@
 import DriveDomain
+import DriveRecording
 import DriveStorage
 import MapKit
 import SwiftData
@@ -9,9 +10,16 @@ struct SessionDetailView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(AppLanguage.self) private var appLanguage
+    @Environment(RecordingController.self) private var recorder
+    @Environment(\.dismiss) private var dismiss
     @Query private var sessions: [DriveSession]
     @State private var route = SessionRoute()
     @State private var camera = MapCameraPosition.automatic
+    @State private var isRenaming = false
+    @State private var draftTitle = ""
+    @State private var isConfirmingDelete = false
+    @State private var isDeleted = false
+    @State private var deleteError: String?
 
     private static let mapHeight: CGFloat = 340
 
@@ -24,7 +32,7 @@ struct SessionDetailView: View {
         Group {
             if let session = sessions.first {
                 content(session)
-            } else {
+            } else if !isDeleted {
                 ContentUnavailableView("Session not found", systemImage: "questionmark.folder")
             }
         }
@@ -32,6 +40,15 @@ struct SessionDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackgroundVisibility(.hidden, for: .navigationBar)
         .toolbarVisibility(.hidden, for: .tabBar)
+        // Outside `content`: the alert must survive the session disappearing from the query.
+        .alert(
+            "Could not delete the session",
+            isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })
+        ) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(verbatim: deleteError ?? "")
+        }
     }
 
     private func content(_ session: DriveSession) -> some View {
@@ -46,6 +63,8 @@ struct SessionDetailView: View {
                     titleBlock(session, format)
                     metricsGrid(session, format)
                     logQuality(session, format)
+                    SessionPlacesCard(places: session.viaPlaces)
+                    SessionNotesEditor(session: session)
                 }
                 .padding(.horizontal, 20)
                 .padding(.top, 18)
@@ -57,6 +76,82 @@ struct SessionDetailView: View {
         .scrollBounceBehavior(.basedOnSize)
         .safeAreaInset(edge: .bottom, spacing: 0) { actionButtons }
         .task(id: session.id) { await loadRoute(for: session) }
+        .toolbar { menu(session, format) }
+        .alert("Rename", isPresented: $isRenaming) {
+            TextField("Session name", text: $draftTitle)
+            Button("Save") { commitRename(session, format) }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Leave empty to use the automatic name.")
+        }
+        .confirmationDialog("Delete this session?", isPresented: $isConfirmingDelete, titleVisibility: .visible) {
+            Button("Delete", role: .destructive) { delete(session) }
+        } message: {
+            Text("The recorded data is removed from this device.")
+        }
+    }
+
+    // MARK: Rename and delete
+
+    /// The session being recorded right now keeps its files (same rule as the Sessions swipe action).
+    private func isRecording(_ session: DriveSession) -> Bool {
+        recorder.session?.id == session.id
+    }
+
+    @ToolbarContentBuilder
+    private func menu(_ session: DriveSession, _ format: SessionFormat) -> some ToolbarContent {
+        ToolbarItem(placement: .topBarTrailing) {
+            Menu {
+                Button {
+                    beginRename(session, format)
+                } label: {
+                    Label("Rename", systemImage: "pencil")
+                }
+                Button(role: .destructive) {
+                    isConfirmingDelete = true
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+                .disabled(isRecording(session))
+            } label: {
+                Image(systemName: "ellipsis")
+                    .foregroundStyle(Theme.textPrimary)
+            }
+            .accessibilityLabel("More")
+            .accessibilityIdentifier("sessionMenu")
+        }
+    }
+
+    private func beginRename(_ session: DriveSession, _ format: SessionFormat) {
+        draftTitle = format.title(session)
+        isRenaming = true
+    }
+
+    private func commitRename(_ session: DriveSession, _ format: SessionFormat) {
+        let name = draftTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.isEmpty {
+            // Back to the automatic name: clear it so the date shows if regeneration cannot produce one.
+            session.titleIsUserEdited = false
+            session.title = ""
+            try? model.store.save()
+            // A running session is named by the finalizer at STOP.
+            guard !isRecording(session) else { return }
+            Task { await model.finalizer.finalize(session) }
+        } else if name != format.title(session) {
+            session.title = name
+            session.titleIsUserEdited = true
+            try? model.store.save()
+        }
+    }
+
+    private func delete(_ session: DriveSession) {
+        do {
+            try model.store.delete(session, filesRoot: model.filesRoot)
+            isDeleted = true
+            dismiss()
+        } catch {
+            deleteError = String(describing: error)
+        }
     }
 
     // MARK: Map
@@ -123,10 +218,21 @@ struct SessionDetailView: View {
     private func titleBlock(_ session: DriveSession, _ format: SessionFormat) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(spacing: 8) {
-                Text(verbatim: format.title(session))
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(2)
+                Button { beginRename(session, format) } label: {
+                    HStack(spacing: 8) {
+                        Text(verbatim: format.title(session))
+                            .font(.system(size: 22, weight: .semibold))
+                            .foregroundStyle(Theme.textPrimary)
+                            .multilineTextAlignment(.leading)
+                            .lineLimit(2)
+                        Image(systemName: "pencil")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(Theme.textMuted)
+                    }
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint("Rename")
+                .accessibilityIdentifier("renameButton")
                 if session.state == .recovered {
                     Text(verbatim: "RECOVERED")
                         .font(.system(size: 10, weight: .semibold))
@@ -137,6 +243,7 @@ struct SessionDetailView: View {
                         .background(Theme.accent.opacity(0.15), in: RoundedRectangle(cornerRadius: 4))
                 }
             }
+            SessionPlacesLine(session: session, title: format.title(session))
             Text(verbatim: format.dateRangeLine(session))
                 .font(.system(size: 13))
                 .foregroundStyle(Theme.textSecondary)
