@@ -51,9 +51,9 @@ public final class CoreMotionSource: MotionSource, @unchecked Sendable {
                     continuation.yield(.deviceMotion(MotionSample(motion)))
                 }
             }
-            continuation.onTermination = { [manager] _ in
-                manager.stopAccelerometerUpdates()
-                manager.stopDeviceMotionUpdates()
+            continuation.onTermination = { _ in
+                self.manager.stopAccelerometerUpdates()
+                self.manager.stopDeviceMotionUpdates()
             }
         }
     }
@@ -99,7 +99,7 @@ public final class CoreAltimeterSource: AltimeterSource, @unchecked Sendable {
                     pressure: data.pressure.floatValue
                 ))
             }
-            continuation.onTermination = { [altimeter] _ in altimeter.stopRelativeAltitudeUpdates() }
+            continuation.onTermination = { _ in self.altimeter.stopRelativeAltitudeUpdates() }
         }
     }
 }

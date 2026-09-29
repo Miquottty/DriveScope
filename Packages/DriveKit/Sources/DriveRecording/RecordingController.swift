@@ -66,6 +66,8 @@ public final class RecordingController {
     private var observers: [any RecordingObserver] = []
     /// Debug builds may shorten the watchdog thresholds (Settings → Debug).
     public var watchdogPolicy = RecordingWatchdog.Policy()
+    /// Runs at STOP before the streams close — last-moment events (e.g. a final battery snapshot).
+    public var willStop: (@MainActor () async -> Void)?
     /// Applied at every START / resume, so settings changed since launch take effect.
     public var prepareForStart: (@MainActor (RecordingController) -> Void)?
 
@@ -153,6 +155,7 @@ public final class RecordingController {
     public func stop() async {
         guard phase == .recording, let engine, let session, let files else { return }
         phase = .stopping
+        await willStop?()
         let statistics = await engine.stop()
         let duration = max(0, await engine.elapsed)
         phase = .finalizing

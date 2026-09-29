@@ -2,6 +2,7 @@
 # DriveScope build helper. Pins Xcode 27.2 beta via DEVELOPER_DIR (xcode-select is left untouched).
 #
 #   scripts/xc.sh build            Build the app for the simulator → prints the .app path
+#   scripts/xc.sh build-device     Compile for a generic iOS device (no signing) — catches device-only errors
 #   scripts/xc.sh test             Package tests on macOS (fast, `swift test`)
 #   scripts/xc.sh test-ios         App tests (UI tests) on the iOS simulator
 #   scripts/xc.sh test-ui          UI tests only
@@ -72,6 +73,9 @@ case "$cmd" in
     udid=$(sim_udid)
     xcb -scheme DriveScope -configuration Debug -destination "platform=iOS Simulator,id=$udid" build "$@"
     echo "$DERIVED/Build/Products/Debug-iphonesimulator/DriveScope.app" ;;
+  build-device)
+    # Compile-only check for the iphoneos SDK (device-only code paths); no signing.
+    xcb -scheme DriveScope -configuration Debug -destination "generic/platform=iOS" build "$@" && echo "device build OK" ;;
   test)
     (cd "$ROOT/Packages/DriveKit" && swift test --quiet "$@") ;;
   test-ios)
