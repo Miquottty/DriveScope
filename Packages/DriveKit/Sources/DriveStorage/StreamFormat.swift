@@ -90,7 +90,7 @@ public struct StreamHeader: Equatable, Sendable {
         return bytes
     }
 
-    init(decoding buffer: UnsafeRawBufferPointer) throws(StreamFormatError) {
+    public init(decoding buffer: UnsafeRawBufferPointer) throws(StreamFormatError) {
         guard buffer.count >= Self.size else { throw .truncatedHeader }
         var r = RecordReader(buffer, at: 0)
         guard r.get(UInt32.self) == Self.magic else { throw .badMagic }

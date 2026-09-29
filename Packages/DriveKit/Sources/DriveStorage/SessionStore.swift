@@ -11,9 +11,14 @@ public final class SessionStore {
         self.context = context
     }
 
-    public static func makeContainer(inMemory: Bool = false) throws -> ModelContainer {
+    /// `url` places the store elsewhere (UI tests that must survive a relaunch).
+    public static func makeContainer(inMemory: Bool = false, url: URL? = nil) throws -> ModelContainer {
         let schema = Schema([DriveSession.self, Marker.self])
-        let configuration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        let configuration = if let url {
+            ModelConfiguration(schema: schema, url: url)
+        } else {
+            ModelConfiguration(schema: schema, isStoredInMemoryOnly: inMemory)
+        }
         return try ModelContainer(for: schema, configurations: [configuration])
     }
 
@@ -84,7 +89,7 @@ public final class SessionStore {
     }
 
     /// Evenly downsamples fixes to at most `maxPoints`, always keeping the first and last usable fix.
-    public static func routePreview(from locations: [LocationSample], maxPoints: Int = 200) -> [RoutePoint] {
+    nonisolated public static func routePreview(from locations: [LocationSample], maxPoints: Int = 200) -> [RoutePoint] {
         let usable = locations.filter { $0.horizontalAccuracy > 0 && $0.horizontalAccuracy <= 50 }
         guard maxPoints >= 2, usable.count > maxPoints else {
             return usable.map { RoutePoint(latitude: $0.latitude, longitude: $0.longitude) }

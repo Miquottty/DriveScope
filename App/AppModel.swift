@@ -27,8 +27,18 @@ final class AppModel {
     init() {
         sensorEnvironment = SensorEnvironment.current()
         do {
-            container = try SessionStore.makeContainer(inMemory: sensorEnvironment.isUITest)
-            filesRoot = try SessionFiles.defaultRoot()
+            // UI tests never touch the real sessions: in-memory store and a temporary files folder, wiped at launch —
+            // except with `-UITestKeepData`, where both live in a temporary folder that survives a relaunch.
+            let env = sensorEnvironment
+            let testRoot = FileManager.default.temporaryDirectory.appending(path: "UITest", directoryHint: .isDirectory)
+            if env.isUITest, !env.uiTestKeepsData || ProcessInfo.processInfo.arguments.contains("-UITestFresh") {
+                try? FileManager.default.removeItem(at: testRoot)
+            }
+            if env.isUITest { try FileManager.default.createDirectory(at: testRoot, withIntermediateDirectories: true) }
+            container = env.isUITest
+                ? try SessionStore.makeContainer(inMemory: !env.uiTestKeepsData, url: env.uiTestKeepsData ? testRoot.appending(path: "store.sqlite") : nil)
+                : try SessionStore.makeContainer()
+            filesRoot = env.isUITest ? testRoot.appending(path: "Sessions", directoryHint: .isDirectory) : try SessionFiles.defaultRoot()
         } catch {
             fatalError("Cannot open the session store: \(error)")
         }
@@ -79,6 +89,10 @@ final class AppModel {
             Task { @MainActor in await finalizer.retryPending() }
         }
         network.start(queue: DispatchQueue(label: "DriveScope.network"))
+
+        #if DEBUG
+        Task { [store, filesRoot] in await DebugSeed.seedIfRequested(store: store, filesRoot: filesRoot) }
+        #endif
     }
 
     private static func hardwareModel() -> String {
@@ -111,6 +125,8 @@ struct SensorEnvironment {
     var source: Source
     var locationBackend: LocationBackend
     var isUITest: Bool
+    /// `-UITestKeepData`: the UI-test store and files survive a relaunch (recovery test).
+    var uiTestKeepsData: Bool { ProcessInfo.processInfo.arguments.contains("-UITestKeepData") }
 
     static func current(arguments: [String] = ProcessInfo.processInfo.arguments) -> SensorEnvironment {
         func value(after flag: String) -> String? {

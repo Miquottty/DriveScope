@@ -37,7 +37,7 @@ let package = Package(
         .testTarget(name: "DriveStorageTests", dependencies: ["DriveStorage"], swiftSettings: swiftSettings),
         .testTarget(name: "DriveSensorsTests", dependencies: ["DriveSensors"], swiftSettings: swiftSettings),
         .testTarget(name: "DriveRecordingTests", dependencies: ["DriveRecording", "DriveSensors"], swiftSettings: swiftSettings),
-        .testTarget(name: "DriveReplayTests", dependencies: ["DriveReplay", "DriveSensors"], swiftSettings: swiftSettings),
-        .testTarget(name: "DriveExportTests", dependencies: ["DriveExport", "DriveSensors"], swiftSettings: swiftSettings),
+        .testTarget(name: "DriveReplayTests", dependencies: ["DriveReplay", "DriveSensors", "DriveRecording"], swiftSettings: swiftSettings),
+        .testTarget(name: "DriveExportTests", dependencies: ["DriveExport", "DriveSensors", "DriveRecording"], swiftSettings: swiftSettings),
     ]
 )
