@@ -1,3 +1,4 @@
+import AppIntents
 import DriveDomain
 import DriveRecording
 import DriveSensors
@@ -15,6 +16,8 @@ final class AppModel {
     let recorder: RecordingController
     let filesRoot: URL
     let sensorEnvironment: SensorEnvironment
+    private let liveActivity: LiveActivityController
+    private let notifications: RecordingNotifications
 
     init() {
         sensorEnvironment = SensorEnvironment.current()
@@ -32,9 +35,16 @@ final class AppModel {
             osVersion: "\(device.systemName) \(device.systemVersion)"
         )
         let sensors = sensorEnvironment
-        recorder = RecordingController(store: store, filesRoot: filesRoot, environment: environment) {
+        let recorder = RecordingController(store: store, filesRoot: filesRoot, environment: environment) {
             sensors.makeSuite()
         }
+        self.recorder = recorder
+        // Live Activity MARK / STOP intents run in this process and reach the recorder through @Dependency.
+        AppDependencyManager.shared.add(dependency: recorder)
+        liveActivity = LiveActivityController(recorder: recorder)
+        recorder.addObserver(liveActivity)
+        notifications = RecordingNotifications(recorder: recorder)
+        recorder.addObserver(notifications)
     }
 
     private static func hardwareModel() -> String {

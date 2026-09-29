@@ -11,7 +11,7 @@ import UserNotifications
 ///   Tapping it relaunches the app, which resumes the unfinished session.
 @MainActor
 final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificationCenterDelegate {
-    static let deadmanID = "recording.deadman"
+    nonisolated static let deadmanID = "recording.deadman"
     private static let silenceID = "recording.silence"
 
     private let center = UNUserNotificationCenter.current()
@@ -98,7 +98,7 @@ final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificat
     /// Dead-man tap: continue the unfinished session in the same files (PLAN §9.3).
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         guard response.notification.request.identifier == Self.deadmanID else { return }
-        await MainActor.run {
+        _ = await MainActor.run {
             Task { await self.resumeAfterDeadman() }
         }
     }

@@ -69,6 +69,22 @@
         }
       }
     },
+    "Add Marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マーカーを追加"
+          }
+        }
+      }
+    },
     "All sessions": {
       "localizations": {
         "en": {
@@ -309,6 +325,16 @@
         }
       }
     },
+    "DriveScope hasn't received data for a while. Tap to resume recording.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらくデータを受信していません。タップすると記録を再開します。"
+          }
+        }
+      }
+    },
     "Earlier": {
       "localizations": {
         "en": {
@@ -337,6 +363,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "書き出し"
+          }
+        }
+      }
+    },
+    "GPS signal lost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS signal lost"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS 信号なし"
           }
         }
       }
@@ -489,6 +531,22 @@
         }
       }
     },
+    "Motion sensor stalled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motion sensor stalled"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モーションセンサー停止"
+          }
+        }
+      }
+    },
     "Mount the phone, then start. Forward direction is detected automatically on the first acceleration.": {
       "localizations": {
         "en": {
@@ -505,6 +563,32 @@
         }
       }
     },
+    "No GPS fix for a while. Recording continues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No GPS fix for a while. Recording continues."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらく GPS を受信できていません。記録は継続中です。"
+          }
+        }
+      }
+    },
+    "No GPS for %lld min. Recording continues.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS を %lld 分間受信できていません。記録は継続中です。"
+          }
+        }
+      }
+    },
     "No drives yet": {
       "localizations": {
         "en": {
@@ -517,6 +601,32 @@
           "stringUnit": {
             "state": "translated",
             "value": "ドライブはまだありません"
+          }
+        }
+      }
+    },
+    "No motion data for %lld min. Recording continues.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モーションデータが %lld 分間届いていません。記録は継続中です。"
+          }
+        }
+      }
+    },
+    "No motion data for a while. Recording continues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No motion data for a while. Recording continues."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらくモーションデータを受信できていません。記録は継続中です。"
           }
         }
       }
@@ -777,6 +887,16 @@
         }
       }
     },
+    "Recording may have stopped": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録が停止した可能性があります"
+          }
+        }
+      }
+    },
     "Replay": {
       "localizations": {
         "en": {
@@ -949,6 +1069,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "記録を開始"
+          }
+        }
+      }
+    },
+    "Stop Recording": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Recording"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を停止"
           }
         }
       }
