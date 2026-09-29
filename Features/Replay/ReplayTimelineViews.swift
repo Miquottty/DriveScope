@@ -3,6 +3,7 @@ import DriveDomain
 import SwiftUI
 
 /// Speed over the whole session (mock: 44 pt amber area + line), SYNC / MARK rules, and the playhead rule.
+/// V1.1: corners and stops as faint bands behind the line, climbs / descents as a thin lane along the bottom.
 /// The chart itself never reads the playhead: only the overlay does, so playback redraws a 2 pt rule, not 600 points.
 struct SpeedSparkline: View {
     let player: ReplayPlayer
@@ -23,7 +24,20 @@ struct SpeedSparkline: View {
         let timeline = player.timeline
         let profile = timeline?.speedProfile ?? []
         let duration = max(timeline?.duration ?? 0, 1)
+        let top = max((timeline?.maxKmh ?? 0) * 1.15, 10)
+        let sections = timeline?.sections ?? []
         Chart {
+            ForEach(sections.filter { $0.kind == .corner || $0.kind == .stop }) { section in
+                RectangleMark(xStart: .value("Start", section.start), xEnd: .value("End", section.end))
+                    .foregroundStyle(SectionFormat.color(section).opacity(0.16))
+            }
+            ForEach(sections.filter { $0.kind == .climb || $0.kind == .descent }) { section in
+                RectangleMark(
+                    xStart: .value("Start", section.start), xEnd: .value("End", section.end),
+                    yStart: .value("Lane", 0), yEnd: .value("Lane", top * 0.06)
+                )
+                .foregroundStyle(SectionFormat.color(section).opacity(0.7))
+            }
             AreaPlot(profile, x: .value("Time", \.time), y: .value("Speed", \.kmh))
                 .foregroundStyle(Theme.accent.opacity(0.14))
             LinePlot(profile, x: .value("Time", \.time), y: .value("Speed", \.kmh))
@@ -37,7 +51,7 @@ struct SpeedSparkline: View {
         }
         .chartXScale(domain: 0...duration, range: .plotDimension(padding: 0))
         // Headroom above the peak, like the mock's profile.
-        .chartYScale(domain: 0...max((timeline?.maxKmh ?? 0) * 1.15, 10), range: .plotDimension(padding: 0))
+        .chartYScale(domain: 0...top, range: .plotDimension(padding: 0))
         .chartXAxis(.hidden)
         .chartYAxis(.hidden)
         .chartLegend(.hidden)

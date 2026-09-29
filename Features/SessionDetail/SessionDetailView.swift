@@ -108,6 +108,7 @@ struct SessionDetailView: View {
                     titleBlock(session, format)
                     metricsGrid(session, format)
                     logQuality(session, format)
+                    SessionSectionsCard(sections: session.sections)
                     SessionPlacesCard(places: session.viaPlaces)
                     SessionNotesEditor(session: session)
                 }
@@ -176,6 +177,7 @@ struct SessionDetailView: View {
                 iPadTitleBlock(session, format)
                 IPadMetricsGrid(session: session, format: format)
                 IPadLogQualityCard(session: session, format: format)
+                SessionSectionsCard(sections: session.sections, large: true)
                 SessionPlacesCard(places: session.viaPlaces, large: true)
                 SessionNotesEditor(session: session, large: true)
             }
