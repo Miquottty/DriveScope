@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		42B1704D306C03F300F24400 /* DriveScopeWatch.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = 4249A237306C03D800B81416 /* DriveScopeWatch.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D5C0DE00000000000000002D /* DriveScopeWidgets.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D5C0DE000000000000000002 /* DriveScopeWidgets.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D5C0DE000000000000000032 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5C0DE000000000000000010 /* WidgetKit.framework */; };
 		D5C0DE000000000000000033 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D5C0DE000000000000000011 /* SwiftUI.framework */; };
@@ -19,6 +20,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		4299E582306C03EC00D92D41 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D5C0DE00000000000000002B /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 4249A236306C03D800B81416;
+			remoteInfo = DriveScopeWatch;
+		};
 		D5C0DE00000000000000002E /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = D5C0DE00000000000000002B /* Project object */;
@@ -36,6 +44,17 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
+		42B0F13A306C03F200EB5843 /* Embed Watch Content */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
+			dstSubfolderSpec = 16;
+			files = (
+				42B1704D306C03F300F24400 /* DriveScopeWatch.app in Embed Watch Content */,
+			);
+			name = "Embed Watch Content";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D5C0DE000000000000000015 /* Embed Foundation Extensions */ = {
 			isa = PBXCopyFilesBuildPhase;
 			buildActionMask = 2147483647;
@@ -50,6 +69,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		4249A237306C03D800B81416 /* DriveScopeWatch.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DriveScopeWatch.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5C0DE000000000000000001 /* DriveScope.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DriveScope.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5C0DE000000000000000002 /* DriveScopeWidgets.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = DriveScopeWidgets.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D5C0DE000000000000000003 /* DriveScopeUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = DriveScopeUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -60,6 +80,11 @@
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
+		425FDFF6306C03E100FFD1AA /* Watch */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Watch;
+			sourceTree = "<group>";
+		};
 		D5C0DE000000000000000008 /* App */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = App;
@@ -93,6 +118,13 @@
 /* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
+		425C1446306C03E000871D57 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D5C0DE000000000000000013 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -137,6 +169,7 @@
 				D5C0DE000000000000000006 /* Config */,
 				D5C0DE000000000000000007 /* Frameworks */,
 				D5C0DE000000000000000005 /* Products */,
+				425FDFF6306C03E100FFD1AA /* Watch */,
 			);
 			sourceTree = "<group>";
 		};
@@ -146,6 +179,7 @@
 				D5C0DE000000000000000001 /* DriveScope.app */,
 				D5C0DE000000000000000002 /* DriveScopeWidgets.appex */,
 				D5C0DE000000000000000003 /* DriveScopeUITests.xctest */,
+				4249A237306C03D800B81416 /* DriveScopeWatch.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -171,6 +205,28 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
+		4249A236306C03D800B81416 /* DriveScopeWatch */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 4249A23A306C03D800B81416 /* Build configuration list for PBXNativeTarget "DriveScopeWatch" */;
+			buildPhases = (
+				425BF92B306C03E000ECD8EF /* Sources */,
+				425C1446306C03E000871D57 /* Frameworks */,
+				425DC5EB306C03E100510B70 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				425FDFF6306C03E100FFD1AA /* Watch */,
+			);
+			name = DriveScopeWatch;
+			packageProductDependencies = (
+			);
+			productName = DriveScopeWatch;
+			productReference = 4249A237306C03D800B81416 /* DriveScopeWatch.app */;
+			productType = "com.apple.product-type.application";
+		};
 		D5C0DE00000000000000001C /* DriveScope */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = D5C0DE000000000000000020 /* Build configuration list for PBXNativeTarget "DriveScope" */;
@@ -179,11 +235,13 @@
 				D5C0DE000000000000000013 /* Frameworks */,
 				D5C0DE000000000000000014 /* Resources */,
 				D5C0DE000000000000000015 /* Embed Foundation Extensions */,
+				42B0F13A306C03F200EB5843 /* Embed Watch Content */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 				D5C0DE00000000000000002F /* PBXTargetDependency */,
+				4299E583306C03EC00D92D41 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
 				D5C0DE000000000000000008 /* App */,
@@ -286,11 +344,19 @@
 				D5C0DE00000000000000001C /* DriveScope */,
 				D5C0DE00000000000000001D /* DriveScopeWidgets */,
 				D5C0DE00000000000000001E /* DriveScopeUITests */,
+				4249A236306C03D800B81416 /* DriveScopeWatch */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		425DC5EB306C03E100510B70 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D5C0DE000000000000000014 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -315,6 +381,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		425BF92B306C03E000ECD8EF /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		D5C0DE000000000000000012 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -339,6 +412,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		4299E583306C03EC00D92D41 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 4249A236306C03D800B81416 /* DriveScopeWatch */;
+			targetProxy = 4299E582306C03EC00D92D41 /* PBXContainerItemProxy */;
+		};
 		D5C0DE00000000000000002F /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = D5C0DE00000000000000001D /* DriveScopeWidgets */;
@@ -352,6 +430,58 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		4249A238306C03D800B81416 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DriveScope;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.miquottty.DriveScope;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.miquottty.DriveScope.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Debug;
+		};
+		4249A239306C03D800B81416 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = DriveScope;
+				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.miquottty.DriveScope;
+				INFOPLIST_KEY_WKRunsIndependentlyOfCompanionApp = NO;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.miquottty.DriveScope.watchkitapp;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = watchos;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				TARGETED_DEVICE_FAMILY = 4;
+				WATCHOS_DEPLOYMENT_TARGET = 27.0;
+			};
+			name = Release;
+		};
 		D5C0DE000000000000000023 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -534,6 +664,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		4249A23A306C03D800B81416 /* Build configuration list for PBXNativeTarget "DriveScopeWatch" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4249A238306C03D800B81416 /* Debug */,
+				4249A239306C03D800B81416 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		D5C0DE00000000000000001F /* Build configuration list for PBXProject "DriveScope" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

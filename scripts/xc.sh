@@ -7,6 +7,9 @@
 #   scripts/xc.sh test-ios         App tests (UI tests) on the iOS simulator
 #   scripts/xc.sh test-ui          UI tests only
 #   scripts/xc.sh run [args...]    Build, install and launch on the simulator (extra args go to the app)
+#   scripts/xc.sh build-watch      Build the watch app alone for the watchOS simulator
+#   scripts/xc.sh run-pair [args]  Build, install and launch the app and its watch app on a paired simulator
+#                                  (iPhone $DRIVESCOPE_PAIR_PHONE on iOS $DRIVESCOPE_SIM_OS + its watch)
 #   scripts/xc.sh route <gpx|name> Play a location route on the booted simulator (see scripts/routes/)
 #   scripts/xc.sh sim              Print the simulator UDID used
 #   scripts/xc.sh <anything else>  Run it with the pinned toolchain (e.g. `scripts/xc.sh xcrun simctl list`)
@@ -19,6 +22,8 @@ SIM_NAME="${DRIVESCOPE_SIM:-iPhone 18 Pro}"
 SIM_OS="${DRIVESCOPE_SIM_OS:-27.2}"
 DERIVED="$ROOT/.build/DerivedData"
 BUNDLE_ID="com.miquottty.DriveScope"
+WATCH_BUNDLE_ID="com.miquottty.DriveScope.watchkitapp"
+PAIR_PHONE="${DRIVESCOPE_PAIR_PHONE:-iPhone 18 Pro Max}"
 
 sim_udid() {
   xcrun simctl list devices available -j | /usr/bin/python3 -c '
@@ -35,6 +40,20 @@ for runtime in candidates:
         if d["name"] == name:
             print(d["udid"]); sys.exit(0)
 sys.exit("simulator not found: %s (iOS %s)" % (name, sys.argv[2]))' "$SIM_NAME" "$SIM_OS"
+}
+
+pair_udids() {
+  # Prints "<phone udid> <watch udid>" for the first pair whose phone is $PAIR_PHONE on iOS $SIM_OS.
+  { xcrun simctl list pairs -j; echo "@@@"; xcrun simctl list devices -j; } | /usr/bin/python3 -c '
+import json, sys
+name, os_ver = sys.argv[1], sys.argv[2].replace(".", "-")
+pairs_json, devices_json = sys.stdin.read().split("@@@", 1)
+runtime_of = {d["udid"]: r for r, ds in json.loads(devices_json)["devices"].items() for d in ds}
+for pair in json.loads(pairs_json)["pairs"].values():
+    phone, watch = pair["phone"], pair["watch"]
+    if phone["name"] == name and runtime_of.get(phone["udid"], "").endswith("iOS-" + os_ver):
+        print(phone["udid"], watch["udid"]); sys.exit(0)
+sys.exit("no simulator pair with %s on iOS %s (create one: xcrun simctl pair <watch> <phone>)" % (name, sys.argv[2]))' "$PAIR_PHONE" "$SIM_OS"
 }
 
 boot() {
@@ -94,6 +113,20 @@ case "$cmd" in
     xcrun simctl install "$udid" "$app"
     xcrun simctl terminate "$udid" "$BUNDLE_ID" 2>/dev/null || true
     xcrun simctl launch "$udid" "$BUNDLE_ID" "$@" ;;
+  build-watch)
+    # The watch app links no packages, so a plain target build is enough (no scheme needed).
+    xcodebuild -project "$PROJECT" -target DriveScopeWatch -sdk watchsimulator -quiet \
+      CODE_SIGNING_ALLOWED=NO SYMROOT="$ROOT/.build/watch" build "$@" && echo "watch build OK" ;;
+  run-pair)
+    read phone watch <<< "$(pair_udids)"
+    boot "$phone"; boot "$watch"
+    xcb -scheme DriveScope -configuration Debug -destination "platform=iOS Simulator,id=$phone" build
+    app="$DERIVED/Build/Products/Debug-iphonesimulator/DriveScope.app"
+    xcrun simctl install "$phone" "$app"
+    xcrun simctl install "$watch" "$app/Watch/DriveScopeWatch.app"
+    xcrun simctl terminate "$phone" "$BUNDLE_ID" 2>/dev/null || true
+    xcrun simctl launch "$phone" "$BUNDLE_ID" "$@"
+    xcrun simctl launch "$watch" "$WATCH_BUNDLE_ID" ;;
   route)
     udid=$(sim_udid); boot "$udid"
     "$ROOT/scripts/sim-route.sh" "$udid" "$@" ;;

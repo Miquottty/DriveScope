@@ -45,5 +45,6 @@ scripts/xc.sh run -DriveSim akagi -DriveSimSpeed 10
 |---|---|
 | `App/`, `Features/` | SwiftUI アプリ（iPhone / iPad） |
 | `LiveActivity/`, `Shared/` | Live Activity（Widget Extension）と App Intents |
+| `Watch/` | Apple Watch コンパニオンアプリ（watchOS、iPhone アプリに埋め込み） |
 | `Packages/DriveKit/` | Domain / Sensors / Storage / Recording / Replay / Export |
 | `.github/workflows/ci.yml` | CI（Xcode 27 ランナー: 単体テスト、実機向けビルド、UI テスト） |
