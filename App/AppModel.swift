@@ -78,7 +78,7 @@ final class AppModel {
         let continuing = RobustMode.isActive && UIApplication.shared.applicationState == .background
             ? Set(recorder.unfinishedSessions().map(\.id)) : []
         LiveActivityController.endLeftoversAtLaunch(keeping: continuing)
-        watchLink = WatchLink(recorder: recorder)
+        watchLink = WatchLink(recorder: recorder, environment: sensorEnvironment)
         recorder.addObserver(watchLink)
         notifications = RecordingNotifications(recorder: recorder)
         recorder.addObserver(notifications)

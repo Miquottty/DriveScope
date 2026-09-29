@@ -33,6 +33,22 @@
         }
       }
     },
+    "Start Recording": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Start Recording"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を開始"
+          }
+        }
+      }
+    },
     "Stop": {
       "localizations": {
         "en": {

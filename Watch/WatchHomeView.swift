@@ -36,7 +36,23 @@ struct WatchHomeView: View {
                 .font(.footnote)
                 .foregroundStyle(WatchTheme.textSecondary)
                 .multilineTextAlignment(.center)
+            if link.state?.canStart == true {
+                // Offered only with robust mode on the iPhone (Always permission): the app may be in the background.
+                Button {
+                    link.send(.start)
+                } label: {
+                    Text(verbatim: "START")
+                        .font(.system(size: 15, weight: .semibold))
+                        .foregroundStyle(WatchTheme.hudBackground)
+                        .frame(maxWidth: .infinity, minHeight: 40)
+                        .background(WatchTheme.accent, in: Capsule())
+                }
+                .buttonStyle(.plain)
+                .padding(.top, 4)
+                .accessibilityLabel(Text("Start Recording"))
+            }
         }
+        .padding(.horizontal, 8)
     }
 
     private func recording(_ state: WatchState) -> some View {
