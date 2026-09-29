@@ -27,6 +27,9 @@ struct RecordingControllerTests {
         // Progress-based waits (not fixed sleeps) so slower CI runners behave the same.
         try await waitUntil { controller.live.snapshot.locationCount > 120 }
         await controller.mark(.sync)
+        // A watch MARK (V1.1): marker at the iPhone's receive time, the wrist's press time in the event value.
+        let pressed = Date(timeIntervalSince1970: 1_790_000_123.25)
+        await controller.mark(.mark, source: .watch, pressedAt: pressed)
         try await waitUntil { controller.live.snapshot.locationCount >= 230 }
         await controller.stop()
         #expect(controller.phase == .stopped)
@@ -43,8 +46,10 @@ struct RecordingControllerTests {
         #expect(session.locationSampleCount == locations.count)
         #expect(Double(motion.count) > session.duration * 50 * 0.9)
         #expect(session.motionDropRate < 0.1)
-        #expect(session.markers.count == 1 && session.markers.first?.kind == .sync)
-        #expect(events.contains { $0.kind == .marker && $0.aux == 1 })
+        #expect(session.sortedMarkers.map(\.kind) == [.sync, .mark])
+        #expect(events.contains { $0.kind == .marker && $0.aux == 1 && $0.source == .phone })
+        let watchMark = try #require(events.first { $0.kind == .marker && $0.source == .watch })
+        #expect(watchMark.value == pressed.timeIntervalSince1970 && watchMark.elapsed > 0)
 
         // Distance along the script, within GPS noise.
         let scripted = DriveScript.akagi.state(at: session.duration).distance

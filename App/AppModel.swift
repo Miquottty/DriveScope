@@ -18,6 +18,7 @@ final class AppModel {
     let filesRoot: URL
     let sensorEnvironment: SensorEnvironment
     private let liveActivity: LiveActivityController
+    private let watchLink: WatchLink
     private let robustMode: RobustMode
     private let notifications: RecordingNotifications
     private let deviceEvents: DeviceEventMonitor
@@ -77,6 +78,8 @@ final class AppModel {
         let continuing = RobustMode.isActive && UIApplication.shared.applicationState == .background
             ? Set(recorder.unfinishedSessions().map(\.id)) : []
         LiveActivityController.endLeftoversAtLaunch(keeping: continuing)
+        watchLink = WatchLink(recorder: recorder)
+        recorder.addObserver(watchLink)
         notifications = RecordingNotifications(recorder: recorder)
         recorder.addObserver(notifications)
         deviceEvents = DeviceEventMonitor(recorder: recorder)
