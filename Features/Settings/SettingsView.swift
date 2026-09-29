@@ -10,6 +10,8 @@ struct SettingsView: View {
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @AppStorage("locationBackend") private var locationBackend = SensorEnvironment.LocationBackend.locationManager.rawValue
     @AppStorage(RobustMode.defaultsKey) private var robustMode = false
+    // Read by `AppModel.archiveAfterDays`; 0 = off.
+    @AppStorage("archiveAfterDays") private var archiveAfterDays = 30
     #if DEBUG
     @AppStorage("debugFastWatchdog") private var fastWatchdog = false
     #endif
@@ -82,6 +84,21 @@ struct SettingsView: View {
                     }
                 } footer: {
                     Text("If DriveScope is closed mid-drive (crash, low memory), iOS reopens it in the background and recording continues in the same session within 30 minutes. Needs location access \"Always\".")
+                }
+                Section {
+                    Picker("Compress old sessions", selection: $archiveAfterDays) {
+                        Text("Off").tag(0)
+                        ForEach([7, 30, 90], id: \.self) { days in
+                            Text("After \(days) days").tag(days)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("archivePicker")
+                    .listRowBackground(Theme.surface)
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Lossless (LZFSE). Replay and export work as before. Checked at launch and after each STOP.")
                 }
                 #if DEBUG
                 Section {

@@ -166,6 +166,12 @@ struct QualityView: View {
                 label: "On disk",
                 value: Int64(report.bytesOnDisk).formatted(.byteCount(style: .file).locale(appLanguage.locale))
             )
+            if report.isArchived {
+                QualityRow(
+                    label: "Uncompressed",
+                    value: Int64(report.rawBytes).formatted(.byteCount(style: .file).locale(appLanguage.locale))
+                )
+            }
         }
         QualityCard(title: "Thermal") {
             QualityRow(

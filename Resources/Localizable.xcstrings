@@ -263,6 +263,22 @@
         }
       }
     },
+    "After %lld days": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "After %lld days"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld 日後"
+          }
+        }
+      }
+    },
     "All sessions": {
       "localizations": {
         "en": {
@@ -723,6 +739,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "登り"
+          }
+        }
+      }
+    },
+    "Compress now": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compress now"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "今すぐ圧縮"
+          }
+        }
+      }
+    },
+    "Compress old sessions": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compress old sessions"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "古いセッションを圧縮"
           }
         }
       }
@@ -1671,6 +1719,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "ループ"
+          }
+        }
+      }
+    },
+    "Lossless (LZFSE). Replay and export work as before. Checked at launch and after each STOP.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lossless (LZFSE). Replay and export work as before. Checked at launch and after each STOP."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "可逆圧縮（LZFSE）です。リプレイと書き出しはこれまでどおり使えます。起動時と STOP のたびに確認します。"
           }
         }
       }
@@ -3453,6 +3517,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "利用不可"
+          }
+        }
+      }
+    },
+    "Uncompressed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uncompressed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非圧縮時"
           }
         }
       }

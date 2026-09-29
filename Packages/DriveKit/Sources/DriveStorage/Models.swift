@@ -49,6 +49,8 @@ public final class DriveSession {
     /// the detector's. The defaults let existing stores migrate.
     @Attribute(.codable) public var sections: [DriveSection] = []
     public var sectionsVersion: Int = 0
+    /// When the streams were compressed (V1.1, LZFSE); nil while raw. The default lets existing stores migrate.
+    public var archivedAt: Date? = nil
 
     @Relationship(deleteRule: .cascade, inverse: \Marker.session) public var markers: [Marker]
 
@@ -90,6 +92,7 @@ public final class DriveSession {
         geocodePending = false
         sections = []
         sectionsVersion = 0
+        archivedAt = nil
         markers = []
     }
 

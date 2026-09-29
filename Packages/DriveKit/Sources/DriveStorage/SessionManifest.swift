@@ -21,6 +21,8 @@ public struct SessionManifest: Codable, Sendable, Equatable {
     /// Latest mount calibration, so file-only recovery / replay can use it (PLAN §7).
     public var calibration: MountCalibration?
     public var endedAt: Date?
+    /// When the streams were compressed (V1.1, `SessionArchiver`); nil while they are raw.
+    public var archivedAt: Date?
 
     public init(
         sessionID: UUID, clock: SessionClock, timeZoneID: String, preset: CapturePreset,

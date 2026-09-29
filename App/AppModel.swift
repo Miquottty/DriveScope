@@ -23,6 +23,10 @@ final class AppModel {
     private let deviceEvents: DeviceEventMonitor
     let battery: BatteryMonitor
     let finalizer: SessionFinalizer
+    /// LZFSE archive of old sessions (V1.1, PLAN §4.4).
+    let archiver: SessionArchiveService
+    /// Settings → Storage: compress sessions that ended more than this many days ago (0 = off).
+    static var archiveAfterDays: Int { UserDefaults.standard.object(forKey: "archiveAfterDays") as? Int ?? 30 }
     private let network = NWPathMonitor()
 
     init() {
@@ -88,10 +92,14 @@ final class AppModel {
             locale: { AppLanguage().locale }, loopWord: { AppLanguage().string("Loop") }
         )
         self.finalizer = finalizer
+        let archiver = SessionArchiveService(store: store, filesRoot: filesRoot, recorder: recorder)
+        self.archiver = archiver
         recorder.onFinished = { session in
             session.geocodePending = true
             await finalizer.finalize(session)
+            await archiver.sweep(olderThanDays: Self.archiveAfterDays)
         }
+        Task { await archiver.sweep(olderThanDays: Self.archiveAfterDays) }
         // Offline at STOP → retry when the network returns (and once at launch).
         network.pathUpdateHandler = { path in
             guard path.status == .satisfied else { return }

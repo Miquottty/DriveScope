@@ -50,6 +50,8 @@ public actor SampleWriter {
         lastFlush = now
         lastSync = now
         for kind in kinds {
+            // Appending would start a new raw file that hides the archived one.
+            guard !FileManager.default.fileExists(atPath: files.archiveURL(for: kind).path) else { throw StreamFormatError.archived }
             let file = try StreamFile(url: files.url(for: kind), kind: kind, createdAt: createdAt)
             streams[kind] = Stream(file: file)
         }
