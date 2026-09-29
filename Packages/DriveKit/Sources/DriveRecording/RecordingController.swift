@@ -63,7 +63,7 @@ public final class RecordingController {
     private var files: SessionFiles?
     /// Called after a session is finalized (geocoding — S4).
     public var onFinished: (@MainActor (DriveSession) async -> Void)?
-    public weak var observer: (any RecordingObserver)?
+    private var observers: [any RecordingObserver] = []
     /// Debug builds may shorten the watchdog thresholds (Settings → Debug).
     public var watchdogPolicy = RecordingWatchdog.Policy()
 
@@ -78,6 +78,11 @@ public final class RecordingController {
     }
 
     public var isRecording: Bool { phase == .recording }
+
+    /// Observers are retained for the controller's lifetime (they are app-lifetime objects).
+    public func addObserver(_ observer: any RecordingObserver) {
+        observers.append(observer)
+    }
 
     public func start(preset: CapturePreset) async {
         guard phase == .idle || phase == .stopped else { return }
@@ -95,7 +100,7 @@ public final class RecordingController {
             try files.writeManifest(manifest)
             let session = try store.create(manifest: manifest)
             try await run(session: session, files: files, manifest: manifest, suite: suite, statistics: nil)
-            observer?.recordingDidStart(session, resumed: false)
+            observers.forEach { $0.recordingDidStart(session, resumed: false) }
         } catch {
             lastError = String(describing: error)
             phase = .idle
@@ -127,7 +132,7 @@ public final class RecordingController {
 
     private func handle(_ action: RecordingWatchdog.Action) {
         guard let session, phase == .recording else { return }
-        observer?.recordingWatchdog(action, session: session)
+        observers.forEach { $0.recordingWatchdog(action, session: session) }
     }
 
     public func stop() async {
@@ -150,7 +155,7 @@ public final class RecordingController {
         self.session = nil
         lastFinishedSessionID = session.id
         phase = .stopped
-        observer?.recordingDidStop(session)
+        observers.forEach { $0.recordingDidStop(session) }
         await onFinished?(session)
     }
 
@@ -242,7 +247,7 @@ public final class RecordingController {
                 let now = await engine.elapsed
                 await engine.record(EventRecord(kind: .sessionResumed, source: .system, elapsed: now, value: now - lastElapsed))
             }
-            observer?.recordingDidStart(unfinished, resumed: true)
+            observers.forEach { $0.recordingDidStart(unfinished, resumed: true) }
         } catch {
             lastError = String(describing: error)
             phase = .idle
