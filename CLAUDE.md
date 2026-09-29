@@ -35,6 +35,7 @@ iPhone drive-telemetry logger (GPS + Core Motion + barometer → replay / export
   HUD labels (ALT / COURSE / DIST / LAT G) stay English in both languages; everything else is localized.
 - Strings: String Catalog (`Localizable.xcstrings`), development language `en`, plus `ja`. Every user-facing string
   added must have both en and ja entries. Non-View code resolves strings via `AppLanguage` (see PLAN §13).
+  Put `.relocalizing(appLanguage)` on every `NavigationStack` (UIKit nav titles otherwise keep the old language).
 - Comments: sparse, explain *why*. Match the surrounding style.
 
 ## Tests (keep the suite small)
