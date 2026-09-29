@@ -36,6 +36,13 @@ jobs:
       - name: Toolchain
         run: scripts/xc.sh xcodebuild -version && scripts/xc.sh swift --version && scripts/xc.sh sim
 
+      - name: watchOS SDK
+        # The app embeds a watch app, so every iOS build also builds for watchOS.
+        run: |
+          if ! scripts/xc.sh xcodebuild -showsdks | grep -q watchos; then
+            scripts/xc.sh xcodebuild -downloadPlatform watchOS
+          fi
+
       - name: DriveKit unit tests (macOS)
         run: scripts/xc.sh test
 

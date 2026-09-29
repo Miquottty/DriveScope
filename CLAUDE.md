@@ -10,10 +10,11 @@ iPhone drive-telemetry logger (GPS + Core Motion + barometer → replay / export
 - `scripts/xc.sh build` — simulator build (iPhone 18 Pro, iOS 27.2); prints the `.app` path
 - `scripts/xc.sh test-ios` / `test-ui` — UI tests on the simulator
 - `scripts/xc.sh run [-DriveSim akagi …]` — build, install, launch on the simulator
+- `scripts/xc.sh build-watch` / `run-pair` — watch app alone / app + watch app on a paired simulator
 - `scripts/xc.sh build-device` — compile for the iphoneos SDK (device-only code paths)
 - Launch flags: `-UITest` (isolated store/files), `-SeedSession <s>` (DEBUG demo session), `-appLanguage ja|en`; see docs/TESTING.md
 - The project file is `DriveScope.xcodeproj/project.pbxproj` with **filesystem-synchronized groups**: adding a
-  `.swift` file under `App/`, `Features/`, `Resources/`, `Shared/`, `LiveActivity/`, `UITests/` needs no project edit.
+  `.swift` file under `App/`, `Features/`, `Resources/`, `Shared/`, `LiveActivity/`, `Watch/`, `UITests/` needs no project edit.
   Do not edit the project file unless the task says so (only the lead does, via `xcodeproj` CLI in the pinned Xcode).
 
 ## Layout
@@ -24,6 +25,7 @@ iPhone drive-telemetry logger (GPS + Core Motion + barometer → replay / export
 | `Resources/` | DriveScope | `Localizable.xcstrings`, `InfoPlist.xcstrings`, `Assets.xcassets` |
 | `Shared/` | DriveScope + DriveScopeWidgets | `DriveActivityAttributes`, Live Activity intents |
 | `LiveActivity/` | DriveScopeWidgets | Widget extension (Live Activity UI) |
+| `Watch/` | DriveScopeWatch | watchOS companion app (embedded in the app; links no packages, own String Catalog / theme copy) |
 | `Packages/DriveKit/` | SwiftPM | `DriveDomain`, `DriveSensors`, `DriveStorage`, `DriveRecording`, `DriveReplay`, `DriveExport` |
 | `Config/` | — | Partial Info.plists merged with generated keys |
 

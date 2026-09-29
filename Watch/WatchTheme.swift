@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// Design tokens from design/mock/README.md — the widget extension's copy of `App/Theme.swift`, which lives in the
-/// app target. Keep it, `App/Theme.swift` and `Watch/WatchTheme.swift` in sync. Never use literal colors in views.
-enum WidgetTheme {
+/// Design tokens from design/mock/README.md — the watch app's copy of `App/Theme.swift` (and of
+/// `LiveActivity/WidgetTheme.swift`). Keep the three in sync. Never use literal colors in views.
+enum WatchTheme {
     static let background = Color(hex: 0x0B0D10)
     /// Recording / StandBy backgrounds are true black.
     static let hudBackground = Color(hex: 0x000000)
