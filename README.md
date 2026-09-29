@@ -37,7 +37,7 @@ scripts/xc.sh run -DriveSim akagi -DriveSimSpeed 10
 - `test-ui`: UI テスト（iPhone 18 Pro シミュレータ）
 - `run -DriveSim akagi`: 赤城山のスクリプト走行でシミュレータ起動（位置情報の許可は不要）
 
-実機で使うときは Xcode でチーム `3X6HG4QJA8` の署名を選び、端末にインストールしてください。
+実機で使うときは Xcode でチーム `NHP8639NK4` の署名を選び、端末にインストールしてください。
 
 ## 構成
 
