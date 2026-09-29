@@ -81,6 +81,7 @@ public enum SessionTitle {
         if distance < loopRadius || from == to && distance < loopRadius * 4 {
             return "\(from) · \(loopWord)"
         }
-        return "\(from) → \(to)"
+        // Same municipality but not a loop (e.g. across town): "A → A" reads oddly.
+        return from == to ? from : "\(from) → \(to)"
     }
 }

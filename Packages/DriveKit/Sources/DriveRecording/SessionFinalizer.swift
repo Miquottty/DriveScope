@@ -20,11 +20,14 @@ public struct MapKitGeocoder: ReverseGeocoder {
         request.preferredLocale = locale
         let item = try await request.mapItems.first
         let address = item?.addressRepresentations
+        let fullAddress = address?.fullAddress(includingRegion: true, singleLine: true)
+        // Without a POI, MapKit names the item by its street address; that is not a place name.
+        let name = item?.name.flatMap { name in fullAddress?.contains(name) == true ? nil : name }
         return PlaceMeta(
-            name: item?.name,
+            name: name,
             locality: address?.cityName,
             administrativeArea: address?.regionName,
-            fullAddress: address?.fullAddress(includingRegion: true, singleLine: true),
+            fullAddress: fullAddress,
             mapItemIdentifier: item?.identifier?.rawValue,
             latitude: latitude, longitude: longitude, role: role
         )

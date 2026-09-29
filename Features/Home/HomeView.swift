@@ -337,7 +337,8 @@ struct HomeView: View {
                         .foregroundStyle(Theme.accent)
                         .accessibilityIdentifier("allSessionsButton")
                 }
-                ForEach(recent) { session in
+                // A session deleted elsewhere can be re-rendered once before the query drops it.
+                ForEach(recent.filter { !$0.isDeleted && $0.modelContext != nil }) { session in
                     Button {
                         onOpenSession(session.id)
                     } label: {

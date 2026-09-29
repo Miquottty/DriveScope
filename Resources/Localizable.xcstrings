@@ -149,6 +149,22 @@
         }
       }
     },
+    "Add notes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add notes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモを追加"
+          }
+        }
+      }
+    },
     "All sessions": {
       "localizations": {
         "en": {
@@ -353,6 +369,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "キャリブレーション更新"
+          }
+        }
+      }
+    },
+    "Cancel": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cancel"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャンセル"
           }
         }
       }
@@ -911,6 +943,22 @@
         }
       }
     },
+    "Highest point": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Highest point"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最高地点"
+          }
+        }
+      }
+    },
     "Hold to stop": {
       "localizations": {
         "ja": {
@@ -933,6 +981,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "言語"
+          }
+        }
+      }
+    },
+    "Leave empty to use the automatic name.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Leave empty to use the automatic name."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空にすると自動の名前に戻ります。"
           }
         }
       }
@@ -1029,6 +1093,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "ログ品質"
+          }
+        }
+      }
+    },
+    "Loop": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Loop"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ループ"
           }
         }
       }
@@ -1177,6 +1257,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "平均間隔"
+          }
+        }
+      }
+    },
+    "More": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "More"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他"
           }
         }
       }
@@ -1425,6 +1521,22 @@
         }
       }
     },
+    "Notes": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Notes"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "メモ"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "en": {
@@ -1549,6 +1661,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "iPhone"
+          }
+        }
+      }
+    },
+    "Place names pending (offline)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Place names pending (offline)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地名は未取得（オフライン）"
+          }
+        }
+      }
+    },
+    "Places": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Places"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "地点"
           }
         }
       }
@@ -1771,6 +1915,22 @@
         }
       }
     },
+    "Rename": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Rename"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "名前を変更"
+          }
+        }
+      }
+    },
     "Replay": {
       "localizations": {
         "en": {
@@ -1893,6 +2053,22 @@
         }
       }
     },
+    "Save": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Save"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "保存"
+          }
+        }
+      }
+    },
     "Screen off": {
       "localizations": {
         "en": {
@@ -1985,6 +2161,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッション"
+          }
+        }
+      }
+    },
+    "Session name": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session name"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション名"
           }
         }
       }
@@ -2257,6 +2449,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "未接続"
+          }
+        }
+      }
+    },
+    "Via": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Via"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "経由地"
           }
         }
       }
