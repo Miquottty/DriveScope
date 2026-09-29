@@ -19,12 +19,62 @@ struct RecoverySheet: View {
     @Environment(AppModel.self) private var model
     @Environment(RecordingController.self) private var recorder
     @Environment(AppLanguage.self) private var appLanguage
+    /// iPad: a centered form-sized card with the iPad type scale (set by `recoveryPrompt`).
+    @Environment(\.iPadSheet) private var iPadSheet
     @State private var figures: RecoveryFigures?
     @State private var isWorking = false
     @State private var confirmingDiscard = false
     @State private var failure: String?
 
     var body: some View {
+        if iPadSheet {
+            iPadCard
+        } else {
+            phoneCard
+        }
+    }
+
+    private var iPadCard: some View {
+        VStack(alignment: .leading, spacing: 20) {
+            HStack(alignment: .top, spacing: 14) {
+                Image(systemName: "exclamationmark.triangle")
+                    .font(.system(size: 24, weight: .semibold))
+                    .foregroundStyle(Theme.accent)
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Previous recording didn't finish")
+                        .font(.system(size: 20, weight: .semibold))
+                        .foregroundStyle(Theme.textPrimary)
+                    Text(verbatim: detail)
+                        .font(.hudNumber(size: 15))
+                        .foregroundStyle(Theme.textTertiary)
+                }
+                .fixedSize(horizontal: false, vertical: true)
+            }
+            if let failure {
+                Text(verbatim: failure)
+                    .font(.system(size: 15))
+                    .foregroundStyle(Theme.rec)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            HStack(spacing: 12) {
+                recoverButton
+                discardButton
+            }
+            if canResume {
+                resumeButton
+            }
+        }
+        .padding(28)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.surface)
+        .presentationBackground(Theme.surface)
+        .interactiveDismissDisabled(isWorking)
+        .task(id: candidate.id) {
+            figures = await Self.figures(for: SessionFiles(root: model.filesRoot, sessionID: candidate.id))
+        }
+    }
+
+    private var phoneCard: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 10) {
                 Image(systemName: "exclamationmark.triangle")
@@ -86,9 +136,9 @@ struct RecoverySheet: View {
             }
         } label: {
             Label("Resume recording", systemImage: "record.circle")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.system(size: iPadSheet ? 16 : 13, weight: .semibold))
                 .foregroundStyle(Theme.accent)
-                .frame(maxWidth: .infinity, minHeight: 28)
+                .frame(maxWidth: .infinity, minHeight: iPadSheet ? IPadMetrics.minTouch : 28)
         }
         .buttonStyle(.plain)
         .disabled(isWorking)
@@ -103,9 +153,9 @@ struct RecoverySheet: View {
                 Text("Recover session").opacity(isWorking ? 0 : 1)
                 if isWorking { ProgressView().tint(Theme.background) }
             }
-            .font(.system(size: 14, weight: .semibold))
+            .font(.system(size: iPadSheet ? 16 : 14, weight: .semibold))
             .foregroundStyle(Theme.background)
-            .frame(maxWidth: .infinity, minHeight: 44)
+            .frame(maxWidth: .infinity, minHeight: iPadSheet ? IPadMetrics.minTouch : 44)
             .background(Theme.accent, in: RoundedRectangle(cornerRadius: 12))
         }
         .buttonStyle(.plain)
@@ -118,9 +168,9 @@ struct RecoverySheet: View {
             confirmingDiscard = true
         } label: {
             Text("Discard")
-                .font(.system(size: 14, weight: .semibold))
+                .font(.system(size: iPadSheet ? 16 : 14, weight: .semibold))
                 .foregroundStyle(Theme.textPrimary)
-                .frame(maxWidth: .infinity, minHeight: 44)
+                .frame(maxWidth: .infinity, minHeight: iPadSheet ? IPadMetrics.minTouch : 44)
                 .background(Theme.background, in: RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.dividerStrong, lineWidth: 1.5))
         }

@@ -23,6 +23,7 @@ private struct RecoveryPrompt: ViewModifier {
 
     @Environment(RecordingController.self) private var recorder
     @Environment(AppLanguage.self) private var appLanguage
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var candidate: RecoveryCandidate?
     /// Sessions already offered in this launch: one dismissed without a choice is asked again next launch, not in a loop.
     @State private var offered: Set<UUID> = []
@@ -40,7 +41,7 @@ private struct RecoveryPrompt: ViewModifier {
                 }
             }
             .sheet(item: $candidate, onDismiss: presentNext) { current in
-                RecoverySheet(
+                let sheet = RecoverySheet(
                     candidate: current,
                     onRecovered: { id in
                         candidate = nil
@@ -48,6 +49,14 @@ private struct RecoveryPrompt: ViewModifier {
                     },
                     onDiscarded: { candidate = nil }
                 )
+                if horizontalSizeClass == .regular {
+                    // iPad: a centered form-width card, as tall as its content.
+                    sheet
+                        .presentationSizing(.form.fitted(horizontal: false, vertical: true))
+                        .environment(\.iPadSheet, true)
+                } else {
+                    sheet
+                }
             }
     }
 

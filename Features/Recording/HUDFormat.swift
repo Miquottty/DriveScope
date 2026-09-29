@@ -52,15 +52,26 @@ enum HUDFormat {
 
     /// "50 Hz · Logger" — landscape header (mock artboard 8).
     static func presetLabel(_ preset: CapturePreset) -> String {
-        let name = switch preset {
+        let name = presetName(preset)
+        let hz = preset.motion.hz
+        return hz > 0 ? "\(Int(hz)) Hz · \(name)" : "GPS 1 Hz · \(name)"
+    }
+
+    /// "Logger · 50 Hz" — iPad header chip (mock artboards 12 / 16).
+    static func presetChip(_ preset: CapturePreset) -> String {
+        let hz = preset.motion.hz
+        return "\(presetName(preset)) · " + (hz > 0 ? "\(Int(hz)) Hz" : "GPS 1 Hz")
+    }
+
+    /// Preset names are product names, English in both languages (PLAN §2.2.1).
+    static func presetName(_ preset: CapturePreset) -> String {
+        switch preset {
         case .gpsOnly: "GPS Only"
         case .eco: "Eco"
         case .vlog: "Vlog"
         case .logger: "Logger"
         case .lab: "Lab"
         }
-        let hz = preset.motion.hz
-        return hz > 0 ? "\(Int(hz)) Hz · \(name)" : "GPS 1 Hz · \(name)"
     }
 
     private static func normalized(_ degrees: Double) -> Double {

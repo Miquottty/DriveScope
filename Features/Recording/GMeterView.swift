@@ -13,6 +13,14 @@ struct GMeterView: View {
     var showsTrail = true
     /// Trail length in snapshots (the HUD publishes on change, ≤10 Hz).
     var trailLength = 12
+    var style = Style.phone
+
+    /// `phone` scales everything with the 150-unit grid. `pad` follows the iPad artboards (12, 14, 16): the outer
+    /// ring 4 pt inside the edge in `dividerStrong`, fixed hairlines, a fixed-size dot and an optional "1.0 G" label.
+    enum Style {
+        case phone
+        case pad(dotRadius: CGFloat, labelSize: CGFloat?)
+    }
 
     /// The dot shows the car's acceleration vector: a left turn (+lateral) plots left, accelerating plots up.
     static let lateralSign: Double = -1
@@ -26,6 +34,10 @@ struct GMeterView: View {
 
     var body: some View {
         Canvas { context, size in
+            if case .pad(let dotRadius, let labelSize) = style {
+                drawPad(context, size: size, dotRadius: dotRadius, labelSize: labelSize)
+                return
+            }
             let side = min(size.width, size.height)
             let unit = side / 150
             let center = CGPoint(x: size.width / 2, y: size.height / 2)
@@ -79,9 +91,61 @@ struct GMeterView: View {
             "LATERAL \(HUDFormat.signedG(lateralG)) G, LONG \(HUDFormat.signedG(longitudinalG)) G"))
     }
 
+    private func drawPad(_ context: GraphicsContext, size: CGSize, dotRadius: CGFloat, labelSize: CGFloat?) {
+        let side = min(size.width, size.height)
+        let center = CGPoint(x: size.width / 2, y: size.height / 2)
+        let outer = side / 2 - 4
+        let hairline = GraphicsContext.Shading.color(Theme.divider)
+        func circle(_ r: CGFloat, at c: CGPoint) -> Path {
+            Path(ellipseIn: CGRect(x: c.x - r, y: c.y - r, width: 2 * r, height: 2 * r))
+        }
+
+        context.stroke(circle(outer, at: center), with: .color(Theme.dividerStrong), lineWidth: 2)
+        context.stroke(circle(outer * 2 / 3, at: center), with: hairline, lineWidth: 1.5)
+        context.stroke(circle(outer / 3, at: center), with: hairline, lineWidth: 1.5)
+        var cross = Path()
+        cross.move(to: CGPoint(x: center.x, y: center.y - outer))
+        cross.addLine(to: CGPoint(x: center.x, y: center.y + outer))
+        cross.move(to: CGPoint(x: center.x - outer, y: center.y))
+        cross.addLine(to: CGPoint(x: center.x + outer, y: center.y))
+        context.stroke(cross, with: hairline, lineWidth: 1.5)
+
+        if showsTrail, trail.count > 1 {
+            var wedge = Path()
+            wedge.move(to: center)
+            for sample in trail {
+                wedge.addLine(to: point(sample, center: center, radius: outer, dotRadius: dotRadius))
+            }
+            wedge.closeSubpath()
+            context.fill(wedge, with: .color(Theme.accent.opacity(0.16)))
+        }
+
+        if let labelSize {
+            // Mock: baseline 22 pt below the top edge, i.e. just inside the outer ring.
+            context.draw(
+                Text(verbatim: String(format: "%.1f G", range))
+                    .font(.hudNumber(size: labelSize))
+                    .foregroundStyle(Theme.textSecondary),
+                at: CGPoint(x: center.x, y: center.y - side / 2 + 22), anchor: UnitPoint(x: 0.5, y: 0.8))
+        }
+
+        let dot = point(Sample(lateral: lateralG, longitudinal: longitudinalG), center: center, radius: outer,
+                        dotRadius: dotRadius)
+        context.fill(circle(dotRadius, at: dot), with: .color(Theme.accent))
+    }
+
+    /// `pad` geometry: same mapping, clamped so the dot stays inside the ring's outer edge.
+    private func point(_ sample: Sample, center: CGPoint, radius: CGFloat, dotRadius: CGFloat) -> CGPoint {
+        let limit = max(radius + 4 - dotRadius, 0) / radius
+        return point(sample, center: center, radius: radius, limit: limit)
+    }
+
     /// Maps g to canvas coordinates, clamping so a spike past `range` keeps the whole dot inside the canvas.
     private func point(_ sample: Sample, center: CGPoint, radius: CGFloat) -> CGPoint {
-        let limit = (75.0 - 7.0) / 72.0
+        point(sample, center: center, radius: radius, limit: (75.0 - 7.0) / 72.0)
+    }
+
+    private func point(_ sample: Sample, center: CGPoint, radius: CGFloat, limit: Double) -> CGPoint {
         var x = Self.lateralSign * sample.lateral / range
         var y = sample.longitudinal / range
         let magnitude = (x * x + y * y).squareRoot()

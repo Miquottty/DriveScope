@@ -94,20 +94,22 @@ struct SettingsView: View {
 private struct PresetOption: View {
     let preset: CapturePreset
     @Environment(AppLanguage.self) private var appLanguage
+    /// iPad form sheet: the iPad type scale (≥ 15 pt body).
+    @Environment(\.iPadSheet) private var iPadSheet
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
             Text(verbatim: preset.displayName)
-                .font(.system(size: 16, weight: .semibold))
+                .font(.system(size: iPadSheet ? 17 : 16, weight: .semibold))
                 .foregroundStyle(Theme.textPrimary)
             Text(preset.summary)
-                .font(.system(size: 12))
-                .foregroundStyle(Theme.textSecondary)
+                .font(.system(size: iPadSheet ? 15 : 12))
+                .foregroundStyle(iPadSheet ? Theme.textTertiary : Theme.textSecondary)
             Text(verbatim: costLine)
-                .font(.hudNumber(size: 11))
+                .font(.hudNumber(size: iPadSheet ? 14 : 11))
                 .foregroundStyle(Theme.textTertiary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, iPadSheet ? 6 : 4)
     }
 
     /// "13.3 MB/h · Screen off ≈ 2.5–3 %/h (estimate)"

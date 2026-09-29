@@ -12,6 +12,7 @@ struct ExportView: View {
     @Environment(AppModel.self) private var model
     @Environment(AppLanguage.self) private var appLanguage
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.iPadSheet) private var iPadSheet
     @Query private var sessions: [DriveSession]
     @State private var tab = ExportTab.logger
     /// nil until the old exports are cleared and the session size is known.
@@ -55,7 +56,8 @@ struct ExportView: View {
             }
         }
         .relocalizing(appLanguage)
-        .presentationDetents([.medium, .large])
+        // A form sheet on iPad is sized by `presentationSizing`; the half-height detent is a phone affordance.
+        .presentationDetents(iPadSheet ? [.large] : [.medium, .large])
         .presentationBackground(Theme.background)
         .presentationDragIndicator(.visible)
         .interactiveDismissDisabled(exporting != nil)
@@ -111,11 +113,11 @@ struct ExportView: View {
     private func header(_ session: DriveSession, _ format: SessionFormat) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(verbatim: format.title(session))
-                .font(.system(size: 15, weight: .medium))
+                .font(.system(size: iPadSheet ? 17 : 15, weight: iPadSheet ? .semibold : .medium))
                 .foregroundStyle(Theme.textPrimary)
                 .lineLimit(1)
             Text(verbatim: format.metaLine(session))
-                .font(.hudNumber(size: 12))
+                .font(.hudNumber(size: iPadSheet ? 14 : 12))
                 .foregroundStyle(Theme.textSecondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.85)
@@ -135,7 +137,7 @@ struct ExportView: View {
                 Text("No SYNC marker — t = 0 at session start")
             }
         }
-        .font(.system(size: 13))
+        .font(.system(size: iPadSheet ? 15 : 13))
         .foregroundStyle(Theme.textTertiary)
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
@@ -241,18 +243,21 @@ private struct OptionRow: View {
     let canStart: Bool
     let onExport: () -> Void
 
+    /// iPad type scale and 52 pt buttons (design/mock/README.md "iPad の視認性ルール").
+    @Environment(\.iPadSheet) private var iPadSheet
+
     var body: some View {
         HStack(spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(verbatim: option.title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.system(size: iPadSheet ? 17 : 16, weight: .semibold))
                     .foregroundStyle(Theme.textPrimary)
                 Text(option.detail)
-                    .font(.system(size: 13))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(.system(size: iPadSheet ? 15 : 13))
+                    .foregroundStyle(iPadSheet ? Theme.textTertiary : Theme.textSecondary)
                     .fixedSize(horizontal: false, vertical: true)
                 Text(verbatim: footer)
-                    .font(.hudNumber(size: 12))
+                    .font(.hudNumber(size: iPadSheet ? 14 : 12))
                     .foregroundStyle(Theme.textTertiary)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -260,9 +265,12 @@ private struct OptionRow: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             action
         }
-        .padding(14)
-        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 14))
+        .padding(iPadSheet ? 18 : 14)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: iPadSheet ? IPadMetrics.cardRadius : 14))
     }
+
+    private var buttonFont: Font { .system(size: iPadSheet ? 16 : 14, weight: .semibold) }
+    private var buttonHeight: CGFloat { iPadSheet ? IPadMetrics.minTouch : 40 }
 
     /// The estimate before exporting; the actual file name and size afterwards.
     private var footer: String {
@@ -275,9 +283,9 @@ private struct OptionRow: View {
         case .idle:
             Button(action: onExport) {
                 Text("Export")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(buttonFont)
                     .foregroundStyle(Theme.textPrimary)
-                    .frame(minWidth: 72, minHeight: 40)
+                    .frame(minWidth: 72, minHeight: buttonHeight)
                     .padding(.horizontal, 6)
                     .background(Theme.background, in: RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.dividerStrong, lineWidth: 1.5))
@@ -289,14 +297,14 @@ private struct OptionRow: View {
         case .working:
             ProgressView()
                 .tint(Theme.accent)
-                .frame(minWidth: 84, minHeight: 40)
+                .frame(minWidth: 84, minHeight: buttonHeight)
                 .accessibilityLabel("Exporting…")
         case .done(let file, _):
             ShareLink(item: file.url) {
                 Label("Share", systemImage: "square.and.arrow.up")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(buttonFont)
                     .foregroundStyle(Theme.background)
-                    .frame(minWidth: 72, minHeight: 40)
+                    .frame(minWidth: 72, minHeight: buttonHeight)
                     .padding(.horizontal, 6)
                     .background(Theme.accent, in: RoundedRectangle(cornerRadius: 10))
             }

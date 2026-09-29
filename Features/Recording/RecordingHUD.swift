@@ -4,7 +4,7 @@ import SwiftUI
 
 /// The Recording HUD layout, independent of `RecordingController` so it can be previewed with a fixed snapshot.
 /// One view for both orientations (PLAN §11 rows 2 and 8): width > height → the 3-column landscape artboard,
-/// otherwise the portrait artboard.
+/// otherwise the portrait artboard. iPad-sized windows get `RecordingHUDIPadLayout` (artboards 12 and 16).
 struct RecordingHUD: View {
     var snapshot: TelemetrySnapshot
     var preset: CapturePreset?
@@ -18,7 +18,22 @@ struct RecordingHUD: View {
     /// Unplugged and < 20 %: suggest a lighter preset for the next session (PLAN §2.2.1 — never switch mid-session).
     var batteryLow = false
 
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
+
     var body: some View {
+        // Regular × regular is an iPad-sized window. A Plus / Max iPhone in landscape is regular × compact and keeps
+        // the phone artboard.
+        if horizontalSizeClass == .regular, verticalSizeClass == .regular {
+            RecordingHUDIPadLayout(
+                snapshot: snapshot, preset: preset, isSaving: isSaving, onMark: onMark, onSync: onSync,
+                onStop: onStop, onRotateMount: onRotateMount, batteryLow: batteryLow)
+        } else {
+            phone
+        }
+    }
+
+    private var phone: some View {
         GeometryReader { proxy in
             if proxy.size.width > proxy.size.height {
                 landscape
@@ -272,5 +287,17 @@ private extension TelemetrySnapshot {
 
 #Preview("Saving") {
     RecordingHUD(snapshot: .mock, preset: .logger, isSaving: true)
+}
+
+#Preview("iPad landscape", traits: .fixedLayout(width: 1210, height: 834)) {
+    RecordingHUD(snapshot: .mock, preset: .logger)
+        .environment(\.horizontalSizeClass, .regular)
+        .environment(\.verticalSizeClass, .regular)
+}
+
+#Preview("iPad portrait", traits: .fixedLayout(width: 834, height: 1210)) {
+    RecordingHUD(snapshot: .mock, preset: .logger, batteryLow: true)
+        .environment(\.horizontalSizeClass, .regular)
+        .environment(\.verticalSizeClass, .regular)
 }
 #endif

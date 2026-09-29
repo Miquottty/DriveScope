@@ -143,6 +143,19 @@ final class ReplayPlayer {
         seek(to: previous?.elapsed ?? 0)
     }
 
+    /// The first marker after the playhead; stays put after the last one.
+    func stepForward() {
+        // A small margin so a jump that landed on a marker moves on to the next one.
+        guard let next = timeline?.markers.first(where: { $0.elapsed > time + 0.05 }) else { return }
+        seek(to: next.elapsed)
+    }
+
+    /// Relative jump (keyboard ← / →); playback keeps running from the new position.
+    func skip(by seconds: TimeInterval) {
+        guard canPlay else { return }
+        seek(to: time + seconds)
+    }
+
     private func advance(by step: Duration) {
         let seconds = Double(step.components.seconds) + Double(step.components.attoseconds) / 1e18
         let next = time + seconds * Double(rate.rawValue)

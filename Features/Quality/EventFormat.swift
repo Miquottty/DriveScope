@@ -32,8 +32,9 @@ struct EventFormat {
         }
     }
 
-    /// The payload in the unit its kind uses; empty when the kind carries none.
-    func value(_ event: EventRecord) -> String {
+    /// The payload in the unit its kind uses; empty when the kind carries none. `includingSource: false` leaves
+    /// a marker's source out, for tables that show it in a column of its own.
+    func value(_ event: EventRecord, includingSource: Bool = true) -> String {
         switch event.kind {
         case .gpsLost, .gpsResumed, .motionStalled, .motionResumed, .sessionResumed:
             return format.seconds(event.value).text
@@ -46,7 +47,8 @@ struct EventFormat {
             return [level, batteryState(event.aux)].compactMap { $0 }.joined(separator: " · ")
         case .marker:
             // aux: 0 = MARK, 1 = SYNC.
-            return "\(event.aux == 1 ? "SYNC" : "MARK") · \(source(event.source))"
+            let kind = event.aux == 1 ? "SYNC" : "MARK"
+            return includingSource ? "\(kind) · \(source(event.source))" : kind
         case .thermalStateChanged:
             return thermalState(Int(event.aux))
         case .lowPowerModeChanged:
@@ -76,7 +78,7 @@ struct EventFormat {
         }
     }
 
-    private func source(_ source: EventSource) -> String {
+    func source(_ source: EventSource) -> String {
         switch source {
         case .phone: language.string("Phone")
         case .liveActivity: language.string("Live Activity")

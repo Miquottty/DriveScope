@@ -10,6 +10,8 @@ struct TelemetryValue: View {
         var labelSize: CGFloat = 11
         /// Label-to-value spacing.
         var spacing: CGFloat = 4
+        var labelWeight = Font.Weight.regular
+        var unitColor = Theme.textSecondary
 
         /// Portrait metric row (ALT / COURSE / DIST).
         static let metric = Style(valueSize: 26, unitSize: 13)
@@ -18,6 +20,14 @@ struct TelemetryValue: View {
         /// G readouts next to the meter.
         static let gForce = Style(valueSize: 28, unitSize: 12, spacing: 0)
         static let gForceLarge = Style(valueSize: 30, unitSize: 12, spacing: 0)
+
+        // iPad (mock artboards 12 / 16): semibold 15 pt labels, units in the lighter secondary color.
+        /// ALT / COURSE / DIST tiles.
+        static let padTile = Style(valueSize: 56, unitSize: 22, unitGap: 6, labelSize: 15, spacing: 4,
+                                   labelWeight: .semibold, unitColor: Theme.textTertiary)
+        /// LATERAL / LONG next to the meter.
+        static let padGForce = Style(valueSize: 48, unitSize: 20, unitGap: 4, labelSize: 15, spacing: 0,
+                                     labelWeight: .semibold, unitColor: Theme.textTertiary)
     }
 
     var label: String
@@ -30,7 +40,7 @@ struct TelemetryValue: View {
     var body: some View {
         VStack(alignment: alignment, spacing: style.spacing) {
             Text(verbatim: label)
-                .font(.system(size: style.labelSize))
+                .font(.system(size: style.labelSize, weight: style.labelWeight))
                 .tracking(style.labelSize * 0.1)
                 .foregroundStyle(Theme.textSecondary)
             HStack(alignment: .firstTextBaseline, spacing: style.unitGap) {
@@ -40,7 +50,7 @@ struct TelemetryValue: View {
                 if let unit {
                     Text(verbatim: unit)
                         .font(.hudNumber(size: style.unitSize))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(style.unitColor)
                 }
             }
             .lineLimit(1)

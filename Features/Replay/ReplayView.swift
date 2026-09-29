@@ -17,7 +17,7 @@ struct ReplayDestination: View, Equatable {
 }
 
 /// Timeline Replay (PLAN §11 row 5, mock artboard 5): map following the car, HUD readout, speed sparkline,
-/// scrubber, marker jumps and playback speed. Pushed from Session Detail.
+/// scrubber, marker jumps and playback speed. Pushed from Session Detail (iPhone); full screen on iPad (artboard 14).
 struct ReplayView: View {
     let sessionID: UUID
 
@@ -25,6 +25,7 @@ struct ReplayView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.verticalSizeClass) private var verticalSizeClass
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @Query private var sessions: [DriveSession]
     @State private var player = ReplayPlayer()
 
@@ -63,9 +64,22 @@ struct ReplayView: View {
         }
     }
 
+    private func content(_ session: DriveSession) -> some View {
+        Group {
+            // Regular × regular is an iPad-sized window (artboard 14); a Max iPhone in landscape (regular × compact)
+            // stays on the phone layout.
+            if horizontalSizeClass == .regular, verticalSizeClass == .regular {
+                ReplayIPadLayout(player: player, session: session) { dismiss() }
+            } else {
+                phoneContent(session)
+            }
+        }
+        .task(id: session.id) { await load(session) }
+    }
+
     /// Portrait is the mock: map on top, panel below. Landscape puts the panel beside the map. One `AnyLayout`
     /// keeps the map's identity (FOLLOW / 3D, camera) across rotation.
-    private func content(_ session: DriveSession) -> some View {
+    private func phoneContent(_ session: DriveSession) -> some View {
         let landscape = verticalSizeClass == .compact
         let layout = landscape ? AnyLayout(HStackLayout(alignment: .top, spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
         return layout {
@@ -87,7 +101,6 @@ struct ReplayView: View {
             .frame(width: landscape ? Self.panelWidth : nil)
             .frame(maxHeight: .infinity, alignment: .top)
         }
-        .task(id: session.id) { await load(session) }
     }
 
     private func load(_ session: DriveSession) async {
