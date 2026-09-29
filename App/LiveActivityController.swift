@@ -271,7 +271,8 @@ final class LiveActivityController: RecordingObserver {
             lateralG: (snapshot.lateralG * 100).rounded() / 100,
             status: status,
             languageCode: language().languageCode,
-            markCount: (session ?? recorder.session)?.markers.count ?? 0
+            // MARKs only, like the watch: the badge is on the MARK button; SYNC is not counted.
+            markCount: (session ?? recorder.session)?.markers.filter { $0.kind == .mark }.count ?? 0
         )
     }
 

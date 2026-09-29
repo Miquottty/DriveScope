@@ -60,6 +60,11 @@ final class WatchLink: NSObject, RecordingObserver {
 
     // MARK: - State
 
+    /// MARKs only: the badge sits on the MARK button, and SYNC (the video clap) is its own thing.
+    private var markCount: Int {
+        recorder.session?.markers.filter { $0.kind == .mark }.count ?? 0
+    }
+
     private func makeState() -> WatchState {
         let snapshot = recorder.live.snapshot
         let phase: WatchState.Phase = switch recorder.phase {
@@ -74,7 +79,7 @@ final class WatchLink: NSObject, RecordingObserver {
             phase: phase,
             timerStart: timerStart,
             speedKmh: snapshot.speed.map { Units.kmh(fromMetersPerSecond: max(0, $0)).rounded() },
-            markCount: recorder.session?.markers.count ?? 0,
+            markCount: markCount,
             gpsSearching: snapshot.gpsStatus == .searching,
             canStart: RemoteStart.isAvailable(recorder: recorder, environment: environment),
             languageCode: language().languageCode
@@ -108,7 +113,7 @@ final class WatchLink: NSObject, RecordingObserver {
 
     private func handle(_ command: WatchCommand) async -> WatchAck {
         func ack(_ accepted: Bool) -> WatchAck {
-            WatchAck(id: command.id, accepted: accepted, markCount: recorder.session?.markers.count ?? 0)
+            WatchAck(id: command.id, accepted: accepted, markCount: markCount)
         }
         guard !recentCommands.contains(command.id) else { return ack(true) }
         recentCommands.append(command.id)
