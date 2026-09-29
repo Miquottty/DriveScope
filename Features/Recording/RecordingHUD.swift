@@ -13,6 +13,10 @@ struct RecordingHUD: View {
     var onMark: () async -> Void = {}
     var onSync: () async -> Void = {}
     var onStop: () async -> Void = {}
+    /// Manual "rotate 90°" when the auto calibration picked the wrong axis (PLAN §7-4).
+    var onRotateMount: () async -> Void = {}
+    /// Unplugged and < 20 %: suggest a lighter preset for the next session (PLAN §2.2.1 — never switch mid-session).
+    var batteryLow = false
 
     var body: some View {
         GeometryReader { proxy in
@@ -23,6 +27,17 @@ struct RecordingHUD: View {
             }
         }
         .background(Theme.hudBackground.ignoresSafeArea())
+        .overlay(alignment: .top) {
+            if batteryLow {
+                Text("Low battery — consider Eco or GPS Only next time")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.accent)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Theme.surface, in: Capsule())
+                    .padding(.top, 52)
+            }
+        }
     }
 
     // MARK: - Portrait (artboard 2, 390×844)
@@ -171,10 +186,39 @@ struct RecordingHUD: View {
                                style: style, valueColor: Theme.accent, alignment: .trailing)
                 TelemetryValue(label: "LONG", value: HUDFormat.signedG(snapshot.longitudinalG), unit: "G",
                                style: style, alignment: .trailing)
+                calibrationControl
             }
             .fixedSize()
             GMeterView(lateralG: snapshot.lateralG, longitudinalG: snapshot.longitudinalG)
                 .frame(width: meterSize, height: meterSize)
+        }
+    }
+
+    /// "GPS EST." until the mount is calibrated (lateral g from GPS only); then "CAL" with the 90° correction.
+    @ViewBuilder private var calibrationControl: some View {
+        if snapshot.isCalibrated {
+            Button {
+                Task { await onRotateMount() }
+            } label: {
+                Label {
+                    Text(verbatim: "CAL · 90°")
+                } icon: {
+                    Image(systemName: "rotate.right")
+                }
+                .font(.hudNumber(size: 11, weight: .medium))
+                .foregroundStyle(Theme.textSecondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .overlay(Capsule().stroke(Theme.dividerStrong))
+            }
+            .buttonStyle(.plain)
+            .disabled(isSaving)
+            .accessibilityLabel(Text("Rotate mount 90°"))
+            .accessibilityIdentifier("rotateMountButton")
+        } else {
+            Text(verbatim: "GPS EST.")
+                .font(.hudNumber(size: 11, weight: .medium))
+                .foregroundStyle(Theme.textMuted)
         }
     }
 

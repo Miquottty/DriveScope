@@ -133,6 +133,7 @@ struct QualityView: View {
             QualityRow(label: "Effective / preset", value: motionRate(report, format))
             QualityRow(label: "Dropped", value: report.motionDropRate.map { format.percent($0) } ?? none)
         }
+        batteryCard(report.battery, format)
         QualityCard(title: "Altitude") {
             QualityRow(label: "Samples", value: format.integer(report.altitude.count))
             QualityRow(label: "Mean interval", value: interval(report.altitude.meanInterval))
@@ -150,6 +151,23 @@ struct QualityView: View {
             )
         }
         eventsCard(report.events)
+    }
+
+    /// Drain from `batterySnapshot` events (PLAN §2.2.2, real-car test E). Needs ≥ 10 min unplugged per figure.
+    private func batteryCard(_ battery: BatteryUsage, _ format: SessionFormat) -> some View {
+        let drain: (Double?) -> String = { rate in
+            rate.map { format.number($0, fraction: 1) + "\u{00A0}%/h" } ?? "—"
+        }
+        return QualityCard(title: "Battery") {
+            QualityRow(label: "Overall", value: drain(battery.overall))
+            QualityRow(label: "Screen on", value: drain(battery.screenOn))
+            QualityRow(label: "Screen off", value: drain(battery.screenOff))
+            if battery.overall == nil || battery.screenOn == nil || battery.screenOff == nil {
+                Text("Not enough unplugged data (needs ≥ 10 min)")
+                    .font(.system(size: 11))
+                    .foregroundStyle(Theme.textSecondary)
+            }
+        }
     }
 
     /// "49.8 / 50 Hz": what the stream delivered against what the preset asked for.
