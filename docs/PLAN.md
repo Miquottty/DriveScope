@@ -355,7 +355,15 @@ STOP: removePendingNotificationRequests
 サスペンド・クラッシュ・強制終了のどれでも、最終延期から 180 秒後に OS が単独で通知。通知タップでアプリ復帰 → `state == .recording` のセッションを再開・同じファイルに追記。
 
 ### 9.4 events ストリーム
-`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested` を elapsed 付きで記録。Quality 画面と JSON Export に出す。
+`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed` を elapsed 付きで記録。Quality 画面と JSON Export に出す。
+
+### 9.5 堅牢モード（V1.1）
+- 設定 → 記録 →「堅牢モード」（既定オフ）。オンにすると位置情報の「常に」許可を求める（`NSLocationAlwaysAndWhenInUseUsageDescription`）。未許可なら設定アプリへのリンクを出す。
+- 有効（設定オン + Always）なとき、記録中は Significant Location Change を監視する（`RobustMode`）。プロセスが走行中に落ちても（クラッシュ・メモリ不足）、iOS がアプリをバックグラウンドで再起動する。STOP で監視を止め、記録を継続しない起動でも止める（アイドル時に再起動され続けないため）。
+- バックグラウンド起動では `RecordingController.autoResume()` が最新の未完了セッションを UI なしで継続する。条件は `resumeDecision`: 同じ起動（uptime が巻き戻っていない）かつ最後のサンプルから 30 分以内（実時間。uptime はスリープ中止まるため）。`sessionResumed` と `autoResumed`（値 = 途切れた秒数）を events に記録。フォアグラウンド起動は従来どおり復旧シート（同じ判定を使う）。
+- Live Activity: 継続するセッションの Live Activity は起動時の後片付けから外して引き継ぐ。バックグラウンドで新規作成を拒否されたら、次にアクティブになった時に作り直す。
+- `liveUpdates` バックエンドは `CLServiceSession(.always)` で開く。再開時は配信済みのデッドマン通知を消す。
+- **未検証（実車）**: 実際に iOS が再起動して継続するか・所要時間、ユーザーのスワイプ終了後はどうなるか、STOP 後に再起動されないこと。結果をここに追記する。
 
 ---
 
@@ -367,11 +375,16 @@ STOP: removePendingNotificationRequests
 - `LiveActivityIntent` で MARK / STOP をロック画面と expanded から実行。
 - 言語はアプリ内設定に従う（§13）。
 
-### 10.1 Apple Watch（MVP 範囲: Watch アプリなし）
+### 10.1 Apple Watch（MVP: Watch アプリなし / V1.1: W3 Watch アプリ）
 - **W1 Smart Stack 表示**: iPhone の Live Activity は watchOS 11+ で Watch アプリなしに Smart Stack / 文字盤へ表示される。Watch 側は Dynamic Island の compact / expanded の内容から描かれるため、compact（REC + 経過 / 速度）と expanded を Watch でも読める密度で作る。`.small` family は CarPlay と共通。
 - **W2 Double Tap で MARK**: MARK ボタンに `.handGestureShortcut(.primaryAction)` を付与し、ハンドルを握ったまま指の Double Tap（Series 9 / Ultra 2 以降）で MARK できるようにする。watchOS 27 の Single Tap でも Smart Stack から選択可能。
-- **要検証（S2）**: Watch 上の iPhone Live Activity から押したボタンで iPhone 側の `LiveActivityIntent` が確実に実行されるか。不可なら W3（V1.1 の Watch アプリ）で実現する。
-- Watch から実行された MARK は events に `source = watch` を付けて記録する。
+- **検証済み（2026-09-29、Series 9）**: Smart Stack の MARK は iPhone の `LiveActivityIntent` に届く。ただし 1 回の操作が 0–0.1 秒差で 2 回届くため、Live Activity 経由の MARK は 0.5 秒以内の重複を無視する。Watch 側の反映は約 1 秒（Watch ↔ iPhone の往復）。Live Activity 経由の MARK の source は区別できず `liveActivity`。
+- **W3 Watch アプリ（V1.1）**: 単一ターゲットの watchOS 27 アプリ（`Watch/`、iPhone アプリに埋め込み、パッケージはリンクしない）。メッセージ型は `WatchShared/`（アプリと共有）。
+  - iPhone 側 `WatchLink`: フェーズ変化で application context、記録中は到達可能なとき 1 Hz で状態を送る。Watch のコマンドを ID で重複排除して実行し、ack を返す。
+  - 画面: 記録中は REC + 経過・速度・大きな MARK（Double Tap = `handGestureShortcut(.primaryAction)`、MARK 件数バッジ）・STOP（確認あり）。待機中は「記録していません」、堅牢モードが有効なら START。ack で成功 / エラーの触覚。iPhone のアプリ内言語に従う。
+  - MARK は `source = watch`、elapsed は iPhone の受信時刻、events の value に Watch で押した時刻（UNIX 秒）。キューに溜めない（遅れて届くと時刻がずれるため）。
+  - START は堅牢モードが有効（Always + 正確な位置）なときだけ。許可ダイアログは出さない。SYNC は iPhone のみ。
+  - 実機（2026-09-30、Series 9 + iPhone 16 Pro Max）: MARK 4 件すべて `source = watch` で記録、重複なし、1 秒以内の連打も取りこぼしなし。押下時刻 − 受信時刻は −360〜−322 ms（Watch と iPhone の時計差を含むため絶対値は測れないが、ばらつき 38 ms）。
 
 ---
 
@@ -521,10 +534,10 @@ DriveScope/
 ---
 
 ## 19. V1.1 候補
-- 堅牢モード（Always 権限 + Significant Location Change による自動復旧）
+- 堅牢モード（Always 権限 + Significant Location Change による自動復旧） — ✅ 実装（§9.5、実車での再起動確認は未）
 - Motion 補助による速度の 10 Hz 補間（GPS 1 Hz の間を加速度積分で埋める） — ✅ 実装（§12）
 - Replay 区間解析（コーナー・登り / 下り）→ `sections[]` — ✅ 解析・保存・JSON（§12）
-- **Apple Watch コンパニオンアプリ（W3）**
+- **Apple Watch コンパニオンアプリ（W3）** — ✅ 実装（§10.1。MARK は実機確認済み、START は実機未確認）
   - 画面: 大きな MARK（`handGestureShortcut(.primaryAction)`）、REC 状態・経過・速度、STOP
   - 通信: `WatchConnectivity`（Watch からの送信で iPhone アプリがバックグラウンドで起動・処理）
   - MARK 時の触覚フィードバック。Watchdog のローカル通知は OS が自動で Watch に転送
