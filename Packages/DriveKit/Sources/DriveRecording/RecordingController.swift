@@ -66,6 +66,8 @@ public final class RecordingController {
     private var observers: [any RecordingObserver] = []
     /// Debug builds may shorten the watchdog thresholds (Settings → Debug).
     public var watchdogPolicy = RecordingWatchdog.Policy()
+    /// Runs at STOP before the streams close — last-moment events (e.g. a final battery snapshot).
+    public var willStop: (@MainActor () async -> Void)?
     /// Applied at every START / resume, so settings changed since launch take effect.
     public var prepareForStart: (@MainActor (RecordingController) -> Void)?
 
@@ -123,7 +125,8 @@ public final class RecordingController {
             suite: suite, writer: writer, files: files, manifest: manifest, statistics: statistics,
             watchdogPolicy: watchdogPolicy,
             onSnapshot: { snapshot in Task { @MainActor in live.apply(snapshot) } },
-            onWatchdog: { [weak self] action in Task { @MainActor in self?.handle(action) } }
+            onWatchdog: { [weak self] action in Task { @MainActor in self?.handle(action) } },
+            onCalibration: { [weak self] calibration in Task { @MainActor in self?.persist(calibration) } }
         )
         self.files = files
         self.engine = engine
@@ -131,6 +134,17 @@ public final class RecordingController {
         live.reset()
         await engine.start()
         phase = .recording
+    }
+
+    private func persist(_ calibration: MountCalibration) {
+        guard let session else { return }
+        session.calibration = calibration
+        try? store.save()
+    }
+
+    /// Recording screen: the auto calibration picked the wrong axis; turn "forward" by 90°.
+    public func rotateMount() async {
+        await engine?.rotateMountManually()
     }
 
     private func handle(_ action: RecordingWatchdog.Action) {
@@ -141,6 +155,7 @@ public final class RecordingController {
     public func stop() async {
         guard phase == .recording, let engine, let session, let files else { return }
         phase = .stopping
+        await willStop?()
         let statistics = await engine.stop()
         let duration = max(0, await engine.elapsed)
         phase = .finalizing
@@ -148,7 +163,7 @@ public final class RecordingController {
             let preview = SessionStore.routePreview(from: (try? files.locations()) ?? [])
             try store.finish(
                 session, state: .stopped, endedAt: session.clock.date(elapsed: duration),
-                summary: statistics.summary(duration: duration), routePreview: preview
+                summary: Self.summary(statistics, duration: duration, files: files), routePreview: preview
             )
         } catch {
             lastError = String(describing: error)
@@ -226,7 +241,7 @@ public final class RecordingController {
             let preview = SessionStore.routePreview(from: (try? files.locations()) ?? [])
             try store.finish(
                 unfinished, state: .recovered, endedAt: manifest.clock.date(elapsed: duration),
-                summary: statistics.summary(duration: duration), routePreview: preview
+                summary: Self.summary(statistics, duration: duration, files: files), routePreview: preview
             )
             await onFinished?(unfinished)
         } catch {
@@ -268,6 +283,12 @@ public final class RecordingController {
             lastError = String(describing: error)
             phase = .idle
         }
+    }
+
+    private static func summary(_ statistics: SessionStatistics, duration: TimeInterval, files: SessionFiles) -> SessionSummary {
+        var summary = statistics.summary(duration: duration)
+        summary.batteryUsagePerHour = BatteryUsage(events: (try? files.events()) ?? []).overall
+        return summary
     }
 
     /// Reads the files off the main actor.

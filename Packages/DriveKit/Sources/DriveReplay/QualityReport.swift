@@ -22,6 +22,7 @@ public struct QualityReport: Sendable {
     public var accuracyP95: Double = 0
     /// 1 - received / expected, over the motion span.
     public var motionDropRate: Double?
+    public var battery = BatteryUsage()
     /// Highest `ProcessInfo.ThermalState` raw value seen (0 nominal … 3 critical).
     public var maxThermalState: Int?
     public var events: [EventRecord] = []
@@ -51,6 +52,7 @@ public struct QualityReport: Sendable {
         report.altitude = stream(times: try files.altitudes().map(\.timestamp))
 
         report.events = try files.events()
+        report.battery = BatteryUsage(events: report.events)
         report.maxThermalState = report.events.filter { $0.kind == .thermalStateChanged }.map { Int($0.aux) }.max()
         report.bytesOnDisk = files.byteSize()
         return report

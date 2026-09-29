@@ -17,6 +17,22 @@
         }
       }
     },
+    "%@/h": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/h"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@/時"
+          }
+        }
+      }
+    },
     "%lld drives": {
       "localizations": {
         "en": {
@@ -309,6 +325,22 @@
         }
       }
     },
+    "Battery %lld%% — switch to Eco or GPS Only?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery %lld%% — switch to Eco or GPS Only?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッテリー残量 %lld%%。Eco か GPS Only に切り替えますか？"
+          }
+        }
+      }
+    },
     "Calibration updated": {
       "localizations": {
         "en": {
@@ -321,6 +353,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "キャリブレーション更新"
+          }
+        }
+      }
+    },
+    "Capture preset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Capture preset"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャプチャプリセット"
           }
         }
       }
@@ -517,6 +565,22 @@
         }
       }
     },
+    "Dismiss": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dismiss"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "閉じる"
+          }
+        }
+      }
+    },
     "Distance": {
       "localizations": {
         "en": {
@@ -703,6 +767,70 @@
         }
       }
     },
+    "GPS + accelerometer at 10 Hz, gyro off. No attitude or rotation rate.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + accelerometer at 10 Hz, gyro off. No attitude or rotation rate."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + 加速度 10 Hz（ジャイロ停止）。姿勢と角速度は記録しません。"
+          }
+        }
+      }
+    },
+    "GPS + full device motion at 100 Hz. Largest files, highest battery use.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + full device motion at 100 Hz. Largest files, highest battery use."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + デバイスモーション 100 Hz。ファイルが最大で、電池消費も最大です。"
+          }
+        }
+      }
+    },
+    "GPS + full device motion at 25 Hz. Nothing lost, smaller files.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + full device motion at 25 Hz. Nothing lost, smaller files."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + デバイスモーション 25 Hz。欠落なしでファイルは小さめです。"
+          }
+        }
+      }
+    },
+    "GPS + full device motion at 50 Hz. Nothing lost. Default.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + full device motion at 50 Hz. Nothing lost. Default."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS + デバイスモーション 50 Hz。欠落なし。標準設定です。"
+          }
+        }
+      }
+    },
     "GPS lost": {
       "localizations": {
         "en": {
@@ -715,6 +843,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "GPS 信号喪失"
+          }
+        }
+      }
+    },
+    "GPS only, no motion sensors. G is estimated from GPS, so peaks are blunted.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS only, no motion sensors. G is estimated from GPS, so peaks are blunted."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS のみでモーションセンサーは使いません。G は GPS からの推定で、ピークは鈍ります。"
           }
         }
       }
@@ -933,6 +1077,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "バッテリー残量低下の通知"
+          }
+        }
+      }
+    },
+    "Low battery — consider Eco or GPS Only next time": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッテリー残量低下 — 次回は Eco か GPS Only を検討してください"
           }
         }
       }
@@ -1255,6 +1409,22 @@
         }
       }
     },
+    "Not enough unplugged data (needs ≥ 10 min)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not enough unplugged data (needs ≥ 10 min)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "非充電時のデータが足りません（10 分以上必要）"
+          }
+        }
+      }
+    },
     "OK": {
       "localizations": {
         "en": {
@@ -1335,6 +1505,22 @@
         }
       }
     },
+    "Overall": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Overall"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "全体"
+          }
+        }
+      }
+    },
     "Peak G": {
       "localizations": {
         "en": {
@@ -1411,6 +1597,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "「正確な位置情報」がオフです。正確なルートを記録するにはオンにしてください。"
+          }
+        }
+      }
+    },
+    "Preset is fixed per session. Changes apply to the next START.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Preset is fixed per session. Changes apply to the next START."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "プリセットはセッションごとに固定されます。変更は次の START から適用されます。"
           }
         }
       }
@@ -1633,6 +1835,16 @@
         }
       }
     },
+    "Rotate mount 90°": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "取り付け向きを 90° 回転"
+          }
+        }
+      }
+    },
     "Route map": {
       "localizations": {
         "en": {
@@ -1693,6 +1905,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "画面オフ"
+          }
+        }
+      }
+    },
+    "Screen off ≈ %@ %%/h (estimate)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen off ≈ %@ %%/h (estimate)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面オフ 約 %@ %%/h（推定）"
           }
         }
       }

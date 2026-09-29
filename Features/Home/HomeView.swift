@@ -15,13 +15,15 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(RecordingController.self) private var recorder
     @Environment(AppLanguage.self) private var appLanguage
+    @Environment(BatteryMonitor.self) private var battery
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @Query(HomeView.recentDescriptor) private var recent: [DriveSession]
 
     @State private var showingSettings = false
-    @State private var power = PowerStatus.read()
+    @State private var isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+    @State private var batterySuggestionDismissed = false
     @State private var isStarting = false
     @State private var issue: StartIssue?
 
@@ -50,6 +52,19 @@ struct HomeView: View {
             VStack(alignment: .leading, spacing: 0) {
                 header
                 sensorStatus.padding(.top, 22)
+                if showsBatterySuggestion {
+                    LowBatterySuggestion(
+                        percent: Int(((battery.level ?? 0) * 100).rounded()),
+                        onSelect: { preset in
+                            withAnimation { presetRaw = preset.rawValue }
+                        },
+                        onDismiss: {
+                            withAnimation { batterySuggestionDismissed = true }
+                        }
+                    )
+                    .padding(.top, 14)
+                    .transition(.opacity)
+                }
                 startArea
                 recentSessions
             }
@@ -62,18 +77,8 @@ struct HomeView: View {
         .sheet(isPresented: $showingSettings) {
             SettingsView()
         }
-        .task {
-            UIDevice.current.isBatteryMonitoringEnabled = true
-            power = PowerStatus.read()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryLevelDidChangeNotification)) { _ in
-            power = PowerStatus.read()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIDevice.batteryStateDidChangeNotification)) { _ in
-            power = PowerStatus.read()
-        }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
-            power = PowerStatus.read()
+            isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
         }
         .onChange(of: permission.canRecord) { _, allowed in
             if allowed, issue == .denied { issue = nil }
@@ -135,7 +140,7 @@ struct HomeView: View {
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(background.tint)
             }
-            if power.isLowPower {
+            if isLowPowerMode {
                 Label("Low Power Mode is on. GPS updates may be reduced; charge or turn it off for long drives.", systemImage: "bolt.badge.exclamationmark")
                     .font(.system(size: 12))
                     .foregroundStyle(Theme.accent)
@@ -193,10 +198,10 @@ struct HomeView: View {
     }
 
     private var powerCell: some View {
-        let level = power.level.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
+        let level = battery.level.map { "\(Int(($0 * 100).rounded()))%" } ?? "—"
         return StatusCell(
             label: Text("Power"), value: Text(verbatim: level), tint: Theme.textPrimary,
-            detail: power.isCharging ? Text("Charging") : nil
+            detail: battery.isCharging ? Text("Charging") : nil
         )
     }
 
@@ -263,6 +268,12 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 300)
         .padding(.vertical, 12)
+    }
+
+    /// PLAN §2.2.1: suggest only, never switch automatically. Nothing to suggest once the preset is already light.
+    private var showsBatterySuggestion: Bool {
+        let idle = recorder.phase == .idle || recorder.phase == .stopped
+        return battery.isLow && !batterySuggestionDismissed && idle && preset != .eco && preset != .gpsOnly
     }
 
     private var presetSummary: String {
@@ -399,20 +410,68 @@ private struct StatusCell: View {
     }
 }
 
-/// Battery / Low Power Mode. The simulator reports level -1 and state unknown, shown as "—".
-private struct PowerStatus {
-    var level: Float?
-    var isCharging: Bool
-    var isLowPower: Bool
+/// Amber card above START when the battery is low and unplugged (PLAN §2.2.1).
+private struct LowBatterySuggestion: View {
+    let percent: Int
+    let onSelect: (CapturePreset) -> Void
+    let onDismiss: () -> Void
 
-    @MainActor
-    static func read() -> PowerStatus {
-        let device = UIDevice.current
-        let level: Float? = device.batteryLevel >= 0 ? device.batteryLevel : nil
-        return PowerStatus(
-            level: level,
-            isCharging: device.batteryState == .charging || device.batteryState == .full,
-            isLowPower: ProcessInfo.processInfo.isLowPowerModeEnabled
-        )
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "battery.25percent")
+                .font(.system(size: 18))
+                .foregroundStyle(Theme.accent)
+                .frame(height: 20)
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Battery \(percent)% — switch to Eco or GPS Only?")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                HStack(spacing: 8) {
+                    option(.eco, id: "suggestEcoButton")
+                    option(.gpsOnly, id: "suggestGPSOnlyButton")
+                }
+            }
+            Spacer(minLength: 0)
+            Button(action: onDismiss) {
+                Image(systemName: "xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(width: 32, height: 32)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityLabel("Dismiss")
+            .accessibilityIdentifier("dismissBatterySuggestionButton")
+            .offset(x: 6, y: -6)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Theme.accent.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.accent.opacity(0.35)))
+        .accessibilityIdentifier("batterySuggestion")
     }
+
+    private func option(_ preset: CapturePreset, id: String) -> some View {
+        Button {
+            onSelect(preset)
+        } label: {
+            Text(verbatim: preset.displayName)
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .padding(.horizontal, 14)
+                .frame(minHeight: 34)
+                .background(Theme.accent.opacity(0.16), in: Capsule())
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier(id)
+    }
+}
+
+#Preview("Low battery") {
+    LowBatterySuggestion(percent: 17, onSelect: { _ in }, onDismiss: {})
+        .padding(20)
+        .background(Theme.background)
+        .preferredColorScheme(.dark)
 }

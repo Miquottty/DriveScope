@@ -12,6 +12,7 @@ struct DriveScopeApp: App {
                 .environment(appLanguage)
                 .environment(model)
                 .environment(model.recorder)
+                .environment(model.battery)
                 .modelContainer(model.container)
                 .environment(\.locale, appLanguage.locale)
                 .preferredColorScheme(.dark)

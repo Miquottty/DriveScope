@@ -19,6 +19,7 @@ final class AppModel {
     private let liveActivity: LiveActivityController
     private let notifications: RecordingNotifications
     private let deviceEvents: DeviceEventMonitor
+    let battery: BatteryMonitor
 
     init() {
         sensorEnvironment = SensorEnvironment.current()
@@ -54,6 +55,10 @@ final class AppModel {
         recorder.addObserver(notifications)
         deviceEvents = DeviceEventMonitor(recorder: recorder)
         recorder.addObserver(deviceEvents)
+        let battery = BatteryMonitor(recorder: recorder)
+        self.battery = battery
+        recorder.addObserver(battery)
+        recorder.willStop = { await battery.snapshot() }
     }
 
     private static func hardwareModel() -> String {
@@ -122,10 +127,9 @@ struct SensorEnvironment {
                 altimeter: LocationDerivedAltimeterSource(), label: "simulator-route"
             )
         case .device:
-            // Core Motion / CMAltimeter sources arrive in S3 / S4.
             return SensorSuite(
-                clock: SystemClock(), location: makeLocationSource(), motion: UnavailableMotionSource(),
-                altimeter: UnavailableAltimeterSource(), label: "device"
+                clock: SystemClock(), location: makeLocationSource(), motion: CoreMotionSource(),
+                altimeter: CoreAltimeterSource(), label: "device"
             )
         }
     }
