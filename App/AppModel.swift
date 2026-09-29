@@ -1,3 +1,4 @@
+import AppIntents
 import DriveDomain
 import DriveRecording
 import DriveSensors
@@ -15,6 +16,9 @@ final class AppModel {
     let recorder: RecordingController
     let filesRoot: URL
     let sensorEnvironment: SensorEnvironment
+    private let liveActivity: LiveActivityController
+    private let notifications: RecordingNotifications
+    private let deviceEvents: DeviceEventMonitor
 
     init() {
         sensorEnvironment = SensorEnvironment.current()
@@ -31,10 +35,25 @@ final class AppModel {
             deviceModel: Self.hardwareModel(),
             osVersion: "\(device.systemName) \(device.systemVersion)"
         )
-        let sensors = sensorEnvironment
-        recorder = RecordingController(store: store, filesRoot: filesRoot, environment: environment) {
-            sensors.makeSuite()
+        // Re-read at every START so Settings changes (location backend) apply to the next session.
+        let recorder = RecordingController(store: store, filesRoot: filesRoot, environment: environment) {
+            SensorEnvironment.current().makeSuite()
         }
+        recorder.prepareForStart = { recorder in
+            #if DEBUG
+            let fast = UserDefaults.standard.bool(forKey: "debugFastWatchdog")
+            recorder.watchdogPolicy = fast ? RecordingWatchdog.Policy().accelerated(by: 10) : RecordingWatchdog.Policy()
+            #endif
+        }
+        self.recorder = recorder
+        // Live Activity MARK / STOP intents run in this process and reach the recorder through @Dependency.
+        AppDependencyManager.shared.add(dependency: recorder)
+        liveActivity = LiveActivityController(recorder: recorder)
+        recorder.addObserver(liveActivity)
+        notifications = RecordingNotifications(recorder: recorder)
+        recorder.addObserver(notifications)
+        deviceEvents = DeviceEventMonitor(recorder: recorder)
+        recorder.addObserver(deviceEvents)
     }
 
     private static func hardwareModel() -> String {

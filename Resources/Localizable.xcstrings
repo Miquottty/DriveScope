@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ recovered": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ recovered"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 復元済み"
+          }
+        }
+      }
+    },
     "%lld drives": {
       "localizations": {
         "en": {
@@ -69,6 +85,54 @@
         }
       }
     },
+    "Accuracy P50": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accuracy P50"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精度 P50"
+          }
+        }
+      }
+    },
+    "Accuracy P95": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accuracy P95"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "精度 P95"
+          }
+        }
+      }
+    },
+    "Add Marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Add Marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マーカーを追加"
+          }
+        }
+      }
+    },
     "All sessions": {
       "localizations": {
         "en": {
@@ -85,6 +149,22 @@
         }
       }
     },
+    "Altitude": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altitude"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高度"
+          }
+        }
+      }
+    },
     "Always · OK": {
       "localizations": {
         "en": {
@@ -97,6 +177,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "常に · OK"
+          }
+        }
+      }
+    },
+    "Applies to the next START. Compared in real-car test B.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Applies to the next START. Compared in real-car test B."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次の START から適用されます。実車テスト B で比較します。"
           }
         }
       }
@@ -197,6 +293,70 @@
         }
       }
     },
+    "Battery": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Battery"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッテリー"
+          }
+        }
+      }
+    },
+    "Calibration updated": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calibration updated"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "キャリブレーション更新"
+          }
+        }
+      }
+    },
+    "CarPlay connected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CarPlay connected"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CarPlay 接続"
+          }
+        }
+      }
+    },
+    "CarPlay disconnected": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CarPlay disconnected"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "CarPlay 切断"
+          }
+        }
+      }
+    },
     "Charging": {
       "localizations": {
         "en": {
@@ -225,6 +385,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションを削除できませんでした"
+          }
+        }
+      }
+    },
+    "Could not read the log files.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Could not read the log files."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ログファイルを読み込めませんでした。"
+          }
+        }
+      }
+    },
+    "Critical": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Critical"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "危険"
+          }
+        }
+      }
+    },
+    "Debug": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Debug"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバッグ"
           }
         }
       }
@@ -277,6 +485,38 @@
         }
       }
     },
+    "Discard": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "破棄"
+          }
+        }
+      }
+    },
+    "Discard this recording?": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Discard this recording?"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "この記録を破棄しますか？"
+          }
+        }
+      }
+    },
     "Distance": {
       "localizations": {
         "en": {
@@ -309,6 +549,32 @@
         }
       }
     },
+    "DriveScope hasn't received data for a while. Tap to resume recording.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらくデータを受信していません。タップすると記録を再開します。"
+          }
+        }
+      }
+    },
+    "Dropped": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dropped"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "欠落"
+          }
+        }
+      }
+    },
     "Earlier": {
       "localizations": {
         "en": {
@@ -325,6 +591,54 @@
         }
       }
     },
+    "Effective / preset": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effective / preset"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実効 / プリセット"
+          }
+        }
+      }
+    },
+    "Entered background": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Entered background"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックグラウンドへ移行"
+          }
+        }
+      }
+    },
+    "Events": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Events"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント"
+          }
+        }
+      }
+    },
     "Export": {
       "localizations": {
         "en": {
@@ -337,6 +651,102 @@
           "stringUnit": {
             "state": "translated",
             "value": "書き出し"
+          }
+        }
+      }
+    },
+    "Fair": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fair"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "やや高温"
+          }
+        }
+      }
+    },
+    "Fast watchdog (÷10)": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fast watchdog (÷10)"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高速ウォッチドッグ (÷10)"
+          }
+        }
+      }
+    },
+    "Full": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Full"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "満充電"
+          }
+        }
+      }
+    },
+    "GPS lost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS lost"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS 信号喪失"
+          }
+        }
+      }
+    },
+    "GPS resumed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS resumed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS 復帰"
+          }
+        }
+      }
+    },
+    "GPS signal lost": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS signal lost"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS 信号なし"
           }
         }
       }
@@ -383,6 +793,38 @@
         }
       }
     },
+    "Live Activity": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Live Activity"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ライブアクティビティ"
+          }
+        }
+      }
+    },
+    "Location": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置情報"
+          }
+        }
+      }
+    },
     "Location access is off. DriveScope needs it to record your route and speed.": {
       "localizations": {
         "en": {
@@ -395,6 +837,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "位置情報の利用がオフです。ルートと速度を記録するには DriveScope に位置情報の許可が必要です。"
+          }
+        }
+      }
+    },
+    "Location backend": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Location backend"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "位置情報バックエンド"
           }
         }
       }
@@ -431,6 +889,22 @@
         }
       }
     },
+    "Low Power Mode changed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode changed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低電力モードの変更"
+          }
+        }
+      }
+    },
     "Low Power Mode is on. GPS updates may be reduced; charge or turn it off for long drives.": {
       "localizations": {
         "en": {
@@ -447,12 +921,44 @@
         }
       }
     },
+    "Low battery suggested": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low battery suggested"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッテリー残量低下の通知"
+          }
+        }
+      }
+    },
     "MARK = bookmark this moment · SYNC = clap / flash for camera sync": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
             "value": "MARK = この瞬間をブックマーク · SYNC = カメラ同期用の拍手 / フラッシュ"
+          }
+        }
+      }
+    },
+    "Marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "マーカー"
           }
         }
       }
@@ -473,6 +979,54 @@
         }
       }
     },
+    "Max gap": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Max gap"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大ギャップ"
+          }
+        }
+      }
+    },
+    "Max state": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Max state"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大状態"
+          }
+        }
+      }
+    },
+    "Mean interval": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mean interval"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "平均間隔"
+          }
+        }
+      }
+    },
     "Motion": {
       "localizations": {
         "en": {
@@ -485,6 +1039,54 @@
           "stringUnit": {
             "state": "translated",
             "value": "モーション"
+          }
+        }
+      }
+    },
+    "Motion resumed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motion resumed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モーション復帰"
+          }
+        }
+      }
+    },
+    "Motion sensor stalled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motion sensor stalled"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モーションセンサー停止"
+          }
+        }
+      }
+    },
+    "Motion stalled": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Motion stalled"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モーション停止"
           }
         }
       }
@@ -505,6 +1107,32 @@
         }
       }
     },
+    "No GPS fix for a while. Recording continues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No GPS fix for a while. Recording continues."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらく GPS を受信できていません。記録は継続中です。"
+          }
+        }
+      }
+    },
+    "No GPS for %lld min. Recording continues.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS を %lld 分間受信できていません。記録は継続中です。"
+          }
+        }
+      }
+    },
     "No drives yet": {
       "localizations": {
         "en": {
@@ -521,6 +1149,48 @@
         }
       }
     },
+    "No events recorded": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No events recorded"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベントはありません"
+          }
+        }
+      }
+    },
+    "No motion data for %lld min. Recording continues.": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "モーションデータが %lld 分間届いていません。記録は継続中です。"
+          }
+        }
+      }
+    },
+    "No motion data for a while. Recording continues.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No motion data for a while. Recording continues."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "しばらくモーションデータを受信できていません。記録は継続中です。"
+          }
+        }
+      }
+    },
     "No route recorded": {
       "localizations": {
         "en": {
@@ -533,6 +1203,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "ルートが記録されていません"
+          }
+        }
+      }
+    },
+    "Nominal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nominal"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正常"
           }
         }
       }
@@ -601,6 +1287,38 @@
         }
       }
     },
+    "On": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "オン"
+          }
+        }
+      }
+    },
+    "On disk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On disk"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスク使用量"
+          }
+        }
+      }
+    },
     "Open Settings": {
       "localizations": {
         "en": {
@@ -629,6 +1347,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "最大 G"
+          }
+        }
+      }
+    },
+    "Phone": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Phone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone"
           }
         }
       }
@@ -677,6 +1411,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "「正確な位置情報」がオフです。正確なルートを記録するにはオンにしてください。"
+          }
+        }
+      }
+    },
+    "Previous recording didn't finish": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous recording didn't finish"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前回の記録が完了していません"
           }
         }
       }
@@ -777,6 +1527,48 @@
         }
       }
     },
+    "Recording": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recording"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録"
+          }
+        }
+      }
+    },
+    "Recording may have stopped": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録が停止した可能性があります"
+          }
+        }
+      }
+    },
+    "Recover session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッションを復元"
+          }
+        }
+      }
+    },
     "Replay": {
       "localizations": {
         "en": {
@@ -805,6 +1597,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "制限あり"
+          }
+        }
+      }
+    },
+    "Resumed from notification": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Resumed from notification"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "通知から再開"
+          }
+        }
+      }
+    },
+    "Returning to foreground": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Returning to foreground"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "フォアグラウンドへ復帰"
           }
         }
       }
@@ -841,6 +1665,54 @@
         }
       }
     },
+    "Samples": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Samples"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サンプル数"
+          }
+        }
+      }
+    },
+    "Screen off": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen off"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面オフ"
+          }
+        }
+      }
+    },
+    "Screen on": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Screen on"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面オン"
+          }
+        }
+      }
+    },
     "Sensor Status": {
       "localizations": {
         "en": {
@@ -857,6 +1729,38 @@
         }
       }
     },
+    "Serious": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serious"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高温"
+          }
+        }
+      }
+    },
+    "Session": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション"
+          }
+        }
+      }
+    },
     "Session not found": {
       "localizations": {
         "en": {
@@ -869,6 +1773,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションが見つかりません"
+          }
+        }
+      }
+    },
+    "Session resumed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Session resumed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "セッション再開"
           }
         }
       }
@@ -953,6 +1873,38 @@
         }
       }
     },
+    "Stop Recording": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Stop Recording"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を停止"
+          }
+        }
+      }
+    },
+    "Storage": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Storage"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ストレージ"
+          }
+        }
+      }
+    },
     "System": {
       "localizations": {
         "en": {
@@ -985,6 +1937,38 @@
         }
       }
     },
+    "Thermal": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thermal"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "サーマル"
+          }
+        }
+      }
+    },
+    "Thermal state changed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thermal state changed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "温度状態の変化"
+          }
+        }
+      }
+    },
     "Time": {
       "localizations": {
         "en": {
@@ -1013,6 +1997,86 @@
           "stringUnit": {
             "state": "translated",
             "value": "利用不可"
+          }
+        }
+      }
+    },
+    "Unknown event": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unknown event"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "不明なイベント"
+          }
+        }
+      }
+    },
+    "Unplugged": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unplugged"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未接続"
+          }
+        }
+      }
+    },
+    "Watch": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watch"
+          }
+        }
+      }
+    },
+    "Watchdog and dead-man notification timings run ten times faster. Applies to the next START.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watchdog and dead-man notification timings run ten times faster. Applies to the next START."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウォッチドッグとデッドマン通知の時間が 10 倍速になります。次の START から適用されます。"
+          }
+        }
+      }
+    },
+    "Watchdog fired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Watchdog fired"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ウォッチドッグ作動"
           }
         }
       }

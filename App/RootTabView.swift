@@ -32,6 +32,7 @@ struct RootTabView: View {
         .fullScreenCover(isPresented: .constant(isRecordingUIVisible)) {
             RecordingView()
         }
+        .recoveryPrompt { showSession($0) }
         .onChange(of: recorder.phase) { _, phase in
             guard phase == .stopped else { return }
             if let id = recorder.lastFinishedSessionID { showSession(id) }

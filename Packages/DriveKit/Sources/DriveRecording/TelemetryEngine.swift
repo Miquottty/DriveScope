@@ -38,30 +38,40 @@ public struct TelemetrySnapshot: Sendable, Equatable {
 /// Consumes the sensor suite, writes every raw sample, and keeps running statistics (PLAN §6).
 /// Sensor streams never touch the main actor; the HUD gets throttled snapshots through `onSnapshot`.
 public actor TelemetryEngine {
-    public static let gpsSearchingAfter: TimeInterval = 15
-
     private let suite: SensorSuite
     private let writer: SampleWriter
     private let files: SessionFiles
     private var manifest: SessionManifest
     private let onSnapshot: @Sendable (TelemetrySnapshot) -> Void
+    private let onWatchdog: @Sendable (RecordingWatchdog.Action) -> Void
+    private var watchdog: RecordingWatchdog
+    private var lastMotionUptime: TimeInterval?
+    private var hasFix = false
     private var statistics: SessionStatistics
     private var snapshot = TelemetrySnapshot()
     private var tasks: [Task<Void, Never>] = []
-    private var lastFixUptime: TimeInterval?
+    private var lastFixUptime: TimeInterval
     private var baroRelativeAtBaseline: Double?
     private var lastRelativeAltitude: Double?
 
     public init(
         suite: SensorSuite, writer: SampleWriter, files: SessionFiles, manifest: SessionManifest,
         statistics: SessionStatistics? = nil,
-        onSnapshot: @escaping @Sendable (TelemetrySnapshot) -> Void
+        watchdogPolicy: RecordingWatchdog.Policy = .init(),
+        onSnapshot: @escaping @Sendable (TelemetrySnapshot) -> Void,
+        onWatchdog: @escaping @Sendable (RecordingWatchdog.Action) -> Void = { _ in }
     ) {
         self.suite = suite
         self.writer = writer
         self.files = files
         self.manifest = manifest
         self.onSnapshot = onSnapshot
+        self.onWatchdog = onWatchdog
+        watchdog = RecordingWatchdog(policy: watchdogPolicy)
+        // Silence is measured from (re)start, so a session that never gets a fix still escalates.
+        let now = suite.clock.uptime
+        lastFixUptime = now
+        lastMotionUptime = manifest.preset.motion == .none ? nil : now
         self.statistics = statistics ?? SessionStatistics(clock: manifest.clock, expectedMotionHz: manifest.preset.motion.hz)
         snapshot.distance = self.statistics.distance
     }
@@ -92,13 +102,22 @@ public actor TelemetryEngine {
         return statistics
     }
 
+    /// Tests only: stops every stream without flushing, like a process kill (buffered samples are lost).
+    package func abandon() {
+        for task in tasks { task.cancel() }
+        tasks.removeAll()
+    }
+
     public func record(_ event: EventRecord) async {
         await writer.append(event, to: .events)
     }
 
     /// Forces buffered samples to disk (app backgrounding / termination, PLAN §4.1).
     public func flush() async {
-        await writer.flush(sync: true)
+        // Called on backgrounding / termination: must complete even if the calling task is cancelled.
+        await withTaskCancellationShield {
+            await writer.flush(sync: true)
+        }
     }
 
     public var elapsed: TimeInterval { suite.clock.uptime - manifest.clock.startUptime }
@@ -113,6 +132,7 @@ public actor TelemetryEngine {
         (suite.altimeter as? any LocationFed)?.feed(location)
         statistics.add(location)
         lastFixUptime = suite.clock.uptime
+        hasFix = true
 
         if manifest.altitudeBaseline == nil, location.verticalAccuracy > 0, location.verticalAccuracy <= 20 {
             manifest.altitudeBaseline = location.altitude
@@ -133,9 +153,11 @@ public actor TelemetryEngine {
     private func handle(_ event: MotionEvent) async {
         switch event {
         case .deviceMotion(let sample):
+            lastMotionUptime = suite.clock.uptime
             await writer.append(sample, to: .motion)
             statistics.addMotion(timestamp: sample.timestamp)
         case .acceleration(let sample):
+            lastMotionUptime = suite.clock.uptime
             await writer.append(sample, to: .accel)
             statistics.addMotion(timestamp: sample.timestamp)
         }
@@ -156,18 +178,46 @@ public actor TelemetryEngine {
         }
     }
 
-    /// 10 Hz: publish the HUD snapshot, and let quiet streams reach disk on time.
+    /// 10 Hz: publish the HUD snapshot; 1 Hz: watchdog and on-time flushing of quiet streams.
     private func tick() async {
         var ticks = 0
         while !Task.isCancelled {
-            snapshot.elapsed = elapsed
-            if let last = lastFixUptime {
-                snapshot.gpsStatus = suite.clock.uptime - last > Self.gpsSearchingAfter ? .searching : .good
+            if ticks % 10 == 0 {
+                await runWatchdog()
+                await writer.flushIfDue()
             }
+            snapshot.elapsed = elapsed
+            snapshot.gpsStatus = !hasFix && watchdog.gpsStage == .ok ? .acquiring : (watchdog.gpsStage == .ok ? .good : .searching)
             onSnapshot(snapshot)
             ticks += 1
-            if ticks % 10 == 0 { await writer.flushIfDue() }
             try? await Task.sleep(for: .milliseconds(100))
+        }
+    }
+
+    private func runWatchdog() async {
+        let actions = watchdog.evaluate(now: suite.clock.uptime, lastLocation: lastFixUptime, lastMotion: lastMotionUptime)
+        for action in actions {
+            if let event = Self.event(for: action, elapsed: elapsed) {
+                await writer.append(event, to: .events)
+            }
+            onWatchdog(action)
+        }
+    }
+
+    static func event(for action: RecordingWatchdog.Action, elapsed: TimeInterval) -> EventRecord? {
+        switch action {
+        case .escalated(.gps, .degraded, let silence):
+            EventRecord(kind: .gpsLost, source: .system, elapsed: elapsed, value: silence)
+        case .escalated(.motion, .degraded, let silence):
+            EventRecord(kind: .motionStalled, source: .system, elapsed: elapsed, value: silence)
+        case .escalated(let stream, .notified, let silence):
+            EventRecord(kind: .watchdogFired, source: .system, aux: stream == .gps ? 0 : 1, elapsed: elapsed, value: silence)
+        case .recovered(.gps, let gap):
+            EventRecord(kind: .gpsResumed, source: .system, elapsed: elapsed, value: gap)
+        case .recovered(.motion, let gap):
+            EventRecord(kind: .motionResumed, source: .system, elapsed: elapsed, value: gap)
+        default:
+            nil
         }
     }
 }

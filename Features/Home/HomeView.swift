@@ -303,6 +303,8 @@ struct HomeView: View {
             guard permission.canRecord else { issue = .denied; return }
             guard await permission.ensureFullAccuracy() else { issue = .imprecise; return }
         }
+        // Ask for notifications (watchdog / dead-man) before recording, not over the HUD. Denial doesn't block START.
+        await RecordingNotifications.requestAuthorizationIfNeeded()
         await recorder.start(preset: preset)
     }
 
