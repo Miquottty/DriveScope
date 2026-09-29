@@ -13,6 +13,7 @@ final class WatchLink: NSObject, RecordingObserver {
     nonisolated static let log = Logger(subsystem: "com.miquottty.DriveScope", category: "Watch")
 
     private let recorder: RecordingController
+    private let environment: SensorEnvironment
     private let language: () -> AppLanguage
     private var session: WCSession?
     private var ticker: Task<Void, Never>?
@@ -20,8 +21,12 @@ final class WatchLink: NSObject, RecordingObserver {
     private var recentCommands: [UUID] = []
     private var timerStart = Date()
 
-    init(recorder: RecordingController, language: @escaping () -> AppLanguage = { AppLanguage() }) {
+    init(
+        recorder: RecordingController, environment: SensorEnvironment,
+        language: @escaping () -> AppLanguage = { AppLanguage() }
+    ) {
         self.recorder = recorder
+        self.environment = environment
         self.language = language
         super.init()
         guard WCSession.isSupported() else { return }
@@ -71,7 +76,7 @@ final class WatchLink: NSObject, RecordingObserver {
             speedKmh: snapshot.speed.map { Units.kmh(fromMetersPerSecond: max(0, $0)).rounded() },
             markCount: recorder.session?.markers.count ?? 0,
             gpsSearching: snapshot.gpsStatus == .searching,
-            canStart: false,
+            canStart: RemoteStart.isAvailable(recorder: recorder, environment: environment),
             languageCode: language().languageCode
         )
     }
@@ -122,8 +127,8 @@ final class WatchLink: NSObject, RecordingObserver {
             Task { await recorder.stop() }
             return ack(true)
         case .start:
-            // START from the watch needs robust mode (Always permission) — not offered yet.
-            return ack(false)
+            // Needs robust mode (Always permission): the iPhone app may be in the background.
+            return ack(await RemoteStart.start(recorder: recorder, environment: environment))
         }
     }
 }
