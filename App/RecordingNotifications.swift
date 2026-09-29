@@ -16,7 +16,6 @@ final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificat
 
     private let center = UNUserNotificationCenter.current()
     private let recorder: RecordingController
-    private var authorizationRequested = false
 
     init(recorder: RecordingController) {
         self.recorder = recorder
@@ -27,10 +26,7 @@ final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificat
     // MARK: RecordingObserver
 
     func recordingDidStart(_ session: DriveSession, resumed: Bool) {
-        Task {
-            await requestAuthorizationIfNeeded()
-            armDeadman()
-        }
+        armDeadman()
     }
 
     func recordingWatchdog(_ action: RecordingWatchdog.Action, session: DriveSession) {
@@ -53,9 +49,9 @@ final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificat
 
     // MARK: Scheduling
 
-    private func requestAuthorizationIfNeeded() async {
-        guard !authorizationRequested else { return }
-        authorizationRequested = true
+    static func requestAuthorizationIfNeeded() async {
+        let center = UNUserNotificationCenter.current()
+        guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])
     }
 
