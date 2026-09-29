@@ -75,13 +75,18 @@ public final class CLLocationManagerSource: NSObject, LocationSource, CLLocation
 
 /// `CLLocationUpdate.liveUpdates` backend with a background activity session (PLAN §2.1, compared in Test B).
 public struct LiveUpdatesLocationSource: LocationSource {
-    public init() {}
+    /// Robust mode (V1.1): the session declares Always, so updates may start after a background relaunch.
+    private let always: Bool
+
+    public init(always: Bool = false) {
+        self.always = always
+    }
 
     public func locations() -> AsyncStream<LocationSample> {
         AsyncStream(bufferingPolicy: .bufferingNewest(64)) { continuation in
             let task = Task {
                 let background = CLBackgroundActivitySession()
-                let service = CLServiceSession(authorization: .whenInUse, fullAccuracyPurposeKey: "DriveTelemetry")
+                let service = CLServiceSession(authorization: always ? .always : .whenInUse, fullAccuracyPurposeKey: "DriveTelemetry")
                 defer {
                     background.invalidate()
                     service.invalidate()

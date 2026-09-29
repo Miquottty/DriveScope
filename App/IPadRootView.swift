@@ -42,7 +42,7 @@ struct IPadRootView: View {
             RecordingView()
         }
         .sheet(isPresented: $showingSettings) {
-            SettingsView()
+            SettingsView(permission: permission)
                 .iPadFormSheet()
         }
         .recoveryPrompt { selection = .session($0) }

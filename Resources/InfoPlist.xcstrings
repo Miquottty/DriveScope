@@ -17,6 +17,22 @@
         }
       }
     },
+    "NSLocationAlwaysAndWhenInUseUsageDescription": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DriveScope uses your location in the background to reopen and continue a recording that was interrupted mid-drive (robust mode)."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "走行中に記録が中断されたとき、DriveScope を再度開いて記録を続けるために、バックグラウンドで位置情報を使用します（堅牢モード）。"
+          }
+        }
+      }
+    },
     "NSLocationWhenInUseUsageDescription": {
       "localizations": {
         "en": {

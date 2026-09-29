@@ -26,6 +26,8 @@ final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificat
     // MARK: RecordingObserver
 
     func recordingDidStart(_ session: DriveSession, resumed: Bool) {
+        // A resumed session (tap, recovery sheet or robust mode) makes the "recording may have stopped" alert stale.
+        if resumed { center.removeDeliveredNotifications(withIdentifiers: [Self.deadmanID]) }
         armDeadman()
     }
 

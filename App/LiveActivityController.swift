@@ -29,6 +29,7 @@ final class LiveActivityController: RecordingObserver {
     private var timerStart = Date()
     private var gpsDegraded = false
     private var terminateObserver: (any NSObjectProtocol)?
+    private var foregroundObserver: (any NSObjectProtocol)?
 
     init(recorder: RecordingController, language: @escaping () -> AppLanguage = { AppLanguage() }) {
         self.recorder = recorder
@@ -64,25 +65,20 @@ final class LiveActivityController: RecordingObserver {
         lastState = nil
         lastPush = .distantPast
         timerStart = session.startedAt
-        let state = makeState()
-        // Anything still around belongs to a process that is gone — a resumed session included: it gets a fresh
-        // activity rather than adopting one that launch cleanup (`endLeftovers`) may be ending concurrently.
-        for leftover in Activity<DriveActivityAttributes>.activities {
+        // Robust mode's background relaunch keeps the dead process's activity for the session it continues
+        // (`endLeftoversAtLaunch(keeping:)`): adopt it, since a new one can't be requested from the background.
+        // Everything else still around belongs to a process that is gone.
+        let existing = Activity<DriveActivityAttributes>.activities
+        let adopted = resumed
+            ? existing.first { $0.attributes.sessionID == session.id && ($0.activityState == .active || $0.activityState == .stale) }
+            : nil
+        for leftover in existing where leftover.id != adopted?.id {
             Task { await leftover.end(nil, dismissalPolicy: .immediate) }
         }
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            Self.log.info("Live Activities are disabled")
-            return
-        }
-        let attributes = DriveActivityAttributes(
-            sessionID: session.id, startedAt: session.startedAt, preset: session.preset.rawValue
-        )
-        do {
-            activity = try Activity.request(attributes: attributes, content: content(state), pushType: nil)
-            lastState = state
-            lastPush = Date()
-        } catch {
-            Self.log.error("Activity.request failed: \(String(describing: error), privacy: .public)")
+        if let adopted {
+            activity = adopted
+            Task { await push(force: true) }
+        } else if !requestActivity(for: session) {
             return
         }
         startUpdates(interval: session.preset.liveActivityInterval)
@@ -91,6 +87,42 @@ final class LiveActivityController: RecordingObserver {
         ) { [weak self] _ in
             MainActor.assumeIsolated { self?.endBeforeTermination() }
         }
+    }
+
+    /// false when there is no activity to update. Requesting fails in the background (robust mode relaunch without
+    /// a leftover to adopt): then it is requested again when the app next comes to the foreground.
+    private func requestActivity(for session: DriveSession) -> Bool {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            Self.log.info("Live Activities are disabled")
+            return false
+        }
+        let state = makeState()
+        let attributes = DriveActivityAttributes(
+            sessionID: session.id, startedAt: session.startedAt, preset: session.preset.rawValue
+        )
+        do {
+            activity = try Activity.request(attributes: attributes, content: content(state), pushType: nil)
+            lastState = state
+            lastPush = Date()
+            return true
+        } catch {
+            Self.log.error("Activity.request failed: \(String(describing: error), privacy: .public)")
+            guard UIApplication.shared.applicationState == .background, foregroundObserver == nil else { return false }
+            foregroundObserver = NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                MainActor.assumeIsolated { self?.retryRequest() }
+            }
+            // The update loop still runs so the request can be retried with the current state.
+            return true
+        }
+    }
+
+    private func retryRequest() {
+        if let foregroundObserver { NotificationCenter.default.removeObserver(foregroundObserver) }
+        foregroundObserver = nil
+        guard activity == nil, let session = recorder.session, recorder.isRecording else { return }
+        _ = requestActivity(for: session)
     }
 
     func recordingWatchdog(_ action: RecordingWatchdog.Action, session: DriveSession) {
@@ -127,6 +159,8 @@ final class LiveActivityController: RecordingObserver {
         updates?.cancel()
         updates = nil
         removeTerminateObserver()
+        if let foregroundObserver { NotificationCenter.default.removeObserver(foregroundObserver) }
+        foregroundObserver = nil
         guard let activity else { return }
         self.activity = nil
         var state = makeState(session: session)
@@ -150,9 +184,10 @@ final class LiveActivityController: RecordingObserver {
     }
 
     /// At launch the list is taken synchronously, before anything can start a recording, so a session resumed while
-    /// the leftovers are still being ended keeps its new activity.
-    static func endLeftoversAtLaunch() {
-        let leftovers = Activity<DriveActivityAttributes>.activities
+    /// the leftovers are still being ended keeps its new activity. `keeping`: sessions robust mode is about to
+    /// continue — their activity is adopted instead.
+    static func endLeftoversAtLaunch(keeping: Set<UUID> = []) {
+        let leftovers = Activity<DriveActivityAttributes>.activities.filter { !keeping.contains($0.attributes.sessionID) }
         guard !leftovers.isEmpty else { return }
         Task { await end(leftovers) }
     }

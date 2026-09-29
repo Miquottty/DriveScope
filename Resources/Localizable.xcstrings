@@ -279,6 +279,22 @@
         }
       }
     },
+    "Allow location access \"Always\" in Settings": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Allow location access \"Always\" in Settings"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "設定で位置情報を「常に」許可"
+          }
+        }
+      }
+    },
     "Altitude": {
       "localizations": {
         "en": {
@@ -1367,6 +1383,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "長押しで停止"
+          }
+        }
+      }
+    },
+    "If DriveScope is closed mid-drive (crash, low memory), iOS reopens it in the background and recording continues in the same session within 30 minutes. Needs location access \"Always\".": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If DriveScope is closed mid-drive (crash, low memory), iOS reopens it in the background and recording continues in the same session within 30 minutes. Needs location access \"Always\"."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "走行中に DriveScope が終了した場合（クラッシュやメモリ不足）、iOS がバックグラウンドで再度開き、30 分以内であれば同じセッションに記録を続けます。位置情報を「常に」許可する必要があります。"
           }
         }
       }
@@ -2659,6 +2691,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "フォアグラウンドへ復帰"
+          }
+        }
+      }
+    },
+    "Robust mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Robust mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "堅牢モード"
           }
         }
       }
