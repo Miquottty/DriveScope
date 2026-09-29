@@ -9,7 +9,8 @@ import Testing
 @MainActor
 struct RecordingControllerTests {
     /// START → record a scripted drive at 100× through the real engine and writer → MARK → STOP: the state machine,
-    /// the files on disk and the persisted statistics must agree with the script.
+    /// the files on disk and the persisted statistics must agree with the script. Core Location's cached fix
+    /// (delivered first, 2 min old, elsewhere) must not become part of the drive.
     @Test func recordsScriptedDriveEndToEnd() async throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeRecording-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -17,7 +18,11 @@ struct RecordingControllerTests {
         let controller = RecordingController(
             store: store, filesRoot: root,
             environment: AppEnvironment(appVersion: "test", deviceModel: "test", osVersion: "test"),
-            makeSuite: { ScriptPlayback.suite(script: .akagi, rate: 100, label: "test") }
+            makeSuite: {
+                var suite = ScriptPlayback.suite(script: .akagi, rate: 100, label: "test")
+                suite.location = CachedFixFirst(inner: suite.location, clock: suite.clock)
+                return suite
+            }
         )
 
         await controller.start(preset: .logger)
@@ -40,6 +45,7 @@ struct RecordingControllerTests {
         let motion = try files.deviceMotion()
         let events = try files.events()
 
+        #expect(locations.allSatisfy { $0.timestamp >= session.startedAt.timeIntervalSince1970 - 2 })
         // ≥ 230 s of drive at 1 Hz GPS and 50 Hz motion.
         #expect(session.state == .stopped)
         #expect((220...400).contains(locations.count))
@@ -70,6 +76,27 @@ struct RecordingControllerTests {
                 return
             }
             try await Task.sleep(for: .milliseconds(50))
+        }
+    }
+}
+
+/// Core Location's habit on a device: the first fix delivered is the cached one, minutes old and elsewhere.
+private struct CachedFixFirst: LocationSource {
+    let inner: any LocationSource
+    let clock: any TelemetryClock
+
+    func locations() -> AsyncStream<LocationSample> {
+        AsyncStream { continuation in
+            continuation.yield(LocationSample(
+                timestamp: clock.now.timeIntervalSince1970 - 120, latitude: 36.30, longitude: 139.00, altitude: 50,
+                receivedUptime: clock.uptime, speed: 0, course: -1, horizontalAccuracy: 8, verticalAccuracy: 8,
+                speedAccuracy: 1, courseAccuracy: -1
+            ))
+            let task = Task {
+                for await location in inner.locations() { continuation.yield(location) }
+                continuation.finish()
+            }
+            continuation.onTermination = { _ in task.cancel() }
         }
     }
 }

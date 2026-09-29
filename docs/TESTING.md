@@ -9,7 +9,9 @@ v1 は **すべてシミュレータで開発・検証**した（Xcode 27.2 beta
 |---|---|
 | `scripts/xc.sh test` | DriveKit パッケージの単体テスト（macOS 上で数秒） |
 | `scripts/xc.sh test-ios` | アプリの UI テスト（シミュレータ） |
-| `scripts/xc.sh build-device` | iphoneos SDK でのコンパイル確認（署名なし） |
+| `scripts/xc.sh build-device` | iphoneos SDK でのコンパイル確認（署名なし、Watch アプリも含む） |
+| `scripts/xc.sh build-watch` | Watch アプリ単体（watchOS シミュレータ） |
+| `scripts/xc.sh run-pair [引数]` | iPhone + Watch のペアシミュレータに両方をインストールして起動（既定 iPhone 18 Pro Max、`DRIVESCOPE_PAIR_PHONE`） |
 
 UI テスト（2 本）:
 
@@ -37,7 +39,15 @@ UI テスト（2 本）:
 - 統計: 駐車中の GPS ドリフトで距離・獲得標高が増えない（Test A 相当）、電池 %/h（画面 ON/OFF 別）
 - 地名: オフライン → pending → 再試行でタイトル生成、ユーザー編集タイトルは上書きしない
 - Replay: 2 時間 Logger ログが 100 ms 未満で開き、フレームがスクリプトと一致（位置・速度・course・横 G 符号・トンネル）
-- Export: JSON（Float ビット一致）、CSV（ロケール非依存・SYNC 基準の t=0）、GPX（XMLParser で妥当）
+- Export: JSON（Float ビット一致、sections の位置と null）、CSV（ロケール非依存・SYNC 基準の t=0）、GPX（XMLParser で妥当）
+
+V1.1 で追加（単体テスト 25 本 / 予算 ~50）:
+
+- 速度のモーション補助: Akagi 10 Hz で真値との RMSE が線形補間の 0.6 倍未満（実測 0.0033 vs 0.0247 m/s）、負にならない、fix で GPS と一致、GPS Only は線形のまま
+- 区間解析: Akagi のコーナー数が真値に同じ規則をかけた基準の ±10%、0.25 g 以上は同じ向きで一致、停止 1 件（トンネルは停止にならない）、登り 1,230 m ± 15%
+- LZFSE アーカイブ: 全リーダーの出力がアーカイブ前後で一致、容量半分未満 / 中断（アーカイブ書き込み後に停止・ゴミ `.tmp`・壊れたアーカイブ）からの修復、アーカイブ済みへの追記を拒否
+- 自動再開の判定: 同じ起動で 30 分以内のみ（スリープ・再起動・31 分）/ autoResume が同じファイルに追記し `sessionResumed` + `autoResumed`
+- 記録パイプライン: Watch の MARK（source・押下時刻・受信時刻）、Core Location のキャッシュ fix（開始前）を記録しない
 
 ## 2. シミュレータで確認済み（2026-09-29）
 
@@ -89,6 +99,16 @@ Live Activity の強制終了まわりは実機の XCUITest（一時的なテス
 | 強制終了後の Live Activity | REC のまま残っていた → 起動時に終了、終了直前（`willTerminate`）に終了、stale で `NO DATA` 表示。SIGKILL 後に `NO DATA` になるまで約 90 秒（staleDate 30 秒に対し iOS の反映が遅い） |
 | 強制終了後の Live Activity の MARK / STOP | 反応しない: iOS は強制終了されたアプリを intent のために起動しない → `NO DATA` 状態の STOP はアプリを開くリンク（開くと消えて復旧シート） |
 | Core Motion 50 Hz（Logger、iPhone 16 Pro Max、9 セッション） | 実効 49.76 Hz（dt 20.1 ms）、欠落 0、時刻の逆行 0、NaN 0。手で強く振って userAcc 最大 12.0 g、回転 最大 26.0 rad/s。飽和なし、\|gravity\| と \|q\| は常に 1.000 |
+
+### 3.2 V1.1 の実機チェックリスト
+
+- [x] **Watch アプリの MARK**（2026-09-30、Series 9 + iPhone 16 Pro Max）: 4 件すべて `source = watch`、重複なし。押下 − 受信は −360〜−322 ms（時計差込み、ばらつき 38 ms）
+- [x] **Watch に記録状態を表示**（REC・経過・速度・MARK バッジ）。SYNC でバッジが増えていた → MARK のみ数えるよう修正
+- [x] **開始前のキャッシュ fix**: 1 件目が開始 118.8 秒前の fix だった → 記録しないよう修正
+- [ ] Watch アプリの STOP（確認ダイアログ）と START（堅牢モード時のみ）
+- [ ] 堅牢モード（実車）: 走行中にアプリが落ちたとき iOS が再起動して継続するか、所要時間、復旧シートが出ないこと、`autoResumed`。ユーザーのスワイプ終了時の挙動。STOP 後に再起動されないこと
+- [ ] 速度のモーション補助・区間解析（実車）: 実データで区間のしきい値を見直す（`SectionDetector.version` を上げると再計算）
+- [ ] LZFSE アーカイブ（実機）: 長時間ログの圧縮率と、圧縮済みログを開く時間（Mac で 2 時間ログ約 20–40 ms、目標 150 ms）
 
 ## 4. 実車テスト（PLAN §17）
 
