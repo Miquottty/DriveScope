@@ -17,6 +17,22 @@
         }
       }
     },
+    "Open DriveScope": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open DriveScope"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "DriveScopeを開く"
+          }
+        }
+      }
+    },
     "Stop Recording": {
       "localizations": {
         "en": {

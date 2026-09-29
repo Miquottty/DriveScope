@@ -14,6 +14,10 @@ nonisolated struct DriveActivityAttributes: ActivityAttributes {
             case saving
             /// Final state, shown until the activity is dismissed.
             case saved
+            /// Never sent by the app: the widget shows a live state past its stale date this way, because the app
+            /// stopped updating it (suspended or killed) and a ticking REC clock would claim a recording that is not
+            /// happening.
+            case interrupted
         }
 
         /// Wall-clock instant at which elapsed was 0. The widget ticks `Text(timerInterval:)` from it, so the clock
@@ -43,4 +47,15 @@ nonisolated struct DriveActivityAttributes: ActivityAttributes {
 nonisolated extension DriveActivityAttributes.ContentState.Status {
     /// Recording is running: the timer ticks and MARK / STOP are offered.
     var isLive: Bool { self == .recording || self == .gpsSearching }
+}
+
+nonisolated extension DriveActivityAttributes.ContentState {
+    /// What the widget draws: a live state whose updates stopped (past its stale date) becomes `.interrupted`,
+    /// with the clock frozen at the last reported elapsed.
+    func displayed(isStale: Bool) -> Self {
+        guard isStale, status.isLive else { return self }
+        var state = self
+        state.status = .interrupted
+        return state
+    }
 }

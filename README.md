@@ -19,7 +19,7 @@ iPhone / iPad だけで車載 Vlog 向けのテレメトリ（位置・速度・
 
 ## ビルドとテスト
 
-Xcode 27.2 beta（`/Applications/Xcode-beta 27.2.app`）を使います。`scripts/xc.sh` が `DEVELOPER_DIR` を固定するので、`xcode-select` を変更する必要はありません。
+Xcode 27.2 beta（`/Applications/Xcode-beta.app`）を使います。`scripts/xc.sh` が `DEVELOPER_DIR` を固定するので、`xcode-select` を変更する必要はありません。
 
 ```bash
 scripts/xc.sh test
