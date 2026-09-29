@@ -35,6 +35,14 @@ public struct AppEnvironment: Sendable {
     }
 }
 
+/// Side effects of recording that live in the app (Live Activity, notifications). All calls are on the main actor.
+@MainActor
+public protocol RecordingObserver: AnyObject {
+    func recordingDidStart(_ session: DriveSession, resumed: Bool)
+    func recordingWatchdog(_ action: RecordingWatchdog.Action, session: DriveSession)
+    func recordingDidStop(_ session: DriveSession)
+}
+
 /// The only owner of recording state (PLAN §6):
 /// `idle → preparing → recording → stopping → finalizing → stopped`, plus `interrupted` for recovery.
 @MainActor
@@ -53,8 +61,11 @@ public final class RecordingController {
     private let makeSuite: @MainActor () -> SensorSuite
     private var engine: TelemetryEngine?
     private var files: SessionFiles?
-    /// Called after a session is finalized (geocoding, notifications — later sprints).
+    /// Called after a session is finalized (geocoding — S4).
     public var onFinished: (@MainActor (DriveSession) async -> Void)?
+    public weak var observer: (any RecordingObserver)?
+    /// Debug builds may shorten the watchdog thresholds (Settings → Debug).
+    public var watchdogPolicy = RecordingWatchdog.Policy()
 
     public init(
         store: SessionStore, filesRoot: URL, environment: AppEnvironment,
@@ -82,25 +93,41 @@ public final class RecordingController {
             let files = SessionFiles(root: filesRoot, sessionID: manifest.sessionID)
             try files.createDirectory()
             try files.writeManifest(manifest)
-            let writer = try SampleWriter(
-                files: files, kinds: SessionManifest.streamKinds(for: preset),
-                createdAt: clock.startedAt.timeIntervalSince1970
-            )
             let session = try store.create(manifest: manifest)
-            let live = live
-            let engine = TelemetryEngine(suite: suite, writer: writer, files: files, manifest: manifest) { snapshot in
-                Task { @MainActor in live.apply(snapshot) }
-            }
-            self.files = files
-            self.engine = engine
-            self.session = session
-            live.reset()
-            await engine.start()
-            phase = .recording
+            try await run(session: session, files: files, manifest: manifest, suite: suite, statistics: nil)
+            observer?.recordingDidStart(session, resumed: false)
         } catch {
             lastError = String(describing: error)
             phase = .idle
         }
+    }
+
+    private func run(
+        session: DriveSession, files: SessionFiles, manifest: SessionManifest, suite: SensorSuite,
+        statistics: SessionStatistics?
+    ) async throws {
+        let writer = try SampleWriter(
+            files: files, kinds: SessionManifest.streamKinds(for: manifest.preset),
+            createdAt: manifest.clock.startedAt.timeIntervalSince1970
+        )
+        let live = live
+        let engine = TelemetryEngine(
+            suite: suite, writer: writer, files: files, manifest: manifest, statistics: statistics,
+            watchdogPolicy: watchdogPolicy,
+            onSnapshot: { snapshot in Task { @MainActor in live.apply(snapshot) } },
+            onWatchdog: { [weak self] action in Task { @MainActor in self?.handle(action) } }
+        )
+        self.files = files
+        self.engine = engine
+        self.session = session
+        live.reset()
+        await engine.start()
+        phase = .recording
+    }
+
+    private func handle(_ action: RecordingWatchdog.Action) {
+        guard let session, phase == .recording else { return }
+        observer?.recordingWatchdog(action, session: session)
     }
 
     public func stop() async {
@@ -123,6 +150,7 @@ public final class RecordingController {
         self.session = nil
         lastFinishedSessionID = session.id
         phase = .stopped
+        observer?.recordingDidStop(session)
         await onFinished?(session)
     }
 
@@ -152,5 +180,77 @@ public final class RecordingController {
         guard let engine else { return }
         let elapsed = await engine.elapsed
         await engine.record(EventRecord(kind: kind, source: source, aux: aux, elapsed: elapsed, value: value))
+    }
+
+    /// Tests only: simulates the process dying mid-recording.
+    package func simulateKill() async {
+        await engine?.abandon()
+        engine = nil
+        session = nil
+        phase = .idle
+    }
+
+    // MARK: - Unfinished sessions (PLAN §9.2 / §9.3)
+
+    /// Sessions left in `.recording` by a crash, kill or suspension, excluding the live one.
+    public func unfinishedSessions() -> [DriveSession] {
+        store.sessions(in: .recording).filter { $0.id != session?.id }
+    }
+
+    /// Finalizes an unfinished session from what reached disk: statistics are recomputed from the files.
+    public func recover(_ unfinished: DriveSession) async {
+        let files = SessionFiles(root: filesRoot, sessionID: unfinished.id)
+        do {
+            let manifest = try files.readManifest()
+            let (statistics, duration) = try await Self.recompute(files: files, manifest: manifest)
+            let preview = SessionStore.routePreview(from: (try? files.locations()) ?? [])
+            try store.finish(
+                unfinished, state: .recovered, endedAt: manifest.clock.date(elapsed: duration),
+                summary: statistics.summary(duration: duration), routePreview: preview
+            )
+            await onFinished?(unfinished)
+        } catch {
+            lastError = String(describing: error)
+        }
+    }
+
+    public func discard(_ unfinished: DriveSession) {
+        do {
+            try store.delete(unfinished, filesRoot: filesRoot)
+        } catch {
+            lastError = String(describing: error)
+        }
+    }
+
+    /// Whether recording can continue in the same files: the uptime clock must not have been reset by a reboot.
+    public func canResume(_ unfinished: DriveSession) -> Bool {
+        guard phase == .idle || phase == .stopped else { return false }
+        // (Scripted drives run a scaled clock, so a resumed script restarts its own timeline — fine for testing.)
+        return ProcessInfo.processInfo.systemUptime >= unfinished.startUptime
+    }
+
+    /// Continues an unfinished session, appending to the same files (dead-man notification tap, PLAN §9.3).
+    public func resume(_ unfinished: DriveSession) async {
+        guard canResume(unfinished) else { return }
+        phase = .preparing
+        let files = SessionFiles(root: filesRoot, sessionID: unfinished.id)
+        do {
+            let manifest = try files.readManifest()
+            let (statistics, lastElapsed) = try await Self.recompute(files: files, manifest: manifest)
+            try await run(session: unfinished, files: files, manifest: manifest, suite: makeSuite(), statistics: statistics)
+            if let engine {
+                let now = await engine.elapsed
+                await engine.record(EventRecord(kind: .sessionResumed, source: .system, elapsed: now, value: now - lastElapsed))
+            }
+            observer?.recordingDidStart(unfinished, resumed: true)
+        } catch {
+            lastError = String(describing: error)
+            phase = .idle
+        }
+    }
+
+    /// Reads the files off the main actor.
+    @concurrent nonisolated private static func recompute(files: SessionFiles, manifest: SessionManifest) async throws -> (SessionStatistics, TimeInterval) {
+        try SessionStatistics.compute(files: files, manifest: manifest)
     }
 }
