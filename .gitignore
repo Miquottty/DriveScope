@@ -1,1 +1,6 @@
 .DS_Store
+.build/
+*.xcuserstate
+xcuserdata/
+.swiftpm/
+Packages/DriveKit/.build/
