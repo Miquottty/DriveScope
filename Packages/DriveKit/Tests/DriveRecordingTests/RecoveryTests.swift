@@ -26,13 +26,14 @@ struct RecoveryTests {
         let first = controller()
         await first.start(preset: .eco)
         let id = try #require(first.session?.id)
-        try await Task.sleep(for: .seconds(2.5))
+        try await waitUntil { StreamReader.recordCount(at: SessionFiles(root: root, sessionID: id).url(for: .location), kind: .location) > 60 }
         let accepted = first.live.snapshot.locationCount
         await first.simulateKill()
         let files = SessionFiles(root: root, sessionID: id)
         let onDisk = StreamReader.recordCount(at: files.url(for: .location), kind: .location)
         // The flush policy bounds the loss to ~2 s of real time (here ×60 in script time) plus one tick.
-        #expect(onDisk > 60 && onDisk <= accepted && accepted - onDisk <= 180)
+        // (`accepted` is the throttled HUD count, so it may lag the disk slightly.)
+        #expect(onDisk > 60 && accepted - onDisk <= 180)
 
         // Relaunch: resume appends to the same files.
         let second = controller()
@@ -49,12 +50,26 @@ struct RecoveryTests {
         let third = controller()
         await third.start(preset: .gpsOnly)
         let otherID = try #require(third.session?.id)
-        try await Task.sleep(for: .seconds(2.5))
+        // Wait for flushed data rather than a fixed time: CI runners are slower than a dev Mac.
+        let otherFiles = SessionFiles(root: root, sessionID: otherID)
+        try await waitUntil { StreamReader.recordCount(at: otherFiles.url(for: .location), kind: .location) > 60 }
         await third.simulateKill()
         let fourth = controller()
         let other = try #require(fourth.unfinishedSessions().first { $0.id == otherID })
         await fourth.recover(other)
         #expect(other.state == .recovered)
         #expect(other.locationSampleCount > 60 && other.distance > 0 && other.duration > 60)
+    }
+
+    /// Polls every 100 ms; fails after `timeout` seconds.
+    private func waitUntil(timeout: TimeInterval = 20, _ condition: () -> Bool) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while !condition() {
+            guard Date() < deadline else {
+                Issue.record("condition not met within \(timeout) s")
+                return
+            }
+            try await Task.sleep(for: .milliseconds(100))
+        }
     }
 }
