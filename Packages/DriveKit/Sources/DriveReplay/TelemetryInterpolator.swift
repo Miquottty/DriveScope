@@ -35,10 +35,13 @@ public struct TelemetryInterpolator: Sendable {
         public var speedWindow = 1
         /// Motion averaging window, seconds (display smoothing; raw ≈ one sample).
         public var gWindow: TimeInterval = 0.06
+        /// Between fixes, speed follows the calibrated longitudinal acceleration instead of a straight line.
+        public var speedFusion = true
 
-        public init(speedWindow: Int = 1, gWindow: TimeInterval = 0.06) {
+        public init(speedWindow: Int = 1, gWindow: TimeInterval = 0.06, speedFusion: Bool = true) {
             self.speedWindow = speedWindow
             self.gWindow = gWindow
+            self.speedFusion = speedFusion
         }
 
         /// Vlog output: speed over 5 fixes, G low-passed (PLAN §5).
@@ -46,6 +49,8 @@ public struct TelemetryInterpolator: Sendable {
     }
 
     public static let gapThreshold: TimeInterval = 5
+    /// Longest fix interval bridged by integrating acceleration; longer gaps (tunnel) stay linear.
+    public static let fusionMaxSpan: TimeInterval = 3
 
     public let reader: TelemetryReader
     public let calibration: MountCalibration?
@@ -93,7 +98,8 @@ public struct TelemetryInterpolator: Sendable {
         var course = courseA + Units.headingDelta(from: courseA, to: courseB) * f
         if course < 0 { course += 360 }
         course = course.truncatingRemainder(dividingBy: 360)
-        let speed = smoothedSpeed(a) + (smoothedSpeed(b) - smoothedSpeed(a)) * f
+        let va = smoothedSpeed(a), vb = smoothedSpeed(b)
+        let speed = fusedSpeed(at: t, ta: ta, tb: tb, va: va, vb: vb) ?? va + (vb - va) * f
 
         var frame = empty
         frame.latitude = fa.latitude + (fb.latitude - fa.latitude) * f
@@ -140,6 +146,83 @@ public struct TelemetryInterpolator: Sendable {
         let sa = samples[a], sb = samples[b]
         let f = sb.timestamp > sa.timestamp ? min(max((uptime - sa.timestamp) / (sb.timestamp - sa.timestamp), 0), 1) : 0
         return Double(sa.relativeAltitude) + Double(sb.relativeAltitude - sa.relativeAltitude) * f
+    }
+
+    // MARK: - Speed fusion
+
+    /// Speed between two fixes from the longitudinal acceleration (PLAN §12): integrate from the first fix and spread
+    /// the miss at the second fix linearly over the interval. The result equals GPS at both fixes, and a constant
+    /// accelerometer bias or mount leak within the interval cancels out. nil → linear interpolation.
+    private func fusedSpeed(at t: TimeInterval, ta: TimeInterval, tb: TimeInterval, va: Double, vb: Double) -> Double? {
+        guard options.speedFusion, let calibration, calibration.confidence >= 0.5 else { return nil }
+        let span = tb - ta
+        guard span > 0, span <= Self.fusionMaxSpan, t >= ta, t <= tb else { return nil }
+        // Parked: integrating noise would only make a stationary car creep.
+        if max(va, vb) < 0.3 { return 0 }
+        let start = reader.clock.startUptime
+        let forward = Array(calibration.rotation.prefix(3))
+        guard let integral = longitudinalIntegral(from: start + ta, to: start + tb, forward: forward),
+              let partial = longitudinalIntegral(from: start + ta, to: start + t, forward: forward) else { return nil }
+        let miss = vb - (va + integral)
+        // The accelerometer disagrees with GPS (moved mount, GPS glitch): trust neither the shape nor the fix.
+        guard abs(miss) / span <= 2 else { return nil }
+        return max(0, va + partial + miss * (t - ta) / span)
+    }
+
+    /// ∫ forward acceleration dt in m/s over [u0, u1] (uptime), trapezoidal; nil when motion has a hole > 0.25 s.
+    private func longitudinalIntegral(from u0: Double, to u1: Double, forward r: [Double]) -> Double? {
+        guard u1 > u0 else { return 0 }
+        if !reader.motion.isEmpty {
+            let samples = reader.motion
+            return integrate(from: u0, to: u1, count: samples.count, index: { samples.partitionIndex(where: { $0.timestamp }, isAtLeast: $0) }) { i in
+                let s = samples[i], a = s.userAcceleration
+                return (s.timestamp, r[0] * Double(a.x) + r[1] * Double(a.y) + r[2] * Double(a.z))
+            }
+        }
+        let samples = reader.accelerations
+        guard !samples.isEmpty else { return nil }
+        // Eco: one gravity estimate (centered mean around the interval) — within ≤ 3 s it acts as a constant bias,
+        // which the fix-to-fix correction removes. A tilting car (mean far from 1 g) is not trusted.
+        var gravity = SIMD3<Double>.zero, n = 0.0
+        var i = samples.partitionIndex(where: { $0.timestamp }, isAtLeast: u0 - 2)
+        while i < samples.count, samples[i].timestamp <= u1 + 2 {
+            let a = samples[i].acceleration
+            gravity += SIMD3(Double(a.x), Double(a.y), Double(a.z))
+            n += 1
+            i += 1
+        }
+        guard n > 0 else { return nil }
+        gravity /= n
+        guard abs((gravity * gravity).sum().squareRoot() - 1) < 0.03 else { return nil }
+        return integrate(from: u0, to: u1, count: samples.count, index: { samples.partitionIndex(where: { $0.timestamp }, isAtLeast: $0) }) { i in
+            let s = samples[i], a = s.acceleration
+            let x = Double(a.x) - gravity.x, y = Double(a.y) - gravity.y, z = Double(a.z) - gravity.z
+            return (s.timestamp, r[0] * x + r[1] * y + r[2] * z)
+        }
+    }
+
+    /// Trapezoid over the samples inside [u0, u1], holding the edge samples out to the bounds; g → m/s².
+    private func integrate(
+        from u0: Double, to u1: Double, count: Int, index: (Double) -> Int, sample: (Int) -> (time: Double, g: Double)
+    ) -> Double? {
+        let maxHole = 0.25
+        var i = index(u0)
+        guard i < count else { return nil }
+        var previous = sample(i)
+        guard previous.time - u0 <= maxHole else { return nil }
+        var sum = previous.g * max(0, min(previous.time, u1) - u0)
+        i += 1
+        while i < count {
+            let next = sample(i)
+            if next.time > u1 { break }
+            guard next.time - previous.time <= maxHole else { return nil }
+            sum += (previous.g + next.g) / 2 * (next.time - previous.time)
+            previous = next
+            i += 1
+        }
+        guard u1 - previous.time <= maxHole else { return nil }
+        sum += previous.g * max(0, u1 - previous.time)
+        return sum * Units.g
     }
 
     // MARK: - Motion

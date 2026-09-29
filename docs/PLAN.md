@@ -389,6 +389,7 @@ STOP: removePendingNotificationRequests
 
 ## 12. Replay / 補間 / Export
 - `TelemetryInterpolator`: Location は線形（course は circular）、Motion は最近傍または線形。共通 API。
+- **速度のモーション補助（V1.1）**: fix 間の速度は、キャリブレーション済みの前後加速度を fix a から積分し、fix b での差分を区間内で線形に配分して求める（`v = max(0, va + ∫a + e·(t−ta)/T)`）。両端の fix で GPS 速度と一致し、区間内の一定バイアスは消える。キャリブレーションなし・confidence < 0.5・モーションなし（GPS Only）・fix 間隔 > 3 s（トンネル）・モーション欠落 > 0.25 s・|e|/T > 2 m/s² のときは線形補間。停車（両端 < 0.3 m/s）は 0。Eco は区間ごとの重力推定（前後 2 s の平均、|g| が 1 ± 0.03 のときのみ）。Replay・CSV・GPX に適用（`Options.speedFusion`）。
 - `ReplayTelemetryFrame { time, lat, lon, speed, altitude, course, lateralG, longitudinalG, verticalG, roll, pitch, yaw, gpsAccuracy }`。
 - Export
   - **JSON** = Master（lossless、session / places / markers / events / location / motion / altitude）
@@ -507,7 +508,7 @@ DriveScope/
 
 ## 19. V1.1 候補
 - 堅牢モード（Always 権限 + Significant Location Change による自動復旧）
-- Motion 補助による速度の 10 Hz 補間（GPS 1 Hz の間を加速度積分で埋める）
+- Motion 補助による速度の 10 Hz 補間（GPS 1 Hz の間を加速度積分で埋める） — ✅ 実装（§12）
 - Replay 区間解析（コーナー・登り / 下り）→ `sections[]`
 - **Apple Watch コンパニオンアプリ（W3）**
   - 画面: 大きな MARK（`handGestureShortcut(.primaryAction)`）、REC 状態・経過・速度、STOP
