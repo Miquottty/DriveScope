@@ -391,6 +391,22 @@
         }
       }
     },
+    "Auto-resumed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Auto-resumed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "自動再開"
+          }
+        }
+      }
+    },
     "Available": {
       "localizations": {
         "en": {
