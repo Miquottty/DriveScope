@@ -249,7 +249,7 @@ struct MountCalibration: Codable {
 | Logger 50 Hz | 13.3 MB | 26.6 MB | 2.0 GB |
 | Lab 100 Hz | 26.2 MB | 52.4 MB | 3.9 GB |
 
-JSON Export はバイナリの約 8〜10 倍。CSV 10 Hz 統合出力は約 4 MB/h。アーカイブ時に LZFSE で Motion は 40〜60% 縮む。制約はサイズより書き込み頻度・CPU・発熱。
+JSON Export はバイナリの約 2.5〜3 倍（S6 で実測。当初見込みの 8〜10 倍は過大だった）。CSV 10 Hz 統合出力は約 4 MB/h。アーカイブ時に LZFSE で Motion は 40〜60% 縮む。制約はサイズより書き込み頻度・CPU・発熱。
 
 ---
 
