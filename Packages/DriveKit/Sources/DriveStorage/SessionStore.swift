@@ -84,7 +84,7 @@ public final class SessionStore {
     }
 
     /// Evenly downsamples fixes to at most `maxPoints`, always keeping the first and last usable fix.
-    public static func routePreview(from locations: [LocationSample], maxPoints: Int = 200) -> [RoutePoint] {
+    nonisolated public static func routePreview(from locations: [LocationSample], maxPoints: Int = 200) -> [RoutePoint] {
         let usable = locations.filter { $0.horizontalAccuracy > 0 && $0.horizontalAccuracy <= 50 }
         guard maxPoints >= 2, usable.count > maxPoints else {
             return usable.map { RoutePoint(latitude: $0.latitude, longitude: $0.longitude) }
