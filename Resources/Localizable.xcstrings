@@ -293,6 +293,22 @@
         }
       }
     },
+    "Back": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "戻る"
+          }
+        }
+      }
+    },
     "Background location": {
       "localizations": {
         "en": {
@@ -783,6 +799,22 @@
         }
       }
     },
+    "Follow": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "追従"
+          }
+        }
+      }
+    },
     "Full": {
       "localizations": {
         "en": {
@@ -965,6 +997,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "長押しで停止"
+          }
+        }
+      }
+    },
+    "Jumps to this marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Jumps to this marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このマーカーへ移動します"
           }
         }
       }
@@ -1633,6 +1681,22 @@
         }
       }
     },
+    "Pause": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pause"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "一時停止"
+          }
+        }
+      }
+    },
     "Peak G": {
       "localizations": {
         "en": {
@@ -1697,6 +1761,38 @@
         }
       }
     },
+    "Play": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生"
+          }
+        }
+      }
+    },
+    "Playback speed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Playback speed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生速度"
+          }
+        }
+      }
+    },
     "Power": {
       "localizations": {
         "en": {
@@ -1757,6 +1853,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "プリセットはセッションごとに固定されます。変更は次の START から適用されます。"
+          }
+        }
+      }
+    },
+    "Previous mark": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous mark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前のマーク"
           }
         }
       }
@@ -2277,6 +2389,38 @@
         }
       }
     },
+    "Speed": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speed"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速度"
+          }
+        }
+      }
+    },
+    "Speed profile": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speed profile"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "速度プロファイル"
+          }
+        }
+      }
+    },
     "Start recording": {
       "localizations": {
         "en": {
@@ -2401,6 +2545,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "時間"
+          }
+        }
+      }
+    },
+    "Timeline": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Timeline"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "タイムライン"
           }
         }
       }
