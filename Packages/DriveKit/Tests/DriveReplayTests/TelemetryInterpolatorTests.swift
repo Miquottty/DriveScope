@@ -63,3 +63,24 @@ struct TelemetryInterpolatorTests {
         #expect(abs(frame.course - 0) < 1e-6 || abs(frame.course - 360) < 1e-6)
     }
 }
+
+struct PresetReplayTests {
+    /// PLAN DoD: every preset records and replays — the right motion file (or none), the expected rate, and frames
+    /// with position and speed; G comes from motion when recorded, from GPS otherwise.
+    @Test func everyPresetRecordsAndReplays() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopePresets-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        for preset in CapturePreset.allCases {
+            let built = try await ScriptedSessionBuilder.write(script: .akagi, preset: preset, duration: 120, root: root)
+            let reader = try TelemetryReader(files: SessionFiles(root: root, sessionID: built.manifest.sessionID))
+            let motionCount = reader.motion.count + reader.accelerations.count
+            #expect(abs(Double(motionCount) - preset.motion.hz * 120) <= preset.motion.hz + 1, "\(preset)")
+            #expect(preset == .eco ? !reader.accelerations.isEmpty : reader.accelerations.isEmpty, "\(preset)")
+            #expect(reader.locations.count >= 115, "\(preset)")
+
+            let frame = TelemetryInterpolator(reader: reader).frame(at: 40) // moving (the scripted light is ~70–90 s)
+            #expect(frame.hasFix && frame.speed > 5, "\(preset)")
+            #expect(built.summary.distance > 1_000, "\(preset)")
+        }
+    }
+}

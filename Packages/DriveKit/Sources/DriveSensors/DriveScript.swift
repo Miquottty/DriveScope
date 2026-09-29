@@ -125,6 +125,16 @@ public struct DriveScript: Sendable {
     }
 
     public func state(at elapsed: TimeInterval) -> State {
+        // Past the end the car is parked: hold the final position with no dynamics.
+        if elapsed >= duration, let last = nodes.last, nodes.count > 1 {
+            var parked = state(at: max(0, last.t - 1e-6))
+            parked.elapsed = duration
+            parked.speed = 0
+            parked.longitudinalAcceleration = 0
+            parked.lateralAcceleration = 0
+            parked.yawRate = 0
+            return parked
+        }
         let t = min(max(elapsed, 0), duration)
         // Binary search for the segment containing t.
         var lo = 0, hi = nodes.count - 1
