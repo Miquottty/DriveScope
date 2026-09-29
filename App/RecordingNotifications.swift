@@ -50,6 +50,8 @@ final class RecordingNotifications: NSObject, RecordingObserver, UNUserNotificat
     // MARK: Scheduling
 
     static func requestAuthorizationIfNeeded() async {
+        // The system alert would block UI tests on a fresh simulator (CI).
+        guard !ProcessInfo.processInfo.arguments.contains("-UITest") else { return }
         let center = UNUserNotificationCenter.current()
         guard await center.notificationSettings().authorizationStatus == .notDetermined else { return }
         _ = try? await center.requestAuthorization(options: [.alert, .sound, .badge])

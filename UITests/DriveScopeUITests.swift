@@ -33,6 +33,17 @@ final class DriveScopeUITests: XCTestCase {
         play.tap()
         sleep(2)
         XCTAssertTrue(app.sliders["replayScrubber"].exists)
+
+        // Back to Detail → Export a GPX file.
+        app.buttons["replayPlayButton"].tap()
+        app.buttons["Back"].tap()
+        let export = app.buttons["exportButton"]
+        XCTAssertTrue(export.waitForExistence(timeout: 10))
+        export.tap()
+        let gpx = app.buttons["exportGPX"]
+        XCTAssertTrue(gpx.waitForExistence(timeout: 10))
+        gpx.tap()
+        XCTAssertTrue(app.buttons["shareGPX"].waitForExistence(timeout: 20), "GPX export should finish")
     }
 
     /// A recording killed mid-drive is offered for recovery on the next launch and opens as RECOVERED.
