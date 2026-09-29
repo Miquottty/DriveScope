@@ -70,6 +70,7 @@ struct HomeView: View {
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
+            .readableWidth()
         }
         .scrollBounceBehavior(.basedOnSize)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

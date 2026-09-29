@@ -74,6 +74,7 @@ struct SessionDetailView: View {
                 .padding(.horizontal, 20)
                 .padding(.top, 18)
                 .padding(.bottom, 12)
+                .readableWidth()
             }
         }
         // The map runs under the status bar, like the mock.

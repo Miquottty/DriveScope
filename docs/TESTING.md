@@ -11,6 +11,22 @@ v1 は **すべてシミュレータで開発・検証**した（Xcode 27.2 beta
 | `scripts/xc.sh test-ios` | アプリの UI テスト（シミュレータ） |
 | `scripts/xc.sh build-device` | iphoneos SDK でのコンパイル確認（署名なし） |
 
+UI テスト（2 本）:
+
+- `testRecordStopReplay`: スクリプト走行で START → MARK → STOP 長押し → 詳細 → リプレイ再生 → 書き出し（GPX）
+- `testKilledRecordingIsRecovered`: 記録中に強制終了 → 再起動 → 復旧シート → RECOVERED
+
+起動引数（デバッグ / テスト用）:
+
+| 引数 | 効果 |
+|---|---|
+| `-DriveSim akagi -DriveSimSpeed N` | 決定論的なスクリプト走行（権限不要、N 倍速） |
+| `-UITest` | メモリ内ストア + 一時フォルダ（実データに触れない、通知の許可ダイアログを出さない） |
+| `-UITestKeepData` / `-UITestFresh` | UI テスト用データを再起動後も保持 / 初期化 |
+| `-SeedSession <秒>`（DEBUG） | Akagi のスクリプト走行セッションを生成（例: 7200 で 2 時間ログ） |
+| `-appLanguage ja` / `en` | アプリ内言語 |
+| Settings → Debug → Fast watchdog | Watchdog の閾値を 1/10 に短縮 |
+
 主な単体テスト（テストは意図的に少数・高価値に絞っている）:
 
 - バイナリ記録: レコード配置、`write` 後の強制終了・書き込み途中の切断からの復旧、静かなストリームの時間 flush
@@ -36,6 +52,10 @@ v1 は **すべてシミュレータで開発・検証**した（Xcode 27.2 beta
 | Mount Calibration | スクリプト走行で CAL 表示、右カーブで横 G がマイナス・点が右 | OK |
 | 地名・自動タイトル | STOP 後 約 2 秒でタイトル（ja / en） | OK |
 | 言語切替 | Settings で即時切替（ナビタイトル含む） | OK |
+| 記録の再開 | 強制終了 → 復旧シートの「記録を再開」 | 同じファイルに追記 OK |
+| リプレイ | 2 時間ログを即時に開き 2× 再生、地図追従 | OK |
+| 書き出し | JSON / GPX / CSV 30 fps / 10 Hz → `jq` / `xmllint` / 共有シートで「ファイルに保存」 | OK |
+| iPad | iPad Pro 11 インチでの表示（本文幅 640 pt に制限） | OK |
 
 ## 3. 実機チェックリスト（シミュレータで確認できないもの）
 

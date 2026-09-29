@@ -20,6 +20,13 @@ enum Theme {
     static let good = Color(hex: 0x7BD88F)
 }
 
+extension View {
+    /// Phone layouts are designed at ~390 pt; on iPad / wide windows, cap the content and center it.
+    func readableWidth(_ width: CGFloat = 640) -> some View {
+        frame(maxWidth: width).frame(maxWidth: .infinity)
+    }
+}
+
 extension Font {
     /// Numbers are monospaced everywhere (SF Mono look).
     static func hudNumber(size: CGFloat, weight: Font.Weight = .regular) -> Font {

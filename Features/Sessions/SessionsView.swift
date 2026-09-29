@@ -78,6 +78,10 @@ struct SessionsView: View {
     }
 
     private func list(_ format: SessionFormat) -> some View {
+        listBody(format).readableWidth()
+    }
+
+    private func listBody(_ format: SessionFormat) -> some View {
         List {
             ForEach(sections) { section in
                 Section {
