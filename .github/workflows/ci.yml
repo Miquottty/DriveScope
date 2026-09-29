@@ -1,0 +1,54 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build & test (Xcode 27.2 beta)
+    # GitHub's macOS 27 image with Xcode 27.x (public preview).
+    runs-on: xcode-27
+    timeout-minutes: 45
+    env:
+      DRIVESCOPE_SIM: iPhone 18 Pro
+      DRIVESCOPE_SIM_OS: latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode 27.2
+        run: |
+          for candidate in /Applications/Xcode_27.2_beta.app /Applications/Xcode_27.2.app; do
+            if [ -d "$candidate" ]; then
+              echo "DRIVESCOPE_DEVELOPER_DIR=$candidate/Contents/Developer" >> "$GITHUB_ENV"
+              echo "Using $candidate"
+              exit 0
+            fi
+          done
+          echo "::error::Xcode 27.2 not found on this runner"; ls /Applications; exit 1
+
+      - name: Toolchain
+        run: scripts/xc.sh xcodebuild -version && scripts/xc.sh swift --version && scripts/xc.sh sim
+
+      - name: DriveKit unit tests (macOS)
+        run: scripts/xc.sh test
+
+      - name: Device SDK build (unsigned)
+        run: scripts/xc.sh build-device
+
+      - name: App UI tests (simulator)
+        run: scripts/xc.sh test-ios
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: xcresult
+          path: .build/TestResults
+          retention-days: 7
