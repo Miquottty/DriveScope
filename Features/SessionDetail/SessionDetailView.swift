@@ -211,6 +211,12 @@ struct SessionDetailView: View {
                 } label: {
                     Label("Rename", systemImage: "pencil")
                 }
+                Button {
+                    Task { await model.archiver.archive(session) }
+                } label: {
+                    Label("Compress now", systemImage: "archivebox")
+                }
+                .disabled(session.archivedAt != nil || isRecording(session))
                 Button(role: .destructive) {
                     isConfirmingDelete = true
                 } label: {
@@ -295,6 +301,12 @@ struct SessionDetailView: View {
                 } label: {
                     Label("Rename", systemImage: "pencil")
                 }
+                Button {
+                    Task { await model.archiver.archive(session) }
+                } label: {
+                    Label("Compress now", systemImage: "archivebox")
+                }
+                .disabled(session.archivedAt != nil || isRecording(session))
                 Button(role: .destructive) {
                     isConfirmingDelete = true
                 } label: {

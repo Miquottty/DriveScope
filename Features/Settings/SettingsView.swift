@@ -7,6 +7,8 @@ struct SettingsView: View {
     // Same key Home reads to start the next session.
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @AppStorage("locationBackend") private var locationBackend = SensorEnvironment.LocationBackend.locationManager.rawValue
+    // Read by `AppModel.archiveAfterDays`; 0 = off.
+    @AppStorage("archiveAfterDays") private var archiveAfterDays = 30
     #if DEBUG
     @AppStorage("debugFastWatchdog") private var fastWatchdog = false
     #endif
@@ -61,6 +63,21 @@ struct SettingsView: View {
                     Text("Recording")
                 } footer: {
                     Text("Applies to the next START. Compared in real-car test B.")
+                }
+                Section {
+                    Picker("Compress old sessions", selection: $archiveAfterDays) {
+                        Text("Off").tag(0)
+                        ForEach([7, 30, 90], id: \.self) { days in
+                            Text("After \(days) days").tag(days)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("archivePicker")
+                    .listRowBackground(Theme.surface)
+                } header: {
+                    Text("Storage")
+                } footer: {
+                    Text("Lossless (LZFSE). Replay and export work as before. Checked at launch and after each STOP.")
                 }
                 #if DEBUG
                 Section {

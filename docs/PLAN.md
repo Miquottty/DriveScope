@@ -255,6 +255,13 @@ struct MountCalibration: Codable {
 
 JSON Export はバイナリの約 2.5〜3 倍（S6 で実測。当初見込みの 8〜10 倍は過大だった）。CSV 10 Hz 統合出力は約 4 MB/h。アーカイブ時に LZFSE で Motion は 40〜60% 縮む。制約はサイズより書き込み頻度・CPU・発熱。
 
+
+### 4.4 LZFSE アーカイブ（V1.1）
+- 終了済み（stopped / recovered）のセッションのストリームを `<name>.bin.lzfse` に置き換える。形式: 16 B ヘッダ（magic "DSLZ"・version・元サイズ）+ 元ファイル全体（32 B ヘッダ込み）をバイトシャッフルしてから LZFSE。可逆で、読み手には `SessionFiles.streamData(_:)` が元のバイト列を返す（Replay・書き出し・統計・品質はすべてこの入口を通る）。
+- バイトシャッフル: レコードをバイト位置ごとのプレーンに並べ替える（vImage の 90° 回転、プレーン内は逆順）。実機 50 Hz の motion.bin は LZFSE だけだと元の 82〜88%、シャッフル後は 57〜68%。スクリプト走行の 2 時間 Logger は 28 MB → 7.8 MB。アーカイブ済み 2 時間ログのオープンは Mac で約 20〜40 ms。
+- 手順（クラッシュ安全）: 一時ファイルに書く → 展開して元と一致を検証 → fsync → rename → 全ストリーム完了後にディレクトリ fsync → manifest に `archivedAt` → 最後に `.bin` を削除。両方あるときは生ファイルを優先し、次回の実行で `.tmp` の削除と不一致アーカイブの作り直しをする。
+- アーカイブ済みのストリームには追記できない（`SampleWriter` が拒否）。対象は記録中でないセッションだけ。
+- 設定「古いセッションを圧縮」（オフ / 7 / 30 / 90 日、既定 30 日）で、起動時と STOP 後に 1 件ずつ実行（記録中・低電力モード中はしない）。詳細画面のメニューから「今すぐ圧縮」も可能。
 ---
 
 ## 5. Raw と派生データの棲み分け
@@ -523,7 +530,7 @@ DriveScope/
   - MARK 時の触覚フィードバック。Watchdog のローカル通知は OS が自動で Watch に転送
   - **START は堅牢モード（Always 権限）時のみ**（iPhone をバックグラウンドから記録開始させるため）
   - **SYNC は iPhone のみ**。Watch → iPhone の通信遅延（100〜500 ms 程度でばらつく）は動画同期基準に不十分。Watch 起点の操作は Watch 時刻と iPhone 受信時刻の両方を保存し、MARK（±1 s で十分）用途に限定
-- LZFSE アーカイブ
+- LZFSE アーカイブ — ✅ 実装（§4.4）
 - **CarPlay Driving Task アプリ — シミュレータ検証のみ**
   - **権限（`com.apple.developer.carplay-driving-task`）は申請しない**。CarPlay 権限は Apple 管理の権限で、個人利用でも実機（Mac の CarPlay Simulator アプリ経由・実車とも）では承認なしに動かない。
   - Xcode の iOS シミュレータ + CarPlay 外部ディスプレイでは、`.entitlements` にキーを書くだけで表示できる見込み（開発者報告ベース。着手時に最初に確認し、不可ならこの項目は中止）。
