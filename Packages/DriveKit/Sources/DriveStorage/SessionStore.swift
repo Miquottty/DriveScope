@@ -30,6 +30,11 @@ public final class SessionStore {
         return try? context.fetch(descriptor).first
     }
 
+    /// Every session, newest first.
+    public func allSessions() -> [DriveSession] {
+        (try? context.fetch(FetchDescriptor<DriveSession>(sortBy: [SortDescriptor(\.startedAt, order: .reverse)]))) ?? []
+    }
+
     public func sessions(in state: RecordingState) -> [DriveSession] {
         // Compare the raw value: enum key paths in predicates are not reliably supported.
         let raw = state.rawValue
