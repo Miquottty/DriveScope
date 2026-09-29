@@ -39,9 +39,8 @@ public struct QualityReport: Sendable {
         report.accuracyP95 = SessionStatistics.percentile(accuracies, 0.95)
 
         if let kind = manifest.motionStream {
-            let url = files.url(for: kind)
-            let count = StreamReader.recordCount(at: url, kind: kind)
-            if count > 0, let (first, last) = try firstAndLastTimestamp(url: url, kind: kind) {
+            let count = files.recordCount(kind)
+            if count > 0, let (first, last) = try firstAndLastTimestamp(files: files, kind: kind) {
                 report.motion.count = count
                 report.motion.span = last - first
                 report.motion.meanInterval = count > 1 ? (last - first) / Double(count - 1) : nil
@@ -68,8 +67,8 @@ public struct QualityReport: Sendable {
         return s
     }
 
-    private static func firstAndLastTimestamp(url: URL, kind: StreamKind) throws -> (Double, Double)? {
-        let data = try Data(contentsOf: url, options: .alwaysMapped)
+    private static func firstAndLastTimestamp(files: SessionFiles, kind: StreamKind) throws -> (Double, Double)? {
+        let data = try files.streamData(kind)
         let count = (data.count - StreamHeader.size) / kind.recordSize
         guard count > 0 else { return nil }
         // Every record starts with its Double timestamp.

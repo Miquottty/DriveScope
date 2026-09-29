@@ -18,7 +18,12 @@ public enum StreamReader {
     /// Decodes every complete record. A partial trailing record is ignored.
     public static func read<R: BinaryRecord>(_ type: R.Type, at url: URL, kind: StreamKind) throws -> [R] {
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }
-        let data = try Data(contentsOf: url, options: .alwaysMapped)
+        return try read(type, from: Data(contentsOf: url, options: .alwaysMapped), kind: kind)
+    }
+
+    /// Decodes every complete record of a stream's bytes (header included); empty data is an empty stream.
+    public static func read<R: BinaryRecord>(_ type: R.Type, from data: Data, kind: StreamKind) throws -> [R] {
+        guard !data.isEmpty else { return [] }
         return try data.withUnsafeBytes { buffer -> [R] in
             let header = try StreamHeader(decoding: buffer)
             guard header.kind == kind else { throw StreamFormatError.wrongStream(expected: kind, found: header.kind) }
@@ -35,22 +40,22 @@ public enum StreamReader {
 
 extension SessionFiles {
     public func locations() throws -> [LocationSample] {
-        try StreamReader.read(LocationSample.self, at: url(for: .location), kind: .location)
+        try StreamReader.read(LocationSample.self, from: streamData(.location), kind: .location)
     }
 
     public func deviceMotion() throws -> [MotionSample] {
-        try StreamReader.read(MotionSample.self, at: url(for: .motion), kind: .motion)
+        try StreamReader.read(MotionSample.self, from: streamData(.motion), kind: .motion)
     }
 
     public func accelerations() throws -> [AccelSample] {
-        try StreamReader.read(AccelSample.self, at: url(for: .accel), kind: .accel)
+        try StreamReader.read(AccelSample.self, from: streamData(.accel), kind: .accel)
     }
 
     public func altitudes() throws -> [AltitudeSample] {
-        try StreamReader.read(AltitudeSample.self, at: url(for: .altitude), kind: .altitude)
+        try StreamReader.read(AltitudeSample.self, from: streamData(.altitude), kind: .altitude)
     }
 
     public func events() throws -> [EventRecord] {
-        try StreamReader.read(EventRecord.self, at: url(for: .events), kind: .events)
+        try StreamReader.read(EventRecord.self, from: streamData(.events), kind: .events)
     }
 }

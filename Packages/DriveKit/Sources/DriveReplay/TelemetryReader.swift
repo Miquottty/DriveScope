@@ -7,15 +7,15 @@ import Foundation
 public struct MappedStream<Record: BinaryRecord>: RandomAccessCollection, Sendable {
     private let data: Data
 
-    public init(url: URL, kind: StreamKind) throws {
-        guard FileManager.default.fileExists(atPath: url.path) else {
+    public init(files: SessionFiles, kind: StreamKind) throws {
+        let bytes = try files.streamData(kind)
+        guard !bytes.isEmpty else {
             data = Data()
             return
         }
-        let mapped = try Data(contentsOf: url, options: .alwaysMapped)
-        let header = try mapped.withUnsafeBytes { try StreamHeader(decoding: $0) }
+        let header = try bytes.withUnsafeBytes { try StreamHeader(decoding: $0) }
         guard header.kind == kind else { throw StreamFormatError.wrongStream(expected: kind, found: header.kind) }
-        data = mapped
+        data = bytes
     }
 
     public var startIndex: Int { 0 }
@@ -48,11 +48,11 @@ public struct TelemetryReader: Sendable {
 
     public init(files: SessionFiles) throws {
         manifest = try files.readManifest()
-        locations = try MappedStream(url: files.url(for: .location), kind: .location)
+        locations = try MappedStream(files: files, kind: .location)
         let motionStream = manifest.motionStream
-        motion = try motionStream == .motion ? MappedStream(url: files.url(for: .motion), kind: .motion) : MappedStream(empty: ())
-        accelerations = try motionStream == .accel ? MappedStream(url: files.url(for: .accel), kind: .accel) : MappedStream(empty: ())
-        altitudes = try MappedStream(url: files.url(for: .altitude), kind: .altitude)
+        motion = try motionStream == .motion ? MappedStream(files: files, kind: .motion) : MappedStream(empty: ())
+        accelerations = try motionStream == .accel ? MappedStream(files: files, kind: .accel) : MappedStream(empty: ())
+        altitudes = try MappedStream(files: files, kind: .altitude)
         events = (try? files.events()) ?? []
     }
 
