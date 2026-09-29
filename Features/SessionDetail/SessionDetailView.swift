@@ -85,7 +85,11 @@ struct SessionDetailView: View {
                 phoneContent(session, format, points: points)
             }
         }
-        .task(id: session.id) { await loadRoute(for: session) }
+        .task(id: session.id) {
+            await loadRoute(for: session)
+            // Sessions recorded before V1.1 (or by an older detector) get their sections here.
+            await model.finalizer.ensureSections(session)
+        }
         .alert("Rename", isPresented: $isRenaming) {
             TextField("Session name", text: $draftTitle)
             Button("Save") { commitRename(session, format) }

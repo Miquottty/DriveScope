@@ -45,6 +45,10 @@ public final class DriveSession {
     /// Downsampled route (≤ 200 points) for list thumbnails, so lists never open the binary files.
     @Attribute(.codable) public var routePreview: [RoutePoint]
     public var geocodePending: Bool
+    /// Corners, climbs / descents and stops (PLAN §12). Derived; recomputed when `sectionsVersion` is older than
+    /// the detector's. The defaults let existing stores migrate.
+    @Attribute(.codable) public var sections: [DriveSection] = []
+    public var sectionsVersion: Int = 0
 
     @Relationship(deleteRule: .cascade, inverse: \Marker.session) public var markers: [Marker]
 
@@ -84,6 +88,8 @@ public final class DriveSession {
         viaPlaces = []
         routePreview = []
         geocodePending = false
+        sections = []
+        sectionsVersion = 0
         markers = []
     }
 

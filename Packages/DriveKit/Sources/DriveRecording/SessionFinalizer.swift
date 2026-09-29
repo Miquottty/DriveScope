@@ -56,6 +56,7 @@ public final class SessionFinalizer {
     }
 
     public func finalize(_ session: DriveSession) async {
+        await ensureSections(session)
         let files = SessionFiles(root: filesRoot, sessionID: session.id)
         let clock = session.clock
         let candidates = await Self.candidates(files: files, clock: clock)
@@ -88,11 +89,28 @@ public final class SessionFinalizer {
         try? store.save()
     }
 
+    /// Computes the sections when missing or made by an older detector (sessions recorded before V1.1 get them the
+    /// first time Detail, Replay or Export needs them). Never for a session still recording.
+    public func ensureSections(_ session: DriveSession) async {
+        guard session.state != .recording, session.sectionsVersion < SectionDetector.version else { return }
+        let files = SessionFiles(root: filesRoot, sessionID: session.id)
+        guard let sections = await Self.detectSections(files: files, calibration: session.calibration) else { return }
+        session.sections = sections
+        session.sectionsVersion = SectionDetector.version
+        try? store.save()
+    }
+
     /// Sessions whose geocoding failed (offline at STOP).
     public func retryPending() async {
         for session in store.allSessions() where session.geocodePending && session.state != .recording {
             await finalize(session)
         }
+    }
+
+    /// nil when the files can't be read (then nothing is stored and a later call tries again).
+    @concurrent nonisolated private static func detectSections(files: SessionFiles, calibration: MountCalibration?) async -> [DriveSection]? {
+        guard let reader = try? TelemetryReader(files: files) else { return nil }
+        return SectionDetector.detect(reader: reader, calibration: calibration)
     }
 
     @concurrent nonisolated private static func candidates(files: SessionFiles, clock: SessionClock) async -> [PlacePicker.Candidate] {

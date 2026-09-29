@@ -25,16 +25,19 @@ public struct ExportMetadata: Sendable, Equatable {
     public var places: [PlaceMeta]
     public var markers: [ExportMarker]
     public var summary: SessionSummary
+    /// Corners, climbs / descents and stops (derived, PLAN §12).
+    public var sections: [DriveSection]
 
     public init(
         title: String = "", notes: String = "", places: [PlaceMeta] = [], markers: [ExportMarker] = [],
-        summary: SessionSummary = SessionSummary()
+        summary: SessionSummary = SessionSummary(), sections: [DriveSection] = []
     ) {
         self.title = title
         self.notes = notes
         self.places = places
         self.markers = markers
         self.summary = summary
+        self.sections = sections
     }
 
     /// Session elapsed of the earliest SYNC marker: t = 0 of the Vlog CSV.

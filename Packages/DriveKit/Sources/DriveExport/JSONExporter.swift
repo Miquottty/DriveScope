@@ -64,6 +64,11 @@ public enum JSONExporter {
             head.appendJSON(marker.label)
             head += "}"
         }
+        head += "],\n\"sections\":["
+        for (i, section) in metadata.sections.enumerated() {
+            head += i == 0 ? "\n" : ",\n"
+            head += sectionObject(section)
+        }
         head += "],\n\"events\":["
         try out.write(head)
 
@@ -116,6 +121,28 @@ public enum JSONExporter {
             row.add(s.timestamp); row.add(s.relativeAltitude); row.add(s.pressure)
         }
         try out.write("}\n")
+    }
+
+    /// Every key is always present (null when it doesn't apply to the kind), so readers see one shape.
+    private static func sectionObject(_ section: DriveSection) -> String {
+        var s = "{\"kind\":"
+        s.appendJSON(section.kind.rawValue)
+        func add(_ key: String, _ value: Double?) {
+            s += ",\"\(key)\":"
+            if let value { s.appendJSON(value) } else { s += "null" }
+        }
+        add("start", section.start)
+        add("end", section.end)
+        add("distance", section.distance)
+        s += ",\"direction\":"
+        s.appendJSON(section.direction?.rawValue)
+        add("peakLateralG", section.peakLateralG)
+        add("entrySpeed", section.entrySpeed)
+        add("exitSpeed", section.exitSpeed)
+        add("minSpeed", section.minSpeed)
+        add("altitudeChange", section.altitudeChange)
+        add("averageGrade", section.averageGrade)
+        return s + "}"
     }
 
     /// `{"fields":[...],"rows":[\n[..],\n[..]]}` (with an optional leading `"type"`).
