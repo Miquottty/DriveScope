@@ -18,6 +18,7 @@ struct HomeView: View {
     @Environment(BatteryMonitor.self) private var battery
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @Query(HomeView.recentDescriptor) private var recent: [DriveSession]
 
@@ -33,7 +34,7 @@ struct HomeView: View {
         return descriptor
     }
 
-    private enum StartIssue {
+    enum StartIssue {
         case denied
         case imprecise
     }
@@ -48,6 +49,45 @@ struct HomeView: View {
     }
 
     var body: some View {
+        Group {
+            if horizontalSizeClass == .regular {
+                iPadDashboard
+            } else {
+                phoneDashboard
+            }
+        }
+        .sheet(isPresented: $showingSettings) {
+            SettingsView()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
+            isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
+        .onChange(of: permission.canRecord) { _, allowed in
+            if allowed, issue == .denied { issue = nil }
+        }
+        .onChange(of: permission.isPrecise) { _, precise in
+            if precise, issue == .imprecise { issue = nil }
+        }
+    }
+
+    /// iPad (mock 11). The sidebar carries the app name and Settings, so there is no header here.
+    private var iPadDashboard: some View {
+        HomeIPadLayout(
+            permission: permission,
+            presetRaw: $presetRaw,
+            canStart: canStart,
+            issue: issue,
+            isLowPowerMode: isLowPowerMode,
+            batterySuggestionPercent: showsBatterySuggestion ? Int(((battery.level ?? 0) * 100).rounded()) : nil,
+            recent: recent.filter { !$0.isDeleted && $0.modelContext != nil },
+            onStart: { Task { await start() } },
+            onDismissBatterySuggestion: { withAnimation { batterySuggestionDismissed = true } },
+            onOpenSession: onOpenSession,
+            onShowAllSessions: onShowAllSessions
+        )
+    }
+
+    private var phoneDashboard: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
@@ -75,18 +115,6 @@ struct HomeView: View {
         .scrollBounceBehavior(.basedOnSize)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
-        .sheet(isPresented: $showingSettings) {
-            SettingsView()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
-            isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
-        }
-        .onChange(of: permission.canRecord) { _, allowed in
-            if allowed, issue == .denied { issue = nil }
-        }
-        .onChange(of: permission.isPrecise) { _, precise in
-            if precise, issue == .imprecise { issue = nil }
-        }
     }
 
     // MARK: Header

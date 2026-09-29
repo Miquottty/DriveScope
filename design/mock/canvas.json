@@ -77,6 +77,54 @@
       "w": 844,
       "x": 924,
       "y": 1424
+    },
+    "iPadHome.dc.html": {
+      "x": 0,
+      "y": 2700,
+      "w": 1210,
+      "h": 834,
+      "title": "11 · iPad · Record dashboard (sidebar + START + sensor tiles)",
+      "is_interactive": true
+    },
+    "iPadRecording.dc.html": {
+      "x": 1290,
+      "y": 2700,
+      "w": 1210,
+      "h": 834,
+      "title": "12 · iPad · Recording HUD · landscape (dash mount)",
+      "is_interactive": true
+    },
+    "iPadDetail.dc.html": {
+      "x": 2580,
+      "y": 2700,
+      "w": 1210,
+      "h": 834,
+      "title": "13 · iPad · Session Detail (map-first)",
+      "is_interactive": true
+    },
+    "iPadReplay.dc.html": {
+      "x": 0,
+      "y": 3654,
+      "w": 1210,
+      "h": 834,
+      "title": "14 · iPad · Timeline Replay (full screen)",
+      "is_interactive": true
+    },
+    "iPadQuality.dc.html": {
+      "x": 1290,
+      "y": 3654,
+      "w": 1210,
+      "h": 834,
+      "title": "15 · iPad · Quality report",
+      "is_interactive": true
+    },
+    "iPadRecordingPortrait.dc.html": {
+      "x": 2580,
+      "y": 3654,
+      "w": 834,
+      "h": 1210,
+      "title": "16 · iPad · Recording HUD · portrait",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -111,6 +159,22 @@
       "w": 240,
       "x": 0,
       "y": 1200
+    },
+    "t4": {
+      "kind": "title1",
+      "text": "iPad — split view · glanceable HUD · map-first review",
+      "x": 0,
+      "y": 2440,
+      "w": 240,
+      "maxW": 3790
+    },
+    "s1": {
+      "text": "iPad readability rules\n• One hero per screen: speed / G while driving, the map while reviewing\n• Text ≥ 15 pt, labels 13 pt caps, key figures ≥ 28 pt (HUD speed 260–280 pt)\n• No #5C6670 text on iPad (below 4.5:1); secondary = #B4BEC8 / #8A94A0\n• Cards: radius 16, padding 20, gaps 16–20, margins 32\n• Touch ≥ 52 pt; HUD buttons 92–100 pt; STOP stays hold-only\n• Sidebar = navigation + session library; narrow multitasking falls back to the iPhone tabs\n• Keyboard: M / S in the HUD; Space, ← →, [ ] in Replay",
+      "x": 3494,
+      "y": 2700,
+      "w": 440,
+      "fill": "orange",
+      "size": "m"
     }
   },
   "order": [
@@ -123,7 +187,13 @@
     "Recovery.dc.html",
     "RecordingLandscape.dc.html",
     "StandBy.dc.html",
-    "DynamicIsland.dc.html"
+    "DynamicIsland.dc.html",
+    "iPadHome.dc.html",
+    "iPadRecording.dc.html",
+    "iPadDetail.dc.html",
+    "iPadReplay.dc.html",
+    "iPadQuality.dc.html",
+    "iPadRecordingPortrait.dc.html"
   ],
   "pages": [],
   "title": "DriveScope Mock"

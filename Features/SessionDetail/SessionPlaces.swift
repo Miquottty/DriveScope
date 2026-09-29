@@ -7,6 +7,8 @@ struct SessionPlacesLine: View {
     let session: DriveSession
     /// The displayed title; the line is dropped when the title already names these places.
     let title: String
+    /// iPad type scale.
+    var large = false
 
     var body: some View {
         let names = Self.names(start: session.startPlace, end: session.endPlace)
@@ -20,13 +22,13 @@ struct SessionPlacesLine: View {
                     } icon: {
                         Image(systemName: "mappin.and.ellipse")
                     }
-                    .font(.system(size: 13))
+                    .font(.system(size: large ? 15 : 13))
                     .foregroundStyle(Theme.textTertiary)
                 }
                 if session.geocodePending {
                     Label("Place names pending (offline)", systemImage: "wifi.slash")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Theme.textMuted)
+                        .font(.system(size: large ? 15 : 12))
+                        .foregroundStyle(large ? Theme.textSecondary : Theme.textMuted)
                 }
             }
         }
@@ -45,12 +47,33 @@ struct SessionPlacesLine: View {
 /// Highest point / peak G / via places, one compact line each. Hidden when none has a name.
 struct SessionPlacesCard: View {
     let places: [PlaceMeta]
+    /// iPad (mock 13): 16 pt rows, role left and place right.
+    var large = false
 
     var body: some View {
         let rows = places.enumerated().compactMap { index, place in
             (place.name ?? place.locality ?? place.shortName).map { Row(id: index, role: place.role, name: $0) }
         }
-        if !rows.isEmpty {
+        if large, !rows.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
+                Text("Places").iPadLabel()
+                VStack(spacing: 8) {
+                    ForEach(rows) { row in
+                        HStack(alignment: .firstTextBaseline, spacing: 16) {
+                            Text(row.role.label)
+                                .foregroundStyle(Theme.textTertiary)
+                            Spacer(minLength: 0)
+                            Text(verbatim: row.name)
+                                .foregroundStyle(Theme.textPrimary)
+                                .lineLimit(1)
+                        }
+                        .font(.system(size: 16))
+                    }
+                }
+            }
+            .iPadCard(padding: EdgeInsets(top: 16, leading: 18, bottom: 16, trailing: 18))
+            .accessibilityElement(children: .combine)
+        } else if !rows.isEmpty {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Places")
                     .font(.system(size: 10))

@@ -1,6 +1,22 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%@ on disk": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ on disk"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ディスク上 %@"
+          }
+        }
+      }
+    },
     "%@ recovered": {
       "localizations": {
         "en": {
@@ -29,6 +45,38 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@/時"
+          }
+        }
+      }
+    },
+    "%lld Hz accelerometer": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Hz accelerometer"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Hz 加速度センサー"
+          }
+        }
+      }
+    },
+    "%lld Hz device motion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Hz device motion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld Hz デバイスモーション"
           }
         }
       }
@@ -67,6 +115,40 @@
         }
       }
     },
+    "%lld events": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld event"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld events"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld 件のイベント"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld marks": {
       "localizations": {
         "en": {
@@ -97,6 +179,22 @@
                 }
               }
             }
+          }
+        }
+      }
+    },
+    "Accelerometer only": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accelerometer only"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "加速度センサーのみ"
           }
         }
       }
@@ -197,6 +295,22 @@
         }
       }
     },
+    "Altitude from GPS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altitude from GPS"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "高度は GPS から"
+          }
+        }
+      }
+    },
     "Always · OK": {
       "localizations": {
         "en": {
@@ -209,6 +323,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "常に · OK"
+          }
+        }
+      }
+    },
+    "Always · location": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always · location"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "常に · 位置情報"
           }
         }
       }
@@ -309,6 +439,54 @@
         }
       }
     },
+    "Back 30 seconds": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back 30 seconds"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 秒戻る"
+          }
+        }
+      }
+    },
+    "Back 5 seconds": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back 5 seconds"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 秒戻る"
+          }
+        }
+      }
+    },
+    "Background": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Background"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バックグラウンド"
+          }
+        }
+      }
+    },
     "Background location": {
       "localizations": {
         "en": {
@@ -369,6 +547,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "バッテリー残量 %lld%%。Eco か GPS Only に切り替えますか？"
+          }
+        }
+      }
+    },
+    "Calibration": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Calibration"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "較正"
           }
         }
       }
@@ -581,6 +775,22 @@
         }
       }
     },
+    "Device motion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Device motion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイスモーション"
+          }
+        }
+      }
+    },
     "Discard": {
       "localizations": {
         "en": {
@@ -703,6 +913,22 @@
         }
       }
     },
+    "Effective": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Effective"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "実効"
+          }
+        }
+      }
+    },
     "Effective / preset": {
       "localizations": {
         "en": {
@@ -731,6 +957,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "バックグラウンドへ移行"
+          }
+        }
+      }
+    },
+    "Event": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Event"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "イベント"
           }
         }
       }
@@ -863,6 +1105,38 @@
         }
       }
     },
+    "Forward 30 seconds": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forward 30 seconds"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "30 秒進む"
+          }
+        }
+      }
+    },
+    "Forward 5 seconds": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Forward 5 seconds"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "5 秒進む"
+          }
+        }
+      }
+    },
     "Full": {
       "localizations": {
         "en": {
@@ -943,6 +1217,22 @@
         }
       }
     },
+    "GPS 1 Hz, no motion": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS 1 Hz, no motion"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS 1 Hz・モーションなし"
+          }
+        }
+      }
+    },
     "GPS lost": {
       "localizations": {
         "en": {
@@ -1019,6 +1309,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "上昇"
+          }
+        }
+      }
+    },
+    "HOLD 0.8 s": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "HOLD 0.8 s"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "0.8 秒長押し"
           }
         }
       }
@@ -1221,6 +1527,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "ロスレスのマスター。全ての生データ・イベント・地名を含む"
+          }
+        }
+      }
+    },
+    "Low Power Mode": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Low Power Mode"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "低電力モード"
           }
         }
       }
@@ -1453,6 +1775,22 @@
         }
       }
     },
+    "Mount the iPhone or iPad, then START. Forward is found on the first acceleration.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mount the iPhone or iPad, then START. Forward is found on the first acceleration."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPhone か iPad を固定してから開始してください。進行方向は最初の加速で検出されます。"
+          }
+        }
+      }
+    },
     "Mount the phone, then start. Forward direction is detected automatically on the first acceleration.": {
       "localizations": {
         "en": {
@@ -1465,6 +1803,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "スマートフォンを固定してから開始してください。進行方向は最初の加速で自動的に検出されます。"
+          }
+        }
+      }
+    },
+    "Next marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Next marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "次のマーカー"
           }
         }
       }
@@ -1649,6 +2003,22 @@
         }
       }
     },
+    "Not recorded": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Not recorded"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録しない"
+          }
+        }
+      }
+    },
     "Notes": {
       "localizations": {
         "en": {
@@ -1709,6 +2079,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "オン"
+          }
+        }
+      }
+    },
+    "On battery": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On battery"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "バッテリー駆動"
           }
         }
       }
@@ -1857,6 +2243,22 @@
         }
       }
     },
+    "Play / Pause": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Play / Pause"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "再生 / 一時停止"
+          }
+        }
+      }
+    },
     "Playback speed": {
       "localizations": {
         "en": {
@@ -1921,6 +2323,22 @@
         }
       }
     },
+    "Precise · full accuracy": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Precise · full accuracy"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "正確な位置情報 · 高精度"
+          }
+        }
+      }
+    },
     "Preset is fixed per session. Changes apply to the next START.": {
       "localizations": {
         "en": {
@@ -1949,6 +2367,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "前のマーク"
+          }
+        }
+      }
+    },
+    "Previous marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Previous marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "前のマーカー"
           }
         }
       }
@@ -2103,6 +2537,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "セッションを復元"
+          }
+        }
+      }
+    },
+    "Relative altitude": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Relative altitude"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "相対高度"
           }
         }
       }
@@ -2319,6 +2769,22 @@
         }
       }
     },
+    "Scripted drive": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scripted drive"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スクリプト走行"
+          }
+        }
+      }
+    },
     "Sensor Status": {
       "localizations": {
         "en": {
@@ -2495,6 +2961,38 @@
         }
       }
     },
+    "Source": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Source"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ソース"
+          }
+        }
+      }
+    },
+    "Space play / pause · ← → 5 s · ⇧ ← → 30 s · [ ] previous / next marker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space play / pause · ← → 5 s · ⇧ ← → 30 s · [ ] previous / next marker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Space 再生 / 一時停止 · ← → 5 秒 · ⇧ ← → 30 秒 · [ ] 前 / 次のマーカー"
+          }
+        }
+      }
+    },
     "Speed": {
       "localizations": {
         "en": {
@@ -2623,6 +3121,22 @@
         }
       }
     },
+    "Thermal max": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Thermal max"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最大温度状態"
+          }
+        }
+      }
+    },
     "Thermal state changed": {
       "localizations": {
         "en": {
@@ -2731,6 +3245,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "未接続"
+          }
+        }
+      }
+    },
+    "Value": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Value"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "値"
           }
         }
       }
@@ -2847,6 +3377,54 @@
         }
       }
     },
+    "While Using · location": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "While Using · location"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "使用中のみ · 位置情報"
+          }
+        }
+      }
+    },
+    "free": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "free"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空き"
+          }
+        }
+      }
+    },
+    "free · ≈ %@ h %@": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "free · ≈ %@ h %@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "空き · %2$@ で約 %1$@ 時間"
+          }
+        }
+      }
+    },
     "max %@": {
       "localizations": {
         "en": {
@@ -2859,6 +3437,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "最高 %@"
+          }
+        }
+      }
+    },
+    "screen off ≈ %@ %%/h": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "screen off ≈ %@ %%/h"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "画面オフ 約 %@ %%/h"
           }
         }
       }

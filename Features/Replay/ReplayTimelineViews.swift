@@ -6,6 +6,18 @@ import SwiftUI
 /// The chart itself never reads the playhead: only the overlay does, so playback redraws a 2 pt rule, not 600 points.
 struct SpeedSparkline: View {
     let player: ReplayPlayer
+    var style = Style.phone
+
+    struct Style {
+        var height: CGFloat = 44
+        var lineWidth: CGFloat = 1.5
+        var ruleDash: [CGFloat] = [2, 2]
+        var playheadWidth: CGFloat = 2
+
+        static let phone = Style()
+        /// iPad timeline bar (mock artboard 14): 112 pt profile, 4-4 dashed marker rules, 2.5 pt playhead.
+        static let pad = Style(height: 112, lineWidth: 2, ruleDash: [4, 4], playheadWidth: 2.5)
+    }
 
     var body: some View {
         let timeline = player.timeline
@@ -16,11 +28,11 @@ struct SpeedSparkline: View {
                 .foregroundStyle(Theme.accent.opacity(0.14))
             LinePlot(profile, x: .value("Time", \.time), y: .value("Speed", \.kmh))
                 .foregroundStyle(Theme.accent)
-                .lineStyle(StrokeStyle(lineWidth: 1.5, lineJoin: .round))
+                .lineStyle(StrokeStyle(lineWidth: style.lineWidth, lineJoin: .round))
             ForEach(timeline?.markers ?? []) { marker in
                 RuleMark(x: .value("Marker", marker.elapsed))
                     .foregroundStyle(marker.kind == .sync ? Theme.good : Theme.textPrimary)
-                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: [2, 2]))
+                    .lineStyle(StrokeStyle(lineWidth: 1.5, dash: style.ruleDash))
             }
         }
         .chartXScale(domain: 0...duration, range: .plotDimension(padding: 0))
@@ -32,10 +44,10 @@ struct SpeedSparkline: View {
         .chartOverlay { proxy in
             GeometryReader { geometry in
                 let plot = proxy.plotFrame.map { geometry[$0] } ?? CGRect(origin: .zero, size: geometry.size)
-                Playhead(player: player, plot: plot)
+                Playhead(player: player, plot: plot, width: style.playheadWidth)
             }
         }
-        .frame(height: 44)
+        .frame(height: style.height)
         .accessibilityElement()
         .accessibilityLabel(Text("Speed profile"))
     }
@@ -45,6 +57,7 @@ struct SpeedSparkline: View {
 private struct Playhead: View {
     let player: ReplayPlayer
     let plot: CGRect
+    let width: CGFloat
 
     var body: some View {
         let duration = player.duration
@@ -56,8 +69,8 @@ private struct Playhead: View {
             if player.timeline != nil {
                 Rectangle()
                     .fill(Theme.textPrimary)
-                    .frame(width: 2, height: plot.height)
-                    .offset(x: plot.minX + plot.width * fraction - 1, y: plot.minY)
+                    .frame(width: width, height: plot.height)
+                    .offset(x: plot.minX + plot.width * fraction - width / 2, y: plot.minY)
                     .allowsHitTesting(false)
             }
         }
@@ -73,9 +86,21 @@ private struct Playhead: View {
     }
 }
 
-/// Mock scrubber: 4 pt track, amber fill to the 24 pt thumb, 28 pt tall. Accessibility sees a real slider.
+/// Mock scrubber: 4 pt track, amber fill to the 24 pt thumb, 28 pt tall (iPad: 6 / 28). Accessibility sees a real
+/// slider.
 struct ReplayScrubber: View {
     let player: ReplayPlayer
+    var style = Style.phone
+
+    struct Style {
+        var trackHeight: CGFloat = 4
+        var trackColor = Theme.dividerStrong
+        var thumbSize: CGFloat = 24
+
+        static let phone = Style()
+        /// iPad timeline bar (mock artboard 14): 6 pt track, 28 pt thumb.
+        static let pad = Style(trackHeight: 6, trackColor: Theme.divider, thumbSize: 28)
+    }
 
     var body: some View {
         let duration = player.duration
@@ -84,16 +109,16 @@ struct ReplayScrubber: View {
             let width = geometry.size.width
             ZStack(alignment: .leading) {
                 Capsule()
-                    .fill(Theme.dividerStrong)
-                    .frame(height: 4)
+                    .fill(style.trackColor)
+                    .frame(height: style.trackHeight)
                 Capsule()
                     .fill(Theme.accent)
-                    .frame(width: width * fraction, height: 4)
+                    .frame(width: width * fraction, height: style.trackHeight)
                 Circle()
                     .fill(Theme.textPrimary)
-                    .frame(width: 24, height: 24)
+                    .frame(width: style.thumbSize, height: style.thumbSize)
                     .shadow(color: Theme.hudBackground.opacity(0.5), radius: 4, y: 2)
-                    .offset(x: width * fraction - 12)
+                    .offset(x: width * fraction - style.thumbSize / 2)
             }
             .frame(width: width, height: geometry.size.height)
             .contentShape(Rectangle())
