@@ -78,7 +78,8 @@ public enum SessionTitle {
         guard let start, let from = start.shortName else { return end?.shortName }
         guard let end, let to = end.shortName else { return from }
         let distance = Units.distance(lat1: start.latitude, lon1: start.longitude, lat2: end.latitude, lon2: end.longitude)
-        if distance < loopRadius || from == to && distance < loopRadius * 4 {
+        // Only a drive that ends where it began is a loop; a one-way drive within one town is just "A" below.
+        if distance < loopRadius {
             return "\(from) · \(loopWord)"
         }
         // Same municipality but not a loop (e.g. across town): "A → A" reads oddly.

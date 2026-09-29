@@ -24,11 +24,16 @@ sim_udid() {
   xcrun simctl list devices available -j | /usr/bin/python3 -c '
 import json, sys
 name, os_ver = sys.argv[1], sys.argv[2].replace(".", "-")
-for runtime, devices in json.load(sys.stdin)["devices"].items():
-    if runtime.endswith("iOS-" + os_ver):
-        for d in devices:
-            if d["name"] == name:
-                print(d["udid"]); sys.exit(0)
+runtimes = json.load(sys.stdin)["devices"]
+def version(runtime):
+    return [int(x) for x in runtime.rsplit("iOS-", 1)[1].split("-")]
+# "latest" (CI): the newest iOS runtime that has this device.
+candidates = sorted((r for r in runtimes if "iOS-" in r), key=version, reverse=True) if os_ver == "latest" \
+    else [r for r in runtimes if r.endswith("iOS-" + os_ver)]
+for runtime in candidates:
+    for d in runtimes[runtime]:
+        if d["name"] == name:
+            print(d["udid"]); sys.exit(0)
 sys.exit("simulator not found: %s (iOS %s)" % (name, sys.argv[2]))' "$SIM_NAME" "$SIM_OS"
 }
 

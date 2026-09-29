@@ -2155,6 +2155,16 @@
         }
       }
     },
+    "Resume recording": {
+      "localizations": {
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "記録を再開"
+          }
+        }
+      }
+    },
     "Resumed from notification": {
       "localizations": {
         "en": {
