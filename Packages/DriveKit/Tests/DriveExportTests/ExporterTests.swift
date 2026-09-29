@@ -22,10 +22,10 @@ struct ExporterTests {
             summary = built.summary
         }
 
-        func metadata(title: String = "Akagi", markers: [ExportMarker] = []) -> ExportMetadata {
+        func metadata(title: String = "Akagi", markers: [ExportMarker] = [], sections: [DriveSection] = []) -> ExportMetadata {
             ExportMetadata(
                 title: title, notes: "line1\nline2 \"q\"", places: [PlaceMeta(name: "Start", latitude: 36.5, longitude: 139.1, role: .start)],
-                markers: markers, summary: summary
+                markers: markers, summary: summary, sections: sections
             )
         }
 
@@ -38,8 +38,13 @@ struct ExporterTests {
         let fx = try await Fixture(preset: .logger)
         defer { try? FileManager.default.removeItem(at: fx.root) }
         let marker = ExportMarker(kind: .sync, elapsed: 10, date: fx.reader.clock.date(elapsed: 10), label: "clap \u{1F44F}")
+        let corner = DriveSection(
+            kind: .corner, start: 40, end: 43.5, distance: 52, direction: .left, peakLateralG: 0.31,
+            entrySpeed: 14, exitSpeed: 12.5, minSpeed: 11
+        )
+        let climb = DriveSection(kind: .climb, start: 50, end: 80, distance: 600, altitudeChange: 36, averageGrade: 0.06)
         let url = fx.output("master.json")
-        try JSONExporter.export(reader: fx.reader, metadata: fx.metadata(markers: [marker]), to: url)
+        try JSONExporter.export(reader: fx.reader, metadata: fx.metadata(markers: [marker], sections: [corner, climb]), to: url)
 
         let root = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf: url)) as? [String: Any])
         #expect(root["format"] as? String == "drivescope.session")
@@ -50,6 +55,16 @@ struct ExporterTests {
         #expect(session["startedAt"] as? String == "2026-09-21T14:13:20.000Z")
         let markers = try #require(root["markers"] as? [[String: Any]])
         #expect(markers.first?["label"] as? String == "clap \u{1F44F}")
+        // V1.1 sections: right after markers, every key present (null when it doesn't apply).
+        let sections = try #require(root["sections"] as? [[String: Any]])
+        #expect(sections.count == 2)
+        #expect(sections[0]["kind"] as? String == "corner" && sections[0]["direction"] as? String == "left")
+        #expect(sections[0]["peakLateralG"] as? Double == 0.31 && sections[0]["altitudeChange"] is NSNull)
+        #expect(sections[1]["averageGrade"] as? Double == 0.06 && sections[1]["direction"] is NSNull)
+        let text = try String(contentsOf: url, encoding: .utf8)
+        let markersKey = try #require(text.range(of: "\"markers\":")), sectionsKey = try #require(text.range(of: "\"sections\":"))
+        let eventsKey = try #require(text.range(of: "\"events\":"))
+        #expect(markersKey.lowerBound < sectionsKey.lowerBound && sectionsKey.lowerBound < eventsKey.lowerBound)
 
         let location = try #require(root["location"] as? [String: Any])
         let rows = try #require(location["rows"] as? [[Double]])

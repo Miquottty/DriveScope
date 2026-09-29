@@ -1,5 +1,6 @@
 import DriveDomain
 import DriveExport
+import DriveRecording
 import DriveStorage
 import SwiftData
 import SwiftUI
@@ -198,7 +199,8 @@ struct ExportView: View {
             markers: session.sortedMarkers.map {
                 ExportMarker(kind: $0.kind, elapsed: $0.elapsed, date: $0.date, label: $0.label)
             },
-            summary: session.summary
+            summary: session.summary,
+            sections: session.sections
         )
     }
 
@@ -206,8 +208,9 @@ struct ExportView: View {
         guard exporting == nil else { return }
         exporting = kind
         let files = SessionFiles(root: model.filesRoot, sessionID: session.id)
-        let metadata = metadata(for: session)
         Task {
+            await model.finalizer.ensureSections(session)
+            let metadata = metadata(for: session)
             do {
                 results[kind] = try await ExportRunner.run(kind, files: files, metadata: metadata)
             } catch {

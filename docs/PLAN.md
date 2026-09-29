@@ -204,6 +204,8 @@ Application Support/Sessions/<sessionID>/
     var geocodePending: Bool
 
     @Relationship(deleteRule: .cascade) var markers: [Marker]
+    @Attribute(.codable) var sections: [DriveSection]   // V1.1 区間解析（派生データ）
+    var sectionsVersion: Int                            // SectionDetector.version 未満なら遅延で再計算
 }
 
 @Model final class Marker {
@@ -390,8 +392,13 @@ STOP: removePendingNotificationRequests
 ## 12. Replay / 補間 / Export
 - `TelemetryInterpolator`: Location は線形（course は circular）、Motion は最近傍または線形。共通 API。
 - `ReplayTelemetryFrame { time, lat, lon, speed, altitude, course, lateralG, longitudinalG, verticalG, roll, pitch, yaw, gpsAccuracy }`。
+- **区間解析（V1.1）**: `SectionDetector`（DriveReplay、純関数）が 5 Hz の解析フレームから `DriveSection`（corner / climb / descent / stop）を作る。
+  - corner: |横 G| ≥ 0.15 で開始、同符号で ≥ 0.08 の間継続（ヒステリシス）。1.5 s 以上・ピーク時 15 km/h 以上・方位変化 15° 以上。同じ向きで 1 s 未満の隙間は結合。左右・ピーク G・進入 / 脱出 / 最低速度。
+  - stop: fix の速度 < 1 km/h が 10 s 以上（fix 間隔 > 5 s で途切れる → トンネルは停止にならない）。
+  - climb / descent: 走行距離 50 m ごとの高度（3 ビン平均）で、直近 200 m の勾配が ±3% 以上の連続区間。500 m 以上かつ |Δ高度| 15 m 以上。
+  - STOP / 復旧時の `SessionFinalizer.ensureSections` で計算して `DriveSession.sections` に保存。古いセッションは詳細・Replay・書き出し時に遅延計算。しきい値を変えたら `SectionDetector.version` を上げる。
 - Export
-  - **JSON** = Master（lossless、session / places / markers / events / location / motion / altitude）
+  - **JSON** = Master（lossless、session / places / markers / **sections**（V1.1、派生） / events / location / motion / altitude）
   - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）
   - **GPX** = 互換（`<trkpt>` + extensions: speed / course / hAcc）
   - `ShareLink` / `UIActivityViewController`
@@ -508,7 +515,7 @@ DriveScope/
 ## 19. V1.1 候補
 - 堅牢モード（Always 権限 + Significant Location Change による自動復旧）
 - Motion 補助による速度の 10 Hz 補間（GPS 1 Hz の間を加速度積分で埋める）
-- Replay 区間解析（コーナー・登り / 下り）→ `sections[]`
+- Replay 区間解析（コーナー・登り / 下り）→ `sections[]` — ✅ 解析・保存・JSON（§12）
 - **Apple Watch コンパニオンアプリ（W3）**
   - 画面: 大きな MARK（`handGestureShortcut(.primaryAction)`）、REC 状態・経過・速度、STOP
   - 通信: `WatchConnectivity`（Watch からの送信で iPhone アプリがバックグラウンドで起動・処理）
