@@ -10,6 +10,9 @@ public final class DriveSession {
     public var startUptime: TimeInterval
     public var endedAt: Date?
     public var timeZoneID: String
+    /// "yyyy-MM" of `startedAt` in the session's own time zone; the `@Query(sectionBy:)` key for month grouping.
+    /// The default lets existing stores migrate; rows created before this field exist keep "".
+    public var monthSection: String = ""
     public var state: RecordingState
     public var preset: CapturePreset
     /// Set by the finalizer once places are known; empty until then.
@@ -51,6 +54,7 @@ public final class DriveSession {
         startUptime = manifest.clock.startUptime
         endedAt = nil
         timeZoneID = manifest.timeZoneID
+        monthSection = Self.monthSection(for: manifest.clock.startedAt, timeZoneID: manifest.timeZoneID)
         state = .recording
         preset = manifest.preset
         title = ""
@@ -81,6 +85,16 @@ public final class DriveSession {
         routePreview = []
         geocodePending = false
         markers = []
+    }
+
+    private static func monthSection(for date: Date, timeZoneID: String) -> String {
+        // Fixed POSIX formatting: the key must not depend on the user's locale or calendar.
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.timeZone = TimeZone(identifier: timeZoneID) ?? .current
+        formatter.dateFormat = "yyyy-MM"
+        return formatter.string(from: date)
     }
 
     public var clock: SessionClock {
