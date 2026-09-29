@@ -49,6 +49,9 @@ struct RecoverySheet: View {
                 recoverButton
                 discardButton
             }
+            if canResume {
+                resumeButton
+            }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -58,12 +61,38 @@ struct RecoverySheet: View {
         .padding(.top, 20)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .background(Theme.background)
-        .presentationDetents([.height(176)])
+        .presentationDetents([.height(canResume ? 214 : 176)])
         .presentationBackground(Theme.background)
         .interactiveDismissDisabled(isWorking)
         .task(id: candidate.id) {
             figures = await Self.figures(for: SessionFiles(root: model.filesRoot, sessionID: candidate.id))
         }
+    }
+
+    /// Continuing into the same files only makes sense shortly after the interruption (e.g. an accidental force
+    /// quit mid-drive) and when the uptime clock survived (no reboot) — PLAN §9.3.
+    private var canResume: Bool {
+        guard let figures, recorder.canResume(candidate.session) else { return false }
+        let lastData = candidate.session.startedAt.addingTimeInterval(figures.duration)
+        return Date().timeIntervalSince(lastData) < 30 * 60
+    }
+
+    private var resumeButton: some View {
+        Button {
+            Task {
+                isWorking = true
+                await recorder.resume(candidate.session)
+                isWorking = false
+            }
+        } label: {
+            Label("Resume recording", systemImage: "record.circle")
+                .font(.system(size: 13, weight: .semibold))
+                .foregroundStyle(Theme.accent)
+                .frame(maxWidth: .infinity, minHeight: 28)
+        }
+        .buttonStyle(.plain)
+        .disabled(isWorking)
+        .accessibilityIdentifier("resumeButton")
     }
 
     private var recoverButton: some View {

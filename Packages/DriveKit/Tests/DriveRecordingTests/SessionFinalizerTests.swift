@@ -62,5 +62,8 @@ struct SessionFinalizerTests {
         await finalizer.finalize(session)
         #expect(session.title == "赤城峠")
         #expect(SessionTitle.make(start: session.startPlace, end: session.startPlace, loopWord: "Loop") == "前橋市 · Loop")
+        // One-way within one town (~3 km) is neither a loop nor "A → A".
+        let across = PlaceMeta(locality: "前橋市", latitude: 36.41, longitude: 139.08, role: .end)
+        #expect(SessionTitle.make(start: session.startPlace, end: across, loopWord: "Loop") == "前橋市")
     }
 }
