@@ -29,6 +29,7 @@ struct EventFormat {
         case .batteryLowSuggested: "Low battery suggested"
         case .marker: "Marker"
         case .sessionResumed: "Session resumed"
+        case .autoResumed: "Auto-resumed"
         }
     }
 
@@ -36,7 +37,7 @@ struct EventFormat {
     /// a marker's source out, for tables that show it in a column of its own.
     func value(_ event: EventRecord, includingSource: Bool = true) -> String {
         switch event.kind {
-        case .gpsLost, .gpsResumed, .motionStalled, .motionResumed, .sessionResumed:
+        case .gpsLost, .gpsResumed, .motionStalled, .motionResumed, .sessionResumed, .autoResumed:
             return format.seconds(event.value).text
         case .watchdogFired:
             // aux: 0 = GPS, 1 = motion.

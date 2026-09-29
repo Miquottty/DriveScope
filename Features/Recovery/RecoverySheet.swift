@@ -123,8 +123,10 @@ struct RecoverySheet: View {
     /// quit mid-drive) and when the uptime clock survived (no reboot) — PLAN §9.3.
     private var canResume: Bool {
         guard let figures, recorder.canResume(candidate.session) else { return false }
-        let lastData = candidate.session.startedAt.addingTimeInterval(figures.duration)
-        return Date().timeIntervalSince(lastData) < 30 * 60
+        return RecordingController.resumeDecision(
+            startUptime: candidate.session.startUptime, nowUptime: ProcessInfo.processInfo.systemUptime,
+            startedAt: candidate.session.startedAt, lastElapsed: figures.duration, now: Date()
+        )
     }
 
     private var resumeButton: some View {

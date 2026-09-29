@@ -113,6 +113,8 @@ public enum EventKind: UInt16, Codable, Sendable, CaseIterable {
     case batteryLowSuggested = 17
     case marker = 18
     case sessionResumed = 19
+    /// Robust mode continued the session by itself after iOS relaunched the app (value = gap, s).
+    case autoResumed = 20
 }
 
 /// Maps each stream's native clock to session elapsed time (PLAN §3).

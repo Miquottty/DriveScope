@@ -9,7 +9,8 @@ import Testing
 @MainActor
 struct RecoveryTests {
     /// A process killed mid-recording leaves a `.recording` session whose files hold everything flushed.
-    /// Recover finalizes it from the files; resume appends to the same files and logs `sessionResumed`.
+    /// Recover finalizes it from the files; resume (here robust mode's automatic one) appends to the same files and
+    /// logs `sessionResumed` + `autoResumed`.
     @Test func recoverAndResumeFromKilledSession() async throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeRecovery-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -35,16 +36,17 @@ struct RecoveryTests {
         // (`accepted` is the throttled HUD count, so it may lag the disk slightly.)
         #expect(onDisk > 60 && accepted - onDisk <= 180)
 
-        // Relaunch: resume appends to the same files.
+        // Relaunch in the background (robust mode): the newest unfinished session continues in the same files.
         let second = controller()
         let unfinished = try #require(second.unfinishedSessions().first)
         #expect(unfinished.id == id && second.canResume(unfinished))
-        await second.resume(unfinished)
-        #expect(second.phase == .recording)
+        #expect(await second.autoResume())
+        #expect(second.phase == .recording && second.session?.id == id)
         try await Task.sleep(for: .seconds(1))
         await second.stop()
         #expect(try files.locations().count > onDisk)
-        #expect(try files.events().contains { $0.kind == .sessionResumed })
+        let events = try files.events()
+        #expect(events.contains { $0.kind == .sessionResumed } && events.contains { $0.kind == .autoResumed })
 
         // A second unfinished session is recovered from its files.
         let third = controller()
@@ -59,6 +61,22 @@ struct RecoveryTests {
         await fourth.recover(other)
         #expect(other.state == .recovered)
         #expect(other.locationSampleCount > 60 && other.distance > 0 && other.duration > 60)
+    }
+
+    /// Robust mode only continues a session from the same boot and within 30 min of its last sample (wall clock:
+    /// the uptime clock pauses while the device sleeps, so it can't measure the gap).
+    @Test func resumeDecisionNeedsSameBootAndRecentData() {
+        let started = Date(timeIntervalSince1970: 1_790_000_000)
+        func decide(nowUptime: TimeInterval, minutesAfterLastSample: Double) -> Bool {
+            RecordingController.resumeDecision(
+                startUptime: 5_000, nowUptime: nowUptime, startedAt: started, lastElapsed: 3_600,
+                now: started.addingTimeInterval(3_600 + minutesAfterLastSample * 60)
+            )
+        }
+        #expect(decide(nowUptime: 9_000, minutesAfterLastSample: 2))
+        #expect(decide(nowUptime: 5_100, minutesAfterLastSample: 29)) // uptime barely moved: the device slept
+        #expect(!decide(nowUptime: 120, minutesAfterLastSample: 2)) // rebooted
+        #expect(!decide(nowUptime: 9_000, minutesAfterLastSample: 31))
     }
 
     /// Polls every 100 ms; fails after `timeout` seconds.

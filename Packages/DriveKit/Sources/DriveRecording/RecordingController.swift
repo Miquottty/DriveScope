@@ -264,24 +264,63 @@ public final class RecordingController {
         return ProcessInfo.processInfo.systemUptime >= unfinished.startUptime
     }
 
+    /// How long after its last sample an unfinished session may still be continued (recovery sheet, robust mode).
+    public nonisolated static let resumeWindow: TimeInterval = 30 * 60
+
+    /// Whether an unfinished session may be continued: same boot (the uptime clock only resets on reboot) and not
+    /// longer than `window` since its last sample on the wall clock (uptime pauses while the device sleeps).
+    public nonisolated static func resumeDecision(
+        startUptime: TimeInterval, nowUptime: TimeInterval, startedAt: Date, lastElapsed: TimeInterval, now: Date,
+        window: TimeInterval = resumeWindow
+    ) -> Bool {
+        nowUptime >= startUptime && now.timeIntervalSince(startedAt.addingTimeInterval(lastElapsed)) <= window
+    }
+
     /// Continues an unfinished session, appending to the same files (dead-man notification tap, PLAN §9.3).
     public func resume(_ unfinished: DriveSession) async {
         guard canResume(unfinished) else { return }
         phase = .preparing
+        await continueSession(unfinished, automatic: false, now: Date())
+    }
+
+    /// Robust mode (PLAN §9.5): iOS relaunched the app in the background after the process died — continue the
+    /// newest unfinished session without any UI when `resumeDecision` allows it. `.preparing` is set before the
+    /// first suspension, so the recovery sheet never offers the session meanwhile. false → back to idle.
+    public func autoResume(now: Date = Date()) async -> Bool {
+        guard let candidate = unfinishedSessions().max(by: { $0.startedAt < $1.startedAt }), canResume(candidate) else { return false }
+        phase = .preparing
+        return await continueSession(candidate, automatic: true, now: now)
+    }
+
+    @discardableResult
+    private func continueSession(_ unfinished: DriveSession, automatic: Bool, now: Date) async -> Bool {
         prepareForStart?(self)
         let files = SessionFiles(root: filesRoot, sessionID: unfinished.id)
         do {
             let manifest = try files.readManifest()
             let (statistics, lastElapsed) = try await Self.recompute(files: files, manifest: manifest)
+            if automatic, !Self.resumeDecision(
+                startUptime: unfinished.startUptime, nowUptime: ProcessInfo.processInfo.systemUptime,
+                startedAt: unfinished.startedAt, lastElapsed: lastElapsed, now: now
+            ) {
+                phase = .idle
+                return false
+            }
             try await run(session: unfinished, files: files, manifest: manifest, suite: makeSuite(), statistics: statistics)
             if let engine {
-                let now = await engine.elapsed
-                await engine.record(EventRecord(kind: .sessionResumed, source: .system, elapsed: now, value: now - lastElapsed))
+                let elapsed = await engine.elapsed
+                let gap = elapsed - lastElapsed
+                await engine.record(EventRecord(kind: .sessionResumed, source: .system, elapsed: elapsed, value: gap))
+                if automatic {
+                    await engine.record(EventRecord(kind: .autoResumed, source: .system, elapsed: elapsed, value: gap))
+                }
             }
             observers.forEach { $0.recordingDidStart(unfinished, resumed: true) }
+            return true
         } catch {
             lastError = String(describing: error)
             phase = .idle
+            return false
         }
     }
 
