@@ -40,6 +40,8 @@ nonisolated struct ReplayTimeline: Sendable {
     let speedProfile: [SpeedPoint]
     let maxKmh: Double
     let markers: [Marker]
+    /// Corners, climbs / descents and stops (V1.1), by start time.
+    let sections: [DriveSection]
     let hasFixes: Bool
     /// Course of the first moving fix: the heading to show while the log starts stationary.
     let initialCourse: Double?
@@ -52,7 +54,8 @@ nonisolated struct ReplayTimeline: Sendable {
 
     @concurrent
     static func load(
-        files: SessionFiles, calibration: MountCalibration?, markers: [MarkerInput], fallbackDuration: TimeInterval
+        files: SessionFiles, calibration: MountCalibration?, markers: [MarkerInput], sections: [DriveSection],
+        fallbackDuration: TimeInterval
     ) async throws -> ReplayTimeline {
         let reader = try TelemetryReader(files: files)
         let interpolator = TelemetryInterpolator(reader: reader, calibration: calibration, options: options)
@@ -112,6 +115,7 @@ nonisolated struct ReplayTimeline: Sendable {
             speedProfile: profile,
             maxKmh: profile.map(\.kmh).max() ?? 0,
             markers: resolved.sorted { $0.elapsed < $1.elapsed },
+            sections: sections.sorted { $0.start < $1.start },
             hasFixes: !fixes.isEmpty,
             initialCourse: initialCourse,
             hasMotionG: hasMotion && interpolator.calibration != nil

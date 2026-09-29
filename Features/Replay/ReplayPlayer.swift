@@ -52,13 +52,14 @@ final class ReplayPlayer {
 
     func load(
         files: SessionFiles, calibration: MountCalibration?, markers: [ReplayTimeline.MarkerInput],
-        fallbackDuration: TimeInterval
+        sections: [DriveSection], fallbackDuration: TimeInterval
     ) async {
         let clock = ContinuousClock()
         let start = clock.now
         do {
             let timeline = try await ReplayTimeline.load(
-                files: files, calibration: calibration, markers: markers, fallbackDuration: fallbackDuration
+                files: files, calibration: calibration, markers: markers, sections: sections,
+                fallbackDuration: fallbackDuration
             )
             self.timeline = timeline
             loadState = .ready

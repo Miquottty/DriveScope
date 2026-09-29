@@ -1,4 +1,5 @@
 import DriveDomain
+import DriveRecording
 import DriveReplay
 import DriveStorage
 import SwiftData
@@ -94,6 +95,7 @@ struct ReplayView: View {
                     ReplayScrubber(player: player)
                     ReplayClockRow(player: player)
                 }
+                ReplaySectionStrip(player: player)
                 ReplayControls(player: player)
             }
             .padding(.horizontal, 20)
@@ -105,10 +107,13 @@ struct ReplayView: View {
 
     private func load(_ session: DriveSession) async {
         guard player.loadState == .loading else { return }
+        // Sessions recorded before V1.1 (or by an older detector) get their sections first.
+        await model.finalizer.ensureSections(session)
         let markers = session.sortedMarkers.map { ReplayTimeline.MarkerInput(id: $0.id, kind: $0.kind, elapsed: $0.elapsed) }
         await player.load(
             files: SessionFiles(root: model.filesRoot, sessionID: session.id),
-            calibration: session.calibration, markers: markers, fallbackDuration: session.duration
+            calibration: session.calibration, markers: markers, sections: session.sections,
+            fallbackDuration: session.duration
         )
     }
 }

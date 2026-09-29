@@ -274,6 +274,7 @@ private struct ReplayTimelineBar: View {
         VStack(spacing: 10) {
             SpeedSparkline(player: player, style: .pad)
             ReplayScrubber(player: player, style: .pad)
+            ReplaySectionStrip(player: player)
             if landscape {
                 // The chips and the transport share the sides equally, so the clock stays centered.
                 HStack(spacing: 16) {
