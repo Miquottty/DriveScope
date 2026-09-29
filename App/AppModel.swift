@@ -4,6 +4,7 @@ import DriveRecording
 import DriveSensors
 import DriveStorage
 import Foundation
+import Network
 import SwiftData
 import UIKit
 
@@ -20,6 +21,8 @@ final class AppModel {
     private let notifications: RecordingNotifications
     private let deviceEvents: DeviceEventMonitor
     let battery: BatteryMonitor
+    let finalizer: SessionFinalizer
+    private let network = NWPathMonitor()
 
     init() {
         sensorEnvironment = SensorEnvironment.current()
@@ -59,6 +62,23 @@ final class AppModel {
         self.battery = battery
         recorder.addObserver(battery)
         recorder.willStop = { await battery.snapshot() }
+
+        // Places + automatic title after STOP / recovery (PLAN §8), in the in-app language.
+        let finalizer = SessionFinalizer(
+            store: store, filesRoot: filesRoot,
+            locale: { AppLanguage().locale }, loopWord: { AppLanguage().string("Loop") }
+        )
+        self.finalizer = finalizer
+        recorder.onFinished = { session in
+            session.geocodePending = true
+            await finalizer.finalize(session)
+        }
+        // Offline at STOP → retry when the network returns (and once at launch).
+        network.pathUpdateHandler = { path in
+            guard path.status == .satisfied else { return }
+            Task { @MainActor in await finalizer.retryPending() }
+        }
+        network.start(queue: DispatchQueue(label: "DriveScope.network"))
     }
 
     private static func hardwareModel() -> String {
