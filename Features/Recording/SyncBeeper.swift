@@ -7,8 +7,10 @@ import DriveRecording
 ///
 /// Pattern "chirp3-v1" (keep the editor's detector in step): 40 ms pips, gaps 120 ms then 200 ms — uneven, so
 /// the pattern cannot line up with a copy of itself shifted by one pip.
-@MainActor
-final class SyncBeeper {
+///
+/// An actor: activating the audio session and starting the engine block, sometimes for long (a CI simulator
+/// without audio hardware never returned), so none of it may run on the main actor.
+actor SyncBeeper {
     static let frequency = 2_500.0
     static let pipDuration = 0.040
     static let pipOnsets: [TimeInterval] = [0, 0.160, 0.400]
@@ -24,6 +26,11 @@ final class SyncBeeper {
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let buffer: AVAudioPCMBuffer?
+
+    /// nil under `-UITest`: UI tests don't depend on audio hardware (same as the notification prompt).
+    static func make() -> SyncBeeper? {
+        ProcessInfo.processInfo.arguments.contains("-UITest") ? nil : SyncBeeper()
+    }
 
     init() {
         buffer = Self.makeBuffer()
