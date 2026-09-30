@@ -11,6 +11,8 @@
 |---|---|---|
 | `canvas.json` | キャンバスのレイアウト（配置・タイトル・注記） | — |
 | `Main.dc.html` | 1 · Home / Ready | 390×844 |
+| `MainLandscape.dc.html` | 1b · Home / Ready · iPhone 横（Record ダッシュボード。Pro Max 横も iPad の分割表示にしない） | 844×390 |
+| `MainLandscapeMax.dc.html` | 1c · Home / Ready · iPhone 横 · Pro Max | 956×440 |
 | `Recording.dc.html` | 2 · Recording HUD（縦。速度・REC 経過時間・G をマウント越しに読める大きさに。2026-09-30 改訂） | 390×844 |
 | `RecordingPortraitV2Max.dc.html` | 2b · Recording HUD · Pro Max（余った高さは G メーターへ） | 440×956 |
 | `RecordingPortraitV2Start.dc.html` | 2c · Recording HUD · 開始直後（測位前・GPS EST.） | 390×844 |

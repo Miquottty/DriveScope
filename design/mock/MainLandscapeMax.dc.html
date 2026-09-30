@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>DriveScope Home Landscape · Pro Max</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+body{margin:0;font-family:"IBM Plex Sans",system-ui,-apple-system,sans-serif;background:#0B0D10;color:#E8ECF0}
+a{color:#F2A33A;text-decoration:none}a:hover{color:#FFC067}
+.mono{font-family:"IBM Plex Mono","SF Mono",Menlo,monospace;font-variant-numeric:tabular-nums}
+</style>
+</helmet>
+<div style="width: 956px; height: 440px; box-sizing: border-box; background: #0B0D10; position: relative; padding: 14px 62px 21px 62px; display: flex; gap: 28px">
+
+  <div style="width: 270px; flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding-bottom: 50px">
+    <a href="RecordingLandscape.dc.html" aria-label="Start recording" style="width: 200px; height: 200px; border-radius: 100px; background: #F2A33A; box-shadow: 0 0 0 11px #221A0D; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; color: #0B0D10">
+      <span style="font-size: 34px; font-weight: 600; letter-spacing: 0.05em">START</span>
+      <span style="font-size: 12px; font-weight: 500; color: #4A3410">Record drive</span>
+    </a>
+    <span class="mono" style="padding: 4px 10px; border-radius: 999px; background: #14181D; color: #B4BEC8; font-size: 12px; font-weight: 500">Logger · 50 Hz</span>
+    <div style="font-size: 11px; color: #8A94A0; text-align: center; line-height: 1.4">Mount the phone, then start.<br>Forward is found on the first acceleration.</div>
+  </div>
+
+  <div style="flex-grow: 1; min-width: 0; display: flex; flex-direction: column; gap: 12px; padding-bottom: 56px">
+    <div style="display: flex; align-items: center; justify-content: space-between">
+      <div style="font-size: 22px; font-weight: 600; letter-spacing: -0.01em">DriveScope</div>
+      <a href="Main.dc.html" aria-label="Settings" style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 20px; background: #14181D"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#B4BEC8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg></a>
+    </div>
+
+    <div style="background: #14181D; border-radius: 16px; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px">
+      <div style="font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: #8A94A0">SENSOR STATUS</div>
+      <div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px">
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <div style="font-size: 11px; letter-spacing: 0.08em; color: #8A94A0">GPS</div>
+            <div class="mono" style="font-size: 22px; font-weight: 500; color: #7BD88F; line-height: 1.1; white-space: nowrap">±3.2 m</div>
+            <div style="font-size: 11px; color: #8A94A0; white-space: nowrap">Precise</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <div style="font-size: 11px; letter-spacing: 0.08em; color: #8A94A0">MOTION</div>
+            <div class="mono" style="font-size: 22px; font-weight: 500; color: #7BD88F; line-height: 1.1; white-space: nowrap">50 Hz</div>
+            <div style="font-size: 11px; color: #8A94A0; white-space: nowrap">Ready</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <div style="font-size: 11px; letter-spacing: 0.08em; color: #8A94A0">BAROMETER</div>
+            <div class="mono" style="font-size: 22px; font-weight: 500; color: #E8ECF0; line-height: 1.1; white-space: nowrap">101.2 kPa</div>
+            <div style="font-size: 11px; color: #8A94A0; white-space: nowrap">Relative alt.</div>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 3px; min-width: 0">
+            <div style="font-size: 11px; letter-spacing: 0.08em; color: #8A94A0">POWER</div>
+            <div class="mono" style="font-size: 22px; font-weight: 500; color: #E8ECF0; line-height: 1.1; white-space: nowrap">82 %</div>
+            <div style="font-size: 11px; color: #8A94A0; white-space: nowrap">Charging</div>
+          </div>
+      </div>
+      <div style="border-top: 1px solid #1F252C; padding-top: 8px; display: flex; align-items: center; justify-content: space-between">
+        <span style="font-size: 12px; color: #8A94A0">Background location</span>
+        <span style="font-size: 12px; font-weight: 500; color: #7BD88F">While Using · OK</span>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 8px">
+      <div style="display: flex; align-items: center; justify-content: space-between">
+        <div style="font-size: 12px; font-weight: 500; letter-spacing: 0.08em; color: #8A94A0">RECENT</div>
+        <a href="Sessions.dc.html" style="font-size: 13px; font-weight: 500">All sessions</a>
+      </div>
+      <div style="display: flex; gap: 10px">
+          <a href="Detail.dc.html" style="flex: 1; min-width: 0; background: #14181D; border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; color: #E8ECF0">
+            <svg width="44" height="34" viewBox="0 0 56 44" aria-hidden="true" style="flex-shrink: 0; background: #0B0D10; border-radius: 8px; border: 1px solid #1F252C"><path d="M10 36 C 18 30, 20 22, 26 18 S 36 14, 38 10 L 44 12 L 40 8 L 47 7" fill="none" stroke="#F2A33A" stroke-width="2.4" stroke-linecap="round"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">前橋市 → 赤城山</span>
+              <span class="mono" style="font-size: 12px; color: #8A94A0; white-space: nowrap">Sep 29 · 42:31 · 38.6 km</span>
+            </div>
+          </a><a href="Detail.dc.html" style="flex: 1; min-width: 0; background: #14181D; border-radius: 12px; padding: 10px 12px; display: flex; align-items: center; gap: 12px; color: #E8ECF0">
+            <svg width="44" height="34" viewBox="0 0 56 44" aria-hidden="true" style="flex-shrink: 0; background: #0B0D10; border-radius: 8px; border: 1px solid #1F252C"><path d="M8 34 L 18 26 L 30 22 L 44 12" fill="none" stroke="#F2A33A" stroke-width="2.4" stroke-linecap="round"></path></svg>
+            <div style="display: flex; flex-direction: column; gap: 2px; min-width: 0">
+              <span style="font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis">渋川市 · Loop</span>
+              <span class="mono" style="font-size: 12px; color: #8A94A0; white-space: nowrap">Sep 27 · 1:12:04 · 64.2 km</span>
+            </div>
+          </a>
+      </div>
+    </div>
+  </div>
+
+  <nav aria-label="Tabs" style="position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%); height: 50px; border-radius: 25px; background: #1B2026; border: 1px solid #2A323B; display: flex; align-items: center; padding: 0 6px; gap: 4px">
+    <a href="Main.dc.html" style="height: 40px; padding: 0 16px; border-radius: 20px; background: #0B0D10; display: flex; align-items: center; gap: 8px; color: #F2A33A; font-size: 13px; font-weight: 600"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"></circle><circle cx="12" cy="12" r="3.5" fill="currentColor"></circle></svg>Record</a>
+    <a href="Sessions.dc.html" style="height: 40px; padding: 0 16px; border-radius: 20px; display: flex; align-items: center; gap: 8px; color: #B4BEC8; font-size: 13px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"></path></svg>Sessions</a>
+    <a href="Main.dc.html" style="height: 40px; padding: 0 16px; border-radius: 20px; display: flex; align-items: center; gap: 8px; color: #B4BEC8; font-size: 13px; font-weight: 500"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 20V10M12 20V4M20 20v-7"></path></svg>Quality</a>
+  </nav>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":956,"height":440}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

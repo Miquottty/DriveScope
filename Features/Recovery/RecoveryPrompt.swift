@@ -24,6 +24,7 @@ private struct RecoveryPrompt: ViewModifier {
     @Environment(RecordingController.self) private var recorder
     @Environment(AppLanguage.self) private var appLanguage
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @State private var candidate: RecoveryCandidate?
     /// Sessions already offered in this launch: one dismissed without a choice is asked again next launch, not in a loop.
     @State private var offered: Set<UUID> = []
@@ -49,7 +50,7 @@ private struct RecoveryPrompt: ViewModifier {
                     },
                     onDiscarded: { candidate = nil }
                 )
-                if horizontalSizeClass == .regular {
+                if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
                     // iPad: a centered form-width card, as tall as its content.
                     sheet
                         .presentationSizing(.form.fitted(horizontal: false, vertical: true))

@@ -65,7 +65,7 @@ struct ReplayView: View {
         Group {
             // Regular × regular is an iPad-sized window (artboard 14); a Max iPhone in landscape (regular × compact)
             // stays on the phone layout.
-            if horizontalSizeClass == .regular, verticalSizeClass == .regular {
+            if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
                 ReplayIPadLayout(player: player, session: session) { dismiss() }
             } else {
                 phoneContent(session)

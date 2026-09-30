@@ -15,6 +15,7 @@ struct SessionDetailView: View {
     @Environment(RecordingController.self) private var recorder
     @Environment(\.dismiss) private var dismiss
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Query private var sessions: [DriveSession]
     @State private var route = SessionRoute()
     @State private var camera = MapCameraPosition.automatic
@@ -39,7 +40,7 @@ struct SessionDetailView: View {
         _sessions = Query(filter: #Predicate<DriveSession> { $0.id == sessionID })
     }
 
-    private var isRegular: Bool { horizontalSizeClass == .regular }
+    private var isRegular: Bool { LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) }
 
     var body: some View {
         Group {

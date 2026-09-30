@@ -24,7 +24,7 @@ struct RecordingHUD: View {
     var body: some View {
         // Regular × regular is an iPad-sized window. A Plus / Max iPhone in landscape is regular × compact and keeps
         // the phone artboard.
-        if horizontalSizeClass == .regular, verticalSizeClass == .regular {
+        if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
             RecordingHUDIPadLayout(
                 snapshot: snapshot, preset: preset, isSaving: isSaving, onMark: onMark, onSync: onSync,
                 onStop: onStop, onRotateMount: onRotateMount, batteryLow: batteryLow)

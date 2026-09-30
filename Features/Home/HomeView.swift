@@ -19,6 +19,7 @@ struct HomeView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openURL) private var openURL
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @Query(HomeView.recentDescriptor) private var recent: [DriveSession]
 
@@ -50,8 +51,10 @@ struct HomeView: View {
 
     var body: some View {
         Group {
-            if horizontalSizeClass == .regular {
+            if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
                 iPadDashboard
+            } else if verticalSizeClass == .compact {
+                phoneLandscapeDashboard
             } else {
                 phoneDashboard
             }
@@ -91,22 +94,10 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                sensorStatus.padding(.top, 22)
-                if showsBatterySuggestion {
-                    LowBatterySuggestion(
-                        percent: Int(((battery.level ?? 0) * 100).rounded()),
-                        onSelect: { preset in
-                            withAnimation { presetRaw = preset.rawValue }
-                        },
-                        onDismiss: {
-                            withAnimation { batterySuggestionDismissed = true }
-                        }
-                    )
-                    .padding(.top, 14)
-                    .transition(.opacity)
-                }
+                sensorStatus(columns: 2).padding(.top, 22)
+                batterySuggestion.padding(.top, 14)
                 startArea
-                recentSessions
+                recentSessions()
             }
             .padding(.horizontal, 20)
             .padding(.top, 8)
@@ -115,6 +106,58 @@ struct HomeView: View {
         .scrollBounceBehavior(.basedOnSize)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.background)
+    }
+
+    /// iPhone landscape (mock 1b / 1c): START on the left, sized to the height; status and recent sessions on the
+    /// right, scrolling if a long language or a warning makes them taller than the screen.
+    private var phoneLandscapeDashboard: some View {
+        GeometryReader { proxy in
+            let startSize = min(200, max(140, proxy.size.height - 120))
+            let side = proxy.size.width - (startSize + 70) - 28
+            HStack(alignment: .center, spacing: 28) {
+                VStack(spacing: 14) {
+                    startButton(size: startSize)
+                    presetChip
+                    startIssue
+                    Text("Mount the phone, then start. Forward direction is detected automatically on the first acceleration.")
+                        .font(.system(size: 11))
+                        .foregroundStyle(Theme.textSecondary)
+                        .multilineTextAlignment(.center)
+                }
+                .frame(width: startSize + 70)
+                .frame(maxHeight: .infinity)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        header
+                        sensorStatus(columns: 4)
+                        batterySuggestion
+                        recentSessions(columns: side >= 480 ? 2 : 1)
+                    }
+                    .padding(.vertical, 8)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .scrollIndicators(.hidden)
+            }
+        }
+        .padding(.horizontal, 8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.background)
+    }
+
+    @ViewBuilder private var batterySuggestion: some View {
+        if showsBatterySuggestion {
+            LowBatterySuggestion(
+                percent: Int(((battery.level ?? 0) * 100).rounded()),
+                onSelect: { preset in
+                    withAnimation { presetRaw = preset.rawValue }
+                },
+                onDismiss: {
+                    withAnimation { batterySuggestionDismissed = true }
+                }
+            )
+            .transition(.opacity)
+        }
     }
 
     // MARK: Header
@@ -141,21 +184,32 @@ struct HomeView: View {
 
     // MARK: Sensor status
 
-    private var sensorStatus: some View {
+    /// Two columns in portrait; one row of four in landscape.
+    private func sensorStatus(columns: Int) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Sensor Status")
                 .font(.system(size: 12, weight: .medium))
                 .tracking(0.96)
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.textSecondary)
-            Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 10) {
-                GridRow {
-                    gpsCell
-                    motionCell
-                }
-                GridRow {
-                    barometerCell
-                    powerCell
+            Grid(alignment: .leading, horizontalSpacing: columns > 2 ? 12 : 10, verticalSpacing: 10) {
+                if columns > 2 {
+                    GridRow(alignment: .top) {
+                        gpsCell
+                        motionCell
+                        barometerCell
+                        powerCell
+                    }
+                    .environment(\.statusCellStacked, true)
+                } else {
+                    GridRow {
+                        gpsCell
+                        motionCell
+                    }
+                    GridRow {
+                        barometerCell
+                        powerCell
+                    }
                 }
             }
             Divider().overlay(Theme.divider)
@@ -249,46 +303,9 @@ struct HomeView: View {
 
     private var startArea: some View {
         VStack(spacing: 18) {
-            Button {
-                Task { await start() }
-            } label: {
-                VStack(spacing: 4) {
-                    Text("START")
-                        .font(.system(size: 30, weight: .semibold))
-                        .tracking(1.8)
-                        .foregroundStyle(Theme.background)
-                    Text("Record drive")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(Theme.background.opacity(0.7))
-                }
-                .frame(width: 188, height: 188)
-                .background(Theme.accent, in: Circle())
-                .padding(10)
-                .background(Theme.accent.opacity(0.08), in: Circle())
-            }
-            .buttonStyle(.plain)
-            .disabled(!canStart)
-            .opacity(canStart ? 1 : 0.4)
-            .accessibilityLabel("Start recording")
-            .accessibilityIdentifier("startButton")
-
-            Text(verbatim: presetSummary)
-                .font(.hudNumber(size: 12, weight: .medium))
-                .foregroundStyle(Theme.textTertiary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
-                .background(Theme.surface, in: Capsule())
-                .accessibilityIdentifier("presetLabel")
-
-            if let issue {
-                issueCard(issue)
-            } else if let error = recorder.lastError {
-                Text(verbatim: error)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Theme.rec)
-                    .multilineTextAlignment(.center)
-            }
-
+            startButton(size: 188)
+            presetChip
+            startIssue
             Text("Mount the phone, then start. Forward direction is detected automatically on the first acceleration.")
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.textSecondary)
@@ -297,6 +314,52 @@ struct HomeView: View {
         }
         .frame(maxWidth: .infinity, minHeight: 300)
         .padding(.vertical, 12)
+    }
+
+    private func startButton(size: CGFloat) -> some View {
+        Button {
+            Task { await start() }
+        } label: {
+            VStack(spacing: 4) {
+                Text("START")
+                    .font(.system(size: size * 0.16, weight: .semibold))
+                    .tracking(size * 0.0096)
+                    .foregroundStyle(Theme.background)
+                Text("Record drive")
+                    .font(.system(size: 12, weight: .medium))
+                    .foregroundStyle(Theme.background.opacity(0.7))
+            }
+            .frame(width: size, height: size)
+            .background(Theme.accent, in: Circle())
+            .padding(size * 0.053)
+            .background(Theme.accent.opacity(0.08), in: Circle())
+        }
+        .buttonStyle(.plain)
+        .disabled(!canStart)
+        .opacity(canStart ? 1 : 0.4)
+        .accessibilityLabel("Start recording")
+        .accessibilityIdentifier("startButton")
+    }
+
+    private var presetChip: some View {
+        Text(verbatim: presetSummary)
+            .font(.hudNumber(size: 12, weight: .medium))
+            .foregroundStyle(Theme.textTertiary)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 4)
+            .background(Theme.surface, in: Capsule())
+            .accessibilityIdentifier("presetLabel")
+    }
+
+    @ViewBuilder private var startIssue: some View {
+        if let issue {
+            issueCard(issue)
+        } else if let error = recorder.lastError {
+            Text(verbatim: error)
+                .font(.system(size: 12))
+                .foregroundStyle(Theme.rec)
+                .multilineTextAlignment(.center)
+        }
     }
 
     /// PLAN §2.2.1: suggest only, never switch automatically. Nothing to suggest once the preset is already light.
@@ -350,8 +413,11 @@ struct HomeView: View {
 
     // MARK: Recent
 
-    @ViewBuilder private var recentSessions: some View {
-        if !recent.isEmpty {
+    /// One column in portrait. Landscape shows only what fits beside START: one card, or two side by side.
+    @ViewBuilder private func recentSessions(columns: Int? = nil) -> some View {
+        // A session deleted elsewhere can be re-rendered once before the query drops it.
+        let sessions = recent.filter { !$0.isDeleted && $0.modelContext != nil }
+        if !sessions.isEmpty {
             let format = SessionFormat(language: appLanguage)
             VStack(spacing: 10) {
                 HStack {
@@ -366,40 +432,47 @@ struct HomeView: View {
                         .foregroundStyle(Theme.accent)
                         .accessibilityIdentifier("allSessionsButton")
                 }
-                // A session deleted elsewhere can be re-rendered once before the query drops it.
-                ForEach(recent.filter { !$0.isDeleted && $0.modelContext != nil }) { session in
-                    Button {
-                        onOpenSession(session.id)
-                    } label: {
-                        HStack(spacing: 12) {
-                            RouteThumbnail(
-                                points: session.routePreview, size: CGSize(width: 44, height: 36),
-                                dashed: session.state == .recovered
-                            )
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(verbatim: format.title(session))
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(Theme.textPrimary)
-                                    .lineLimit(1)
-                                Text(verbatim: recentMeta(session, format))
-                                    .font(.hudNumber(size: 12))
-                                    .foregroundStyle(Theme.textSecondary)
-                                    .lineLimit(1)
-                                    .minimumScaleFactor(0.85)
-                            }
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 12)
-                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
-                        .contentShape(RoundedRectangle(cornerRadius: 12))
+                if let columns {
+                    HStack(spacing: 10) {
+                        ForEach(sessions.prefix(columns)) { recentRow($0, format) }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("recentSession")
+                } else {
+                    ForEach(sessions) { recentRow($0, format) }
                 }
             }
             .padding(.bottom, 14)
         }
+    }
+
+    private func recentRow(_ session: DriveSession, _ format: SessionFormat) -> some View {
+        Button {
+            onOpenSession(session.id)
+        } label: {
+            HStack(spacing: 12) {
+                RouteThumbnail(
+                    points: session.routePreview, size: CGSize(width: 44, height: 36),
+                    dashed: session.state == .recovered
+                )
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(verbatim: format.title(session))
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                    Text(verbatim: recentMeta(session, format))
+                        .font(.hudNumber(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 12)
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: 12))
+            .contentShape(RoundedRectangle(cornerRadius: 12))
+        }
+        .buttonStyle(.plain)
+        .accessibilityIdentifier("recentSession")
     }
 
     private func recentMeta(_ session: DriveSession, _ format: SessionFormat) -> String {
@@ -411,11 +484,18 @@ struct HomeView: View {
     }
 }
 
+private extension EnvironmentValues {
+    /// Landscape Home's four narrow status columns: the detail goes under the value instead of beside it.
+    @Entry var statusCellStacked = false
+}
+
 private struct StatusCell: View {
     let label: Text
     let value: Text
     let tint: Color
     let detail: Text?
+
+    @Environment(\.statusCellStacked) private var stacked
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -423,20 +503,33 @@ private struct StatusCell: View {
                 .font(.system(size: 11))
                 .textCase(.uppercase)
                 .foregroundStyle(Theme.textSecondary)
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                value
-                    .font(.hudNumber(size: 18, weight: .medium))
-                    .foregroundStyle(tint)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.7)
-                detail
-                    .font(.system(size: 11))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
+            if stacked {
+                valueText
+                detailText
+            } else {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    valueText
+                    detailText
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
+    }
+
+    private var valueText: some View {
+        value
+            .font(.hudNumber(size: 18, weight: .medium))
+            .foregroundStyle(tint)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
+    }
+
+    private var detailText: some View {
+        detail
+            .font(.system(size: 11))
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
     }
 }
 
