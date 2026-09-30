@@ -4,3 +4,4 @@
 xcuserdata/
 .swiftpm/
 Packages/DriveKit/.build/
+.claude/worktrees/

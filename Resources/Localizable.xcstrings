@@ -1845,12 +1845,12 @@
         }
       }
     },
-    "MARK = bookmark this moment · SYNC = clap / flash for camera sync": {
+    "MARK = bookmark this moment · SYNC = beep for camera sync": {
       "localizations": {
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "MARK = この瞬間をブックマーク · SYNC = カメラ同期用の拍手 / フラッシュ"
+            "value": "MARK = この瞬間をブックマーク · SYNC = カメラ同期用の音"
           }
         }
       }
@@ -2383,6 +2383,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "設定を開く"
+          }
+        }
+      }
+    },
+    "Other output": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Other output"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "その他の出力"
           }
         }
       }
@@ -2961,6 +2977,22 @@
         }
       }
     },
+    "SYNC beep": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SYNC beep"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SYNC の音"
+          }
+        }
+      }
+    },
     "Samples": {
       "localizations": {
         "en": {
@@ -3277,6 +3309,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Space 再生 / 一時停止 · ← → 5 秒 · ⇧ ← → 30 秒 · [ ] 前 / 次のマーカー"
+          }
+        }
+      }
+    },
+    "Speaker": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Speaker"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "スピーカー"
           }
         }
       }
@@ -3725,6 +3773,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "使用中のみ · 位置情報"
+          }
+        }
+      }
+    },
+    "Wireless": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Wireless"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ワイヤレス"
           }
         }
       }
