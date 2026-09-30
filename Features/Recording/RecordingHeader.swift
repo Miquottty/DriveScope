@@ -26,6 +26,11 @@ struct RecordingHeader: View {
         var badge = HUDGPSBadge.Style()
 
         static let phone = Style()
+        /// Portrait phone HUD (mock artboard 2): elapsed large enough to read from the mount.
+        static let phoneLarge = Style(
+            dotSize: 14, recSize: 16, recTracking: 1.6, elapsedSize: 34, elapsedLeading: 4, leadingSpacing: 10,
+            badge: HUDGPSBadge.Style(
+                iconSize: 14, textSize: 15, spacing: 7, verticalPadding: 7, horizontalPadding: 11, cornerRadius: 10))
         /// Mock artboards 12 / 16: 30 pt elapsed, 16 pt preset chip, 18 pt GPS chip.
         static let pad = Style(
             dotSize: 14, recSize: 18, recTracking: 18 * 0.12, elapsedSize: 30, elapsedLeading: 8, leadingSpacing: 12,

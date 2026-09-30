@@ -20,6 +20,10 @@ struct TelemetryValue: View {
         /// G readouts next to the meter.
         static let gForce = Style(valueSize: 28, unitSize: 12, spacing: 0)
         static let gForceLarge = Style(valueSize: 30, unitSize: 12, spacing: 0)
+        /// Portrait: LATERAL / LONG side by side above the meter.
+        static let gForceStacked = Style(valueSize: 40, unitSize: 16, unitGap: 4, labelSize: 12, spacing: 2)
+        /// Portrait metric row, label left of the value (`InlineTelemetryValue`).
+        static let metricInline = Style(valueSize: 24, unitSize: 13, labelSize: 11, spacing: 6)
 
         // iPad (mock artboards 12 / 16): semibold 15 pt labels, units in the lighter secondary color.
         /// ALT / COURSE / DIST tiles.
@@ -56,6 +60,36 @@ struct TelemetryValue: View {
             .lineLimit(1)
             .minimumScaleFactor(0.6)
         }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// A `TelemetryValue` on one line: the label sits left of the value on its baseline (portrait ALT / COURSE / DIST row).
+struct InlineTelemetryValue: View {
+    var label: String
+    var value: String
+    var unit: String?
+    var style = TelemetryValue.Style.metricInline
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: style.spacing) {
+            Text(verbatim: label)
+                .font(.system(size: style.labelSize, weight: style.labelWeight))
+                .tracking(style.labelSize * 0.1)
+                .foregroundStyle(Theme.textSecondary)
+            HStack(alignment: .firstTextBaseline, spacing: style.unitGap) {
+                Text(verbatim: value)
+                    .font(.hudNumber(size: style.valueSize, weight: .medium))
+                    .foregroundStyle(Theme.textPrimary)
+                if let unit {
+                    Text(verbatim: unit)
+                        .font(.hudNumber(size: style.unitSize))
+                        .foregroundStyle(style.unitColor)
+                }
+            }
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.7)
         .accessibilityElement(children: .combine)
     }
 }
