@@ -16,7 +16,8 @@
 | `RecordingPortraitV2Start.dc.html` | 2c · Recording HUD · 開始直後（測位前・GPS EST.） | 390×844 |
 | `Sessions.dc.html` | 3 · Sessions | 390×844 |
 | `Detail.dc.html` | 4 · Session Detail | 390×844 |
-| `Replay.dc.html` | 5 · Timeline Replay | 390×844 |
+| `Replay.dc.html` | 5 · Timeline Replay（地図は伸縮、操作ボタンは下にオーディオプレイヤー風。2026-09-30 改訂） | 390×844 |
+| `ReplayV2Max.dc.html` | 5b · Timeline Replay · Pro Max | 440×956 |
 | `LiveActivity.dc.html` | 6 · Lock Screen Live Activity | 390×200 |
 | `Recovery.dc.html` | 7 · Crash Recovery Sheet | 390×200 |
 | `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape（速度は MARK / SYNC の上、G は STOP の上。2026-09-30 改訂） | 844×390 |

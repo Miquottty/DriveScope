@@ -58,7 +58,7 @@
     "Replay.dc.html": {
       "h": 844,
       "is_interactive": true,
-      "title": "5 · Timeline Replay",
+      "title": "5 · Timeline Replay (map fills; player controls at the bottom)",
       "w": 390,
       "x": 1880,
       "y": 0
@@ -149,6 +149,14 @@
       "h": 440,
       "title": "8b · Recording HUD · Landscape · Pro Max 956×440",
       "is_interactive": true
+    },
+    "ReplayV2Max.dc.html": {
+      "x": 3340,
+      "y": 0,
+      "w": 440,
+      "h": 956,
+      "title": "5b · Timeline Replay · Pro Max 440×956",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -220,7 +228,8 @@
     "iPadRecordingPortrait.dc.html",
     "RecordingPortraitV2Max.dc.html",
     "RecordingPortraitV2Start.dc.html",
-    "RecordingLandscapeV2Max.dc.html"
+    "RecordingLandscapeV2Max.dc.html",
+    "ReplayV2Max.dc.html"
   ],
   "pages": [],
   "title": "DriveScope Mock"

@@ -519,6 +519,22 @@
         }
       }
     },
+    "Back to start": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to start"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "先頭へ戻る"
+          }
+        }
+      }
+    },
     "Background": {
       "localizations": {
         "en": {
