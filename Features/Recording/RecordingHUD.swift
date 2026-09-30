@@ -36,7 +36,7 @@ struct RecordingHUD: View {
     private var phone: some View {
         GeometryReader { proxy in
             if proxy.size.width > proxy.size.height {
-                landscape
+                landscape(size: proxy.size)
             } else {
                 portrait(size: proxy.size)
             }
@@ -76,19 +76,8 @@ struct RecordingHUD: View {
             }
             .padding(.top, 18)
 
-            HStack(alignment: .firstTextBaseline) {
-                InlineTelemetryValue(label: "ALT", value: HUDFormat.altitude(snapshot.altitude), unit: "m")
-                Spacer(minLength: 8)
-                InlineTelemetryValue(label: "COURSE", value: HUDFormat.course(snapshot.course),
-                                     unit: HUDFormat.courseUnit(snapshot.course))
-                Spacer(minLength: 8)
-                InlineTelemetryValue(label: "DIST", value: HUDFormat.distanceKm(snapshot.distance), unit: "km")
-            }
-            .padding(.vertical, 10)
-            .padding(.horizontal, 2)
-            .overlay(alignment: .top) { Theme.divider.frame(height: 1) }
-            .overlay(alignment: .bottom) { Theme.divider.frame(height: 1) }
-            .padding(.top, 22)
+            metricRow
+                .padding(.top, 22)
 
             HStack(spacing: 12) {
                 TelemetryValue(label: "LATERAL", value: HUDFormat.signedG(snapshot.lateralG), unit: "G",
@@ -128,36 +117,50 @@ struct RecordingHUD: View {
         .padding(.top, 4)
     }
 
-    // MARK: - Landscape (artboard 8, 844×390)
+    // MARK: - Landscape (artboard 8, 844×390; 8b 956×440)
 
-    private var landscape: some View {
-        VStack(spacing: 10) {
-            header(presetLabel: preset.map(HUDFormat.presetLabel))
+    /// Same priorities as portrait: the metrics move to one line under the header, leaving two columns laid on the
+    /// buttons' 1:1:2 grid — speed centered over MARK + SYNC, G over STOP. Speed and meter follow the space.
+    private func landscape(size: CGSize) -> some View {
+        VStack(spacing: 0) {
+            header(presetLabel: preset.map(HUDFormat.presetLabel), style: .phoneLarge)
+            metricRow
+                .padding(.top, 8)
 
-            HStack(alignment: .center, spacing: 24) {
-                VStack(alignment: .leading, spacing: 10) {
-                    speedText(size: 150, tracking: -0.05)
-                    HStack(alignment: .firstTextBaseline, spacing: 10) {
-                        Text(verbatim: "km/h")
-                            .font(.system(size: 18, weight: .medium))
-                            .foregroundStyle(Theme.textSecondary)
-                        caption("GPS SPEED", size: 11, color: Theme.textMuted)
+            GeometryReader { proxy in
+                let unit = (proxy.size.width - 2 * 12) / 4
+                let speedWidth = 2 * unit + 12
+                // Three digits must fit the column; the digits plus the km/h row must fit the height.
+                let speedSize = min(240, speedWidth / 1.8, (proxy.size.height - 36) / 0.74)
+                HStack(spacing: 12) {
+                    VStack(spacing: 10) {
+                        speedText(size: speedSize, tracking: -0.04)
+                        HStack(alignment: .firstTextBaseline, spacing: 12) {
+                            Text(verbatim: "km/h")
+                                .font(.system(size: 22, weight: .medium))
+                                .foregroundStyle(Theme.textSecondary)
+                            caption("GPS SPEED", size: 12, color: Theme.textSecondary)
+                        }
                     }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
+                    .frame(width: speedWidth)
 
-                // The meter column keeps its natural width; the outer columns share the rest equally, so it stays centered.
-                gForces(style: .gForceLarge, meterSize: 170, spacing: 18, valueSpacing: 12)
-                    .fixedSize()
-
-                VStack(alignment: .trailing, spacing: 14) {
-                    altitude(.metricLarge, alignment: .trailing)
-                    course(.metricLarge, alignment: .trailing)
-                    distance(.metricLarge, alignment: .trailing)
+                    HStack(spacing: 20) {
+                        VStack(alignment: .trailing, spacing: 12) {
+                            TelemetryValue(label: "LATERAL", value: HUDFormat.signedG(snapshot.lateralG), unit: "G",
+                                           style: .gForceStacked, valueColor: Theme.accent, alignment: .trailing)
+                            TelemetryValue(label: "LONG", value: HUDFormat.signedG(snapshot.longitudinalG), unit: "G",
+                                           style: .gForceStacked, alignment: .trailing)
+                            calibrationControl
+                        }
+                        .fixedSize()
+                        GMeterView(lateralG: snapshot.lateralG, longitudinalG: snapshot.longitudinalG,
+                                   style: .pad(dotRadius: 10, labelSize: 12))
+                    }
+                    .frame(width: 2 * unit)
                 }
-                .frame(maxWidth: .infinity, alignment: .trailing)
+                .frame(maxHeight: .infinity)
             }
-            .frame(maxHeight: .infinity)
+            .padding(.top, 10)
 
             // Mock grid: 1fr 1fr 2fr.
             GeometryReader { proxy in
@@ -169,8 +172,9 @@ struct RecordingHUD: View {
                 }
             }
             .frame(height: 56)
+            .padding(.top, 10)
         }
-        .padding(.top, 18)
+        .padding(.top, 10)
     }
 
     // MARK: - Pieces
@@ -189,8 +193,8 @@ struct RecordingHUD: View {
             .foregroundStyle(Theme.textPrimary)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
-            // The mock sets line-height 1 (0.9 landscape); SF Mono's line box has much more room above and
-            // below the digits, which would push GPS SPEED and the rest of the HUD down.
+            // The mock sets line-height ~0.8; SF Mono's line box has much more room above and below the digits,
+            // which would push GPS SPEED and the rest of the HUD down.
             .padding(.top, -size * 0.09)
             .padding(.bottom, -size * 0.17)
             .accessibilityLabel(Text(verbatim: "\(HUDFormat.speedKmh(snapshot.speed)) km/h"))
@@ -204,36 +208,20 @@ struct RecordingHUD: View {
             .foregroundStyle(color)
     }
 
-    private func altitude(_ style: TelemetryValue.Style, alignment: HorizontalAlignment = .center) -> some View {
-        TelemetryValue(label: "ALT", value: HUDFormat.altitude(snapshot.altitude), unit: "m",
-                       style: style, alignment: alignment)
-    }
-
-    private func course(_ style: TelemetryValue.Style, alignment: HorizontalAlignment = .center) -> some View {
-        TelemetryValue(label: "COURSE", value: HUDFormat.course(snapshot.course),
-                       unit: HUDFormat.courseUnit(snapshot.course), style: style, alignment: alignment)
-    }
-
-    private func distance(_ style: TelemetryValue.Style, alignment: HorizontalAlignment = .center) -> some View {
-        TelemetryValue(label: "DIST", value: HUDFormat.distanceKm(snapshot.distance), unit: "km",
-                       style: style, alignment: alignment)
-    }
-
-    private func gForces(
-        style: TelemetryValue.Style, meterSize: CGFloat, spacing: CGFloat, valueSpacing: CGFloat
-    ) -> some View {
-        HStack(spacing: spacing) {
-            VStack(alignment: .trailing, spacing: valueSpacing) {
-                TelemetryValue(label: "LATERAL", value: HUDFormat.signedG(snapshot.lateralG), unit: "G",
-                               style: style, valueColor: Theme.accent, alignment: .trailing)
-                TelemetryValue(label: "LONG", value: HUDFormat.signedG(snapshot.longitudinalG), unit: "G",
-                               style: style, alignment: .trailing)
-                calibrationControl
-            }
-            .fixedSize()
-            GMeterView(lateralG: snapshot.lateralG, longitudinalG: snapshot.longitudinalG)
-                .frame(width: meterSize, height: meterSize)
+    /// ALT / COURSE / DIST on one line between hairlines.
+    private var metricRow: some View {
+        HStack(alignment: .firstTextBaseline) {
+            InlineTelemetryValue(label: "ALT", value: HUDFormat.altitude(snapshot.altitude), unit: "m")
+            Spacer(minLength: 8)
+            InlineTelemetryValue(label: "COURSE", value: HUDFormat.course(snapshot.course),
+                                 unit: HUDFormat.courseUnit(snapshot.course))
+            Spacer(minLength: 8)
+            InlineTelemetryValue(label: "DIST", value: HUDFormat.distanceKm(snapshot.distance), unit: "km")
         }
+        .padding(.vertical, 10)
+        .padding(.horizontal, 2)
+        .overlay(alignment: .top) { Theme.divider.frame(height: 1) }
+        .overlay(alignment: .bottom) { Theme.divider.frame(height: 1) }
     }
 
     /// "GPS EST." until the mount is calibrated (lateral g from GPS only); then "CAL" with the 90° correction.

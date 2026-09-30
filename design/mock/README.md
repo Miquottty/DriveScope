@@ -19,7 +19,8 @@
 | `Replay.dc.html` | 5 · Timeline Replay | 390×844 |
 | `LiveActivity.dc.html` | 6 · Lock Screen Live Activity | 390×200 |
 | `Recovery.dc.html` | 7 · Crash Recovery Sheet | 390×200 |
-| `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape | 844×390 |
+| `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape（速度は MARK / SYNC の上、G は STOP の上。2026-09-30 改訂） | 844×390 |
+| `RecordingLandscapeV2Max.dc.html` | 8b · Recording HUD · Landscape · Pro Max | 956×440 |
 | `StandBy.dc.html` | 9 · StandBy | 844×390 |
 | `DynamicIsland.dc.html` | 10 · Dynamic Island / CarPlay small | 844×260 |
 | `iPadHome.dc.html` | 11 · iPad · Record ダッシュボード（サイドバー + START + センサー） | 1210×834 |

@@ -43,7 +43,7 @@
     "RecordingLandscape.dc.html": {
       "h": 390,
       "is_interactive": true,
-      "title": "8 · Recording HUD · Landscape (car mount)",
+      "title": "8 · Recording HUD · Landscape (car mount: speed over MARK/SYNC, G over STOP)",
       "w": 844,
       "x": 0,
       "y": 1424
@@ -141,6 +141,14 @@
       "h": 844,
       "title": "2c · Recording HUD · just started (no fix, GPS EST.)",
       "is_interactive": true
+    },
+    "RecordingLandscapeV2Max.dc.html": {
+      "x": 1848,
+      "y": 1424,
+      "w": 956,
+      "h": 440,
+      "title": "8b · Recording HUD · Landscape · Pro Max 956×440",
+      "is_interactive": true
     }
   },
   "createdOnFiles": {
@@ -211,7 +219,8 @@
     "iPadQuality.dc.html",
     "iPadRecordingPortrait.dc.html",
     "RecordingPortraitV2Max.dc.html",
-    "RecordingPortraitV2Start.dc.html"
+    "RecordingPortraitV2Start.dc.html",
+    "RecordingLandscapeV2Max.dc.html"
   ],
   "pages": [],
   "title": "DriveScope Mock"
