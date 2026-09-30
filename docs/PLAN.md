@@ -144,6 +144,10 @@ Marker / Event  : elapsed + Date の両方
 - `startedAt` は Location と Motion をつなぐ基準なので、manifest には小数秒（µs）まで書く。秒で切り捨てると GPS がモーションより最大 1 秒遅れる（初回実車で 0.8 秒。V1.1.1 で修正、古い manifest は SwiftData の値で `ensureSections` 時に修復）。
 - 実測: Core Location の速度はモーションより約 0.6 秒遅れる（初回実車で dv/dt と前後加速度の相関が最大になるずれ）。現状は補正しない。
 - 動画同期は SYNC マーカーの `elapsed` を t=0 とするオフセット方式（VlogTrack 参照）。
+- SYNC はビープを鳴らす（V1.2、フラッシュなし）。パターン `chirp3-v1`: 2.5 kHz・40 ms のパルス 3 発、間隔 120 ms → 200 ms（不等間隔なので 1 発ずれで一致しない）、5 ms の立ち上がり / 立ち下がり。カメラと DJI Mic の音声からこのパターンを検出すれば、サンプル単位で合わせられる。
+  - SYNC マーカーの `elapsed` は **1 発目がスピーカーから出た時刻**（タップ時刻ではない）。AVAudioEngine でホスト時刻を 0.1 s 先（エンジン停止中からは 0.3 s 先）に予約し、`AVAudioSession.outputLatency` を足す。タップ時刻は marker イベントの value（unix 秒）。
+  - 同じ elapsed で `syncBeep` イベントを記録（value = 足した出力遅延 s、aux = 出力先 0 スピーカー / 1 Bluetooth・車載・AirPlay / 2 その他）。Bluetooth や CarPlay では実際の遅延が報告値とずれることがあるので、aux ≠ 0 の SYNC は ±0.2 s 程度を見込む。
+  - カテゴリは `.playback` + `.mixWithOthers`（消音スイッチでも鳴り、音楽は止めない）。音量はシステム音量に従う。HUD 表示中だけエンジンを起動し、バックグラウンドでは止める（`audio` バックグラウンドモードは使わない）。音が出せないときは従来どおりタップ時刻で記録し、`syncBeep` は残さない。
 
 ---
 
@@ -366,7 +370,7 @@ STOP: removePendingNotificationRequests
 サスペンド・クラッシュ・強制終了のどれでも、最終延期から 180 秒後に OS が単独で通知。通知タップでアプリ復帰 → `state == .recording` のセッションを再開・同じファイルに追記。
 
 ### 9.4 events ストリーム
-`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed` を elapsed 付きで記録。Quality 画面と JSON Export に出す。`marker` の aux はマーカーの種類（0 = MARK、1 = SYNC、2 = HIGHLIGHT。永続化されるので番号は変えない）。
+`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep` を elapsed 付きで記録。Quality 画面と JSON Export に出す。`marker` の aux はマーカーの種類（0 = MARK、1 = SYNC、2 = HIGHLIGHT。永続化されるので番号は変えない）。
 
 ### 9.5 堅牢モード（V1.1）
 - 設定 → 記録 →「堅牢モード」（既定オフ）。オンにすると位置情報の「常に」許可を求める（`NSLocationAlwaysAndWhenInUseUsageDescription`）。未許可なら設定アプリへのリンクを出す。
@@ -434,7 +438,14 @@ STOP: removePendingNotificationRequests
 - Export
   - **JSON** = Master（lossless、session / places / markers（kind = `sync` / `mark` / `highlight`） / **sections**（V1.1、派生） / events / location / motion / altitude）
   - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）
-  - **GPX** = 互換（`<trkpt>` + extensions: speed / course / hAcc）。マーカーは `<wpt>`（実時刻付き）で、SYNC は時刻順に「SYNC 1」「SYNC 2」…と番号を付ける（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）
+  - **GPX** = 互換。`<trkpt>` は 1 秒サマリだけ（50 Hz は JSON の役目）。`<extensions>` は `ds:` 名前空間（`urn:drivescope:gpx:1`）:
+    - `ds:speed`（m/s）・`ds:course`・`ds:hAcc`、`ds:vAcc`（vertical accuracy ≥ 0 のときだけ）
+    - `ds:latG` / `ds:longG` = fix 時刻を中心とした 1 秒間の平均、`ds:peakLatG` = その 1 秒間で絶対値が最大の横 G（符号付き）。`TelemetryInterpolator` のフレームを 10 Hz（モーション平均窓 0.1 s）で走査して集計する。G が無い秒は 3 つとも省略
+    - `ds:baroAlt` = 気圧高度の相対値（m、最初の高度サンプルが 0）。`<ele>` は GPS 高度のまま（他ツールは `<ele>` を GPS 高度として読むため混ぜない）。高度サンプルが無い、または 5 s を超えて欠けている秒は省略
+    - Garmin TrackPointExtension v2（`gpxtpx:speed` m/s・`gpxtpx:course` 度）: `ds:` を知らないツール向けに `ds:speed` / `ds:course` と同じ値を併記
+  - **G の符号と単位（JSON・CSV・GPX 共通）**: エンジンの ISO 8855 のまま — 横 G ＋ = 左、前後 G ＋ = 加速、上下 G ＋ = 上、1 g = 9.80665 m/s²。画面の G メーターは体感する力（逆向き）で描くが表示だけの話で、ファイルには出さない。GPX は `<metadata>` の最後の `<extensions>` に 1 回だけ宣言する: `<ds:axes lateral="+left" longitudinal="+accelerating" vertical="+up"/>`、`<ds:gUnit>9.80665</ds:gUnit>`（1 g の m/s²）、`<ds:gWindow>1.0</ds:gWindow>`（サマリの窓、秒）、`<ds:gSource>`。
+    - `ds:gSource` = `motion`（キャリブレーション済みモーション。横・前後・ピーク。マウント外の秒は省略）/ `gps-estimate`（モーション G が全く無いセッション。GPS の速度 × 方位変化率による横 G だけで `ds:longG` は出さない）/ `none`（G なし）。1 ファイルの中で混ぜない（`SectionDetector.peakLateral` と同じ考え方）
+  - **GPX の `<wpt>`**: マーカーと検出区間を時刻順に並べ、どれも `<type>` を持つ（`<name>` の後）。マーカーは `<type>` = `MarkerKind.rawValue`（`sync` / `mark` / `highlight`）、名前は SYNC を時刻順に「SYNC 1」「SYNC 2」…と番号付け（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）、MARK は「MARK」、HIGHLIGHT は「HIGHLIGHT」、ラベルがあれば「: ラベル」を付ける。名前の対応は `MarkerKind` の exhaustive `switch`（マーカーの種類を足したらコンパイルエラーで気づく）。区間は `<type>` = `DriveSection.Kind.rawValue`（`corner` / `climb` / `descent` / `stop`）、名前は英語の「Corner 3 · 0.45 G」「Climb 1 · +36 m」「Stop 2 · 83 s」（種類ごとの通し番号）。位置と時刻は corner = 横 G が最大の点、climb / descent / stop = 区間の開始
   - `ShareLink` / `UIActivityViewController`
 
 ---

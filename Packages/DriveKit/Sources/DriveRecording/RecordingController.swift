@@ -35,6 +35,28 @@ public struct AppEnvironment: Sendable {
     }
 }
 
+/// When the SYNC beep reaches the speaker, as the app scheduled it (AVAudioEngine lives in the app).
+public struct SyncBeep: Sendable, Equatable {
+    /// Where the beep plays. Bluetooth / car audio add a delay the app can only estimate.
+    public enum Route: UInt32, Sendable {
+        case speaker = 0
+        case wireless = 1
+        case other = 2
+    }
+
+    /// Onset of the first pip at the output, in `ProcessInfo.systemUptime` seconds.
+    public var onsetUptime: TimeInterval
+    /// Output latency already included in `onsetUptime` (s).
+    public var outputLatency: TimeInterval
+    public var route: Route
+
+    public init(onsetUptime: TimeInterval, outputLatency: TimeInterval, route: Route) {
+        self.onsetUptime = onsetUptime
+        self.outputLatency = outputLatency
+        self.route = route
+    }
+}
+
 /// Side effects of recording that live in the app (Live Activity, notifications). All calls are on the main actor.
 @MainActor
 public protocol RecordingObserver: AnyObject {
@@ -188,8 +210,26 @@ public final class RecordingController {
     /// `pressedAt`: when a remote control (the watch) was pressed. The marker stays at the iPhone's receive time;
     /// the press time goes to the event's value (unix seconds) so the link delay can be read back later.
     public func mark(_ kind: MarkerKind, source: EventSource = .phone, pressedAt: Date? = nil) async {
-        guard phase == .recording, let engine, let session else { return }
-        let elapsed = await engine.elapsed
+        await addMarker(kind, source: source, pressedAt: pressedAt, atUptime: nil)
+    }
+
+    /// SYNC from the HUD. The marker sits at the beep's onset — the sound the cameras and the mic record — not at
+    /// the tap; `pressedAt` (the tap) goes to the marker event's value. Without a beep (audio unavailable) the
+    /// marker falls back to the current time.
+    public func sync(beep: SyncBeep?, pressedAt: Date) async {
+        guard let elapsed = await addMarker(.sync, source: .phone, pressedAt: pressedAt, atUptime: beep?.onsetUptime),
+              let beep, let engine else { return }
+        await engine.record(EventRecord(
+            kind: .syncBeep, source: .phone, aux: beep.route.rawValue, elapsed: elapsed, value: beep.outputLatency
+        ))
+    }
+
+    @discardableResult
+    private func addMarker(
+        _ kind: MarkerKind, source: EventSource, pressedAt: Date?, atUptime: TimeInterval?
+    ) async -> TimeInterval? {
+        guard phase == .recording, let engine, let session else { return nil }
+        let elapsed = if let atUptime { await engine.elapsed(systemUptime: atUptime) } else { await engine.elapsed }
         do {
             try store.addMarker(kind: kind, elapsed: elapsed, date: session.clock.date(elapsed: elapsed), to: session)
         } catch {
@@ -199,6 +239,7 @@ public final class RecordingController {
             kind: .marker, source: source, aux: kind.eventAux, elapsed: elapsed,
             value: pressedAt?.timeIntervalSince1970 ?? 0
         ))
+        return elapsed
     }
 
     /// App lifecycle hook: push buffered samples to disk now (backgrounding).

@@ -141,6 +141,9 @@ public enum EventKind: UInt16, Codable, Sendable, CaseIterable {
     /// The phone left its mount or moved in it (gravity far from the calibrated up); G is unavailable until the
     /// mount is found again.
     case mountChanged = 21
+    /// The SYNC beep reached the speaker; the SYNC marker next to it has the same elapsed (the beep's onset).
+    /// value = output latency included (s), aux = output route (`SyncBeep.Route`).
+    case syncBeep = 22
 }
 
 /// Maps each stream's native clock to session elapsed time (PLAN §3).

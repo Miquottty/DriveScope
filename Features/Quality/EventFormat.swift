@@ -31,6 +31,7 @@ struct EventFormat {
         case .sessionResumed: "Session resumed"
         case .autoResumed: "Auto-resumed"
         case .mountChanged: "Mount changed"
+        case .syncBeep: "SYNC beep"
         }
     }
 
@@ -50,6 +51,14 @@ struct EventFormat {
         case .marker:
             let kind = MarkerKind(eventAux: event.aux)?.title ?? "aux \(event.aux)"
             return includingSource ? "\(kind) · \(source(event.source))" : kind
+        case .syncBeep:
+            // aux: 0 = speaker, 1 = Bluetooth / car / AirPlay, 2 = other (`SyncBeep.Route`).
+            let route = switch event.aux {
+            case 0: language.string("Speaker")
+            case 1: language.string("Wireless")
+            default: language.string("Other output")
+            }
+            return "\(route) · +\(Int((event.value * 1000).rounded())) ms"
         case .thermalStateChanged:
             return thermalState(Int(event.aux))
         case .lowPowerModeChanged:
