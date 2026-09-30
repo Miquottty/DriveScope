@@ -13,7 +13,7 @@
 | `Main.dc.html` | 1 · Home / Ready | 390×844 |
 | `MainLandscape.dc.html` | 1b · Home / Ready · iPhone 横（Record ダッシュボード。Pro Max 横も iPad の分割表示にしない） | 844×390 |
 | `MainLandscapeMax.dc.html` | 1c · Home / Ready · iPhone 横 · Pro Max | 956×440 |
-| `Recording.dc.html` | 2 · Recording HUD（縦。速度・REC 経過時間・G をマウント越しに読める大きさに。2026-09-30 改訂） | 390×844 |
+| `Recording.dc.html` | 2 · Recording HUD（縦。速度・REC 経過時間・G をマウント越しに読める大きさに。2026-09-30 改訂。MARK / HIGHLIGHT / SYNC は 2026-10-01） | 390×844 |
 | `RecordingPortraitV2Max.dc.html` | 2b · Recording HUD · Pro Max（余った高さは G メーターへ） | 440×956 |
 | `RecordingPortraitV2Start.dc.html` | 2c · Recording HUD · 開始直後（測位前・GPS EST.） | 390×844 |
 | `Sessions.dc.html` | 3 · Sessions | 390×844 |
@@ -22,7 +22,7 @@
 | `ReplayV2Max.dc.html` | 5b · Timeline Replay · Pro Max | 440×956 |
 | `LiveActivity.dc.html` | 6 · Lock Screen Live Activity | 390×200 |
 | `Recovery.dc.html` | 7 · Crash Recovery Sheet | 390×200 |
-| `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape（速度は MARK / SYNC の上、G は STOP の上。2026-09-30 改訂） | 844×390 |
+| `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape（ボタンは 4 等分。速度は MARK / HIGHLIGHT の上、G は SYNC / STOP の上。2026-10-01 改訂） | 844×390 |
 | `RecordingLandscapeV2Max.dc.html` | 8b · Recording HUD · Landscape · Pro Max | 956×440 |
 | `StandBy.dc.html` | 9 · StandBy | 844×390 |
 | `DynamicIsland.dc.html` | 10 · Dynamic Island / CarPlay small | 844×260 |
@@ -50,6 +50,21 @@
 | 数値フォント | モックは IBM Plex Mono、アプリは SF Mono（`.monospacedDigit()`） |
 | 本文フォント | モックは IBM Plex Sans、アプリはシステムフォント（日本語はヒラギノ） |
 
+## Recording HUD のボタン（2026-10-01 HIGHLIGHT 追加）
+
+MARK（ブックマーク）· HIGHLIGHT（見どころ。Vlog で前方カメラに切り替える瞬間）· SYNC（カメラ同期）· STOP（長押し）の 4 つ。HIGHLIGHT は MARK と同じ確認表示（琥珀のチェック + 触覚）だけで、音やフラッシュは出さない。
+
+| アートボード | 配置 |
+|---|---|
+| 2 / 2b / 2c（縦） | MARK · HIGHLIGHT · SYNC を 3 等分で 1 列（64 pt）。1 つ約 100〜125 pt の幅では「HIGHLIGHT」をアイコンの横に置けないので、3 つともアイコンを文字の上に積む。その下に 1 行の説明（11 pt、収まらなければ縮小）、STOP は従来どおり全幅 68 pt |
+| 8 / 8b（横） | MARK · HIGHLIGHT · SYNC · STOP を 4 等分（56 pt）。上段も同じ 4 列に乗せ、速度は左 2 列、G は右 2 列 |
+| 12（iPad 横） | 4 等分（92 pt）、アイコン・タイトル・キーキャップを横並び |
+| 16（iPad 縦） | 4 等分（100 pt）。1 つ約 180 pt なので、アイコンとキーキャップをタイトルの上に積む |
+
+- STOP は長押しでしか止まらないので、他のボタンと同じ幅にしても誤って止まることはない。iPad の旧比率 MARK 1 : SYNC 1 : STOP 1.6 のままでは、HIGHLIGHT とキーキャップが小さい iPad で収まらない。
+- HIGHLIGHT の色は琥珀（`#F2A33A`）。Replay / Session Detail のピン・チップ・スパークラインの線は MARK 白、SYNC 緑、HIGHLIGHT 琥珀。
+- この変更はローカルの `.dc.html` のみ。キャンバスへの反映は次回の取り込み時に行う。
+
 ## iPad の視認性ルール
 
 - 1 画面 1 主役（運転中は速度・G、振り返りは地図）
@@ -58,7 +73,7 @@
 - カード: 角丸 16、内側余白 20、間隔 16〜20、外側余白 32
 - タップ領域 52 pt 以上（HUD のボタンは 92〜100 pt）。STOP は長押しのみ
 - サイドバー = ナビゲーション + セッション一覧。幅の狭いマルチタスク時は iPhone のタブに切り替え
-- キーボード: HUD は M / S、Replay は Space・← →・[ ]
+- キーボード: HUD は M / H / S、Replay は Space・← →・[ ]
 
 ## G メーターの向き
 
