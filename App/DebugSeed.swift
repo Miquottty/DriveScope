@@ -5,8 +5,9 @@ import DriveSensors
 import DriveStorage
 import Foundation
 
-/// `-SeedSession <seconds>`: writes a scripted Logger drive (Akagi) with SYNC / MARK markers, for UI tests and for
-/// checking that long logs open instantly (`-SeedSession 7200`). Skipped when an identical seed already exists.
+/// `-SeedSession <seconds>`: writes a scripted Logger drive (Akagi) with SYNC / MARK / HIGHLIGHT markers, for UI
+/// tests and for checking that long logs open instantly (`-SeedSession 7200`). Skipped when an identical seed already
+/// exists.
 enum DebugSeed {
     static func seedIfRequested(store: SessionStore, filesRoot: URL, arguments: [String] = ProcessInfo.processInfo.arguments) async {
         guard let flag = arguments.firstIndex(of: "-SeedSession"), arguments.indices.contains(flag + 1),
@@ -22,7 +23,8 @@ enum DebugSeed {
                 session, state: .stopped, endedAt: written.manifest.clock.date(elapsed: duration),
                 summary: written.summary, routePreview: written.preview
             )
-            for (kind, elapsed) in [(MarkerKind.sync, 12.0), (.mark, 762.0), (.mark, duration * 0.55)] where elapsed < duration {
+            let markers = [(MarkerKind.sync, 12.0), (.mark, 762.0), (.highlight, duration * 0.3), (.mark, duration * 0.55)]
+            for (kind, elapsed) in markers where elapsed < duration {
                 try store.addMarker(kind: kind, elapsed: elapsed, date: written.manifest.clock.date(elapsed: elapsed), to: session)
             }
         } catch {

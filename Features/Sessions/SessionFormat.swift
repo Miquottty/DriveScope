@@ -128,7 +128,7 @@ struct SessionFormat {
 
     // MARK: Lines
 
-    /// "42:31 · 36.7 km · max 103 · +842 m · 2 marks"
+    /// "42:31 · 36.7 km · max 103 · +842 m · 2 marks · 1 highlight"
     func metaLine(_ session: DriveSession) -> String {
         var parts = [
             duration(session.duration),
@@ -138,6 +138,9 @@ struct SessionFormat {
         if session.elevationGain >= 10 { parts.append(elevationGain(meters: session.elevationGain).text) }
         let marks = session.markers.filter { $0.kind == .mark }.count
         if marks > 0 { parts.append(language.string("\(marks) marks")) }
+        // Which drives have vlog material, at a glance in the list.
+        let highlights = session.markers.filter { $0.kind == .highlight }.count
+        if highlights > 0 { parts.append(language.string("\(highlights) highlights")) }
         return parts.joined(separator: " · ")
     }
 }

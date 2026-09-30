@@ -49,8 +49,7 @@ struct EventFormat {
             let level = event.value >= 0 ? "\(Int((event.value * 100).rounded()))%" : "—"
             return [level, batteryState(event.aux)].compactMap { $0 }.joined(separator: " · ")
         case .marker:
-            // aux: 0 = MARK, 1 = SYNC.
-            let kind = event.aux == 1 ? "SYNC" : "MARK"
+            let kind = MarkerKind(eventAux: event.aux)?.title ?? "aux \(event.aux)"
             return includingSource ? "\(kind) · \(source(event.source))" : kind
         case .syncBeep:
             // aux: 0 = speaker, 1 = Bluetooth / car / AirPlay, 2 = other (`SyncBeep.Route`).

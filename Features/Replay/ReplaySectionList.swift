@@ -39,7 +39,7 @@ enum SectionFormat {
 }
 
 /// The session's sections as chips under the timeline; tapping one plays from just before it. The chip the
-/// playhead is in is highlighted. `includesMarkers` puts the MARK / SYNC chips first on the same row (iPhone).
+/// playhead is in is highlighted. `includesMarkers` puts the marker chips first on the same row (iPhone).
 struct ReplaySectionStrip: View {
     let player: ReplayPlayer
     var includesMarkers = false
@@ -101,7 +101,7 @@ struct MarkerChip: View {
         Button(action: action) {
             Text(verbatim: ReplayFormat.markerChip(kind: marker.kind, elapsed: marker.elapsed))
                 .font(.hudNumber(size: 11))
-                .foregroundStyle(marker.kind == .sync ? Theme.good : Theme.textPrimary)
+                .foregroundStyle(marker.kind.color)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 5)
                 .background(Theme.surface, in: RoundedRectangle(cornerRadius: 6))

@@ -175,6 +175,7 @@ struct ExporterTests {
             ExportMarker(kind: .sync, elapsed: 60, date: fx.reader.clock.date(elapsed: 60)),
             ExportMarker(kind: .sync, elapsed: 10, date: fx.reader.clock.date(elapsed: 10)),
             ExportMarker(kind: .mark, elapsed: 40, date: fx.reader.clock.date(elapsed: 40), label: "a<b&c"),
+            ExportMarker(kind: .highlight, elapsed: 50, date: fx.reader.clock.date(elapsed: 50)),
         ]
         let sections = [
             DriveSection(kind: .stop, start: 70, end: 83.4, distance: 0, minSpeed: 0),
@@ -189,12 +190,12 @@ struct ExporterTests {
         let valid = fixes.count
         #expect(gpx.texts["trkpt"]?.count == valid && valid > 0)
         #expect(gpx.texts["ds:hAcc"]?.count == valid && gpx.texts["ds:vAcc"]?.count == valid)
-        #expect(gpx.texts["wpt"]?.count == 6)
+        #expect(gpx.texts["wpt"]?.count == 7)
         #expect(gpx.texts["name"] == [
-            title, "SYNC 1", "MARK: a<b&c", "Corner 1 \u{B7} 0.31 G", "Climb 1 \u{B7} +36 m", "SYNC 2", "Stop 1 \u{B7} 13 s", title,
+            title, "SYNC 1", "MARK: a<b&c", "Corner 1 \u{B7} 0.31 G", "HIGHLIGHT", "Climb 1 \u{B7} +36 m", "SYNC 2", "Stop 1 \u{B7} 13 s", title,
         ])
-        #expect(gpx.texts["type"] == ["sync", "mark", "corner", "climb", "sync", "stop"])
-        let wptTimes = try #require(gpx.texts["time"]).dropFirst().prefix(6)
+        #expect(gpx.texts["type"] == ["sync", "mark", "corner", "highlight", "climb", "sync", "stop"])
+        let wptTimes = try #require(gpx.texts["time"]).dropFirst().prefix(7)
         #expect(wptTimes.sorted() == Array(wptTimes))
 
         // The sign convention and G source are declared once, last in `<metadata>` (GPX 1.1 child order).

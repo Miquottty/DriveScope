@@ -43,7 +43,7 @@
     "RecordingLandscape.dc.html": {
       "h": 390,
       "is_interactive": true,
-      "title": "8 · Recording HUD · Landscape (car mount: speed over MARK/SYNC, G over STOP)",
+      "title": "8 · Recording HUD · Landscape (car mount: speed over MARK/HIGHLIGHT, G over SYNC/STOP)",
       "w": 844,
       "x": 0,
       "y": 1424
@@ -217,7 +217,7 @@
       "maxW": 3790
     },
     "s1": {
-      "text": "iPad readability rules\n• One hero per screen: speed / G while driving, the map while reviewing\n• Text ≥ 15 pt, labels 13 pt caps, key figures ≥ 28 pt (HUD speed 260–280 pt)\n• No #5C6670 text on iPad (below 4.5:1); secondary = #B4BEC8 / #8A94A0\n• Cards: radius 16, padding 20, gaps 16–20, margins 32\n• Touch ≥ 52 pt; HUD buttons 92–100 pt; STOP stays hold-only\n• Sidebar = navigation + session library; narrow multitasking falls back to the iPhone tabs\n• Keyboard: M / S in the HUD; Space, ← →, [ ] in Replay",
+      "text": "iPad readability rules\n• One hero per screen: speed / G while driving, the map while reviewing\n• Text ≥ 15 pt, labels 13 pt caps, key figures ≥ 28 pt (HUD speed 260–280 pt)\n• No #5C6670 text on iPad (below 4.5:1); secondary = #B4BEC8 / #8A94A0\n• Cards: radius 16, padding 20, gaps 16–20, margins 32\n• Touch ≥ 52 pt; HUD buttons 92–100 pt; STOP stays hold-only\n• Sidebar = navigation + session library; narrow multitasking falls back to the iPhone tabs\n• Keyboard: M / H / S in the HUD; Space, ← →, [ ] in Replay",
       "x": 3494,
       "y": 2700,
       "w": 440,

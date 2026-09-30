@@ -3,7 +3,7 @@ import DriveRecording
 import SwiftUI
 
 /// iPad Recording HUD (mock artboards 12 landscape, 16 portrait): one hero speed, three large tiles, the G section
-/// and 92 / 100 pt buttons with M / S keyboard keys. Like the phone HUD, width > height picks the landscape
+/// and 92 / 100 pt buttons with M / H / S keyboard keys. Like the phone HUD, width > height picks the landscape
 /// arrangement. Sizes are the mock's points on an 11" iPad (safe area 1210 × 790 / 834 × 1166); smaller windows
 /// (iPad mini, Stage Manager) scale uniformly down, larger screens keep the mock sizes and gain space.
 struct RecordingHUDIPadLayout: View {
@@ -11,6 +11,7 @@ struct RecordingHUDIPadLayout: View {
     var preset: CapturePreset?
     var isSaving: Bool
     var onMark: () async -> Void
+    var onHighlight: () async -> Void
     var onSync: () async -> Void
     var onStop: () async -> Void
     var onRotateMount: () async -> Void
@@ -26,7 +27,7 @@ struct RecordingHUDIPadLayout: View {
             }
         }
         .background(Theme.hudBackground.ignoresSafeArea())
-        // Keeps first responder inside the HUD (not in the sidebar behind the cover), so the M / S shortcuts
+        // Keeps first responder inside the HUD (not in the sidebar behind the cover), so the M / H / S shortcuts
         // resolve against this screen.
         .background(alignment: .topLeading) {
             KeyCommandResponder()
@@ -57,7 +58,7 @@ struct RecordingHUDIPadLayout: View {
                     .fixedSize()
             }
             .frame(maxHeight: .infinity)
-            buttons(height: 92 * s, rowWidth: width - 2 * 36 * s, scale: s)
+            buttons(height: 92 * s, rowWidth: width - 2 * 36 * s, stacked: false, scale: s)
         }
         .padding(.horizontal, 36 * s)
         .padding(.top, 4 * s)
@@ -80,7 +81,7 @@ struct RecordingHUDIPadLayout: View {
             tiles(scale: s)
             gSection(meterSize: 340 * s, spacing: 40 * s, scale: s)
                 .frame(maxHeight: .infinity)
-            buttons(height: 100 * s, rowWidth: width - 2 * 36 * s, scale: s)
+            buttons(height: 100 * s, rowWidth: width - 2 * 36 * s, stacked: true, scale: s)
         }
         .padding(.horizontal, 36 * s)
         .padding(.top, 16 * s)
@@ -200,18 +201,24 @@ struct RecordingHUDIPadLayout: View {
         }
     }
 
-    /// Mock: MARK 1 : SYNC 1 : STOP 1.6. STOP has no keyboard key — it only stops on a deliberate hold.
-    private func buttons(height: CGFloat, rowWidth: CGFloat, scale s: CGFloat) -> some View {
+    /// Four equal buttons (the mock's MARK 1 : SYNC 1 : STOP 1.6 left too little for "HIGHLIGHT" and its key cap).
+    /// `stacked` (portrait, ~180 pt each): icon and key cap above the title. STOP has no keyboard key — it only stops
+    /// on a deliberate hold.
+    private func buttons(height: CGFloat, rowWidth: CGFloat, stacked: Bool, scale s: CGFloat) -> some View {
         let spacing = 16 * s
-        let unit = max(0, rowWidth - 2 * spacing) / 3.6
+        let unit = max(0, rowWidth - 3 * spacing) / 4
         return HStack(spacing: spacing) {
             HUDActionButton(title: "MARK", systemImage: "flag", height: height, isEnabled: !isSaving,
-                            metrics: .pad, key: "m", action: onMark)
+                            metrics: .pad, stacked: stacked, key: "m", action: onMark)
                 .handGestureShortcut(.primaryAction)
                 .accessibilityIdentifier("markButton")
                 .frame(width: unit)
+            HUDActionButton(title: "HIGHLIGHT", systemImage: "star", height: height, isEnabled: !isSaving,
+                            metrics: .pad, stacked: stacked, key: "h", action: onHighlight)
+                .accessibilityIdentifier("highlightButton")
+                .frame(width: unit)
             HUDActionButton(title: "SYNC", systemImage: "bolt", height: height, isEnabled: !isSaving,
-                            metrics: .pad, key: "s", action: onSync)
+                            metrics: .pad, stacked: stacked, key: "s", action: onSync)
                 .accessibilityIdentifier("syncButton")
                 .frame(width: unit)
             StopButton(height: height, cornerRadius: 18, fontSize: 24, squareSize: 20, squareRadius: 4,

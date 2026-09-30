@@ -180,6 +180,8 @@ public enum GPXExporter {
                 name = "SYNC \(syncCount)"
             case .mark:
                 name = "MARK"
+            case .highlight:
+                name = "HIGHLIGHT"
             }
             if let label = marker.label, !label.isEmpty { name += ": " + label }
             waypoints.append(Waypoint(

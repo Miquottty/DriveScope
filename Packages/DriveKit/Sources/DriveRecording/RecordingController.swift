@@ -206,7 +206,7 @@ public final class RecordingController {
         if phase == .stopped { phase = .idle }
     }
 
-    /// Adds a SYNC / MARK marker at the current time (PLAN §3: elapsed + Date).
+    /// Adds a SYNC / MARK / HIGHLIGHT marker at the current time (PLAN §3: elapsed + Date).
     /// `pressedAt`: when a remote control (the watch) was pressed. The marker stays at the iPhone's receive time;
     /// the press time goes to the event's value (unix seconds) so the link delay can be read back later.
     public func mark(_ kind: MarkerKind, source: EventSource = .phone, pressedAt: Date? = nil) async {
@@ -236,7 +236,7 @@ public final class RecordingController {
             lastError = String(describing: error)
         }
         await engine.record(EventRecord(
-            kind: .marker, source: source, aux: kind == .sync ? 1 : 0, elapsed: elapsed,
+            kind: .marker, source: source, aux: kind.eventAux, elapsed: elapsed,
             value: pressedAt?.timeIntervalSince1970 ?? 0
         ))
         return elapsed

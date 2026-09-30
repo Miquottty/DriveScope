@@ -149,6 +149,40 @@
         }
       }
     },
+    "%lld highlights": {
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld highlight"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%lld highlights"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "見どころ %lld 件"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "%lld marks": {
       "localizations": {
         "en": {
@@ -1845,12 +1879,18 @@
         }
       }
     },
-    "MARK = bookmark this moment · SYNC = beep for camera sync": {
+    "MARK = bookmark · HIGHLIGHT = best moment · SYNC = beep for camera sync": {
       "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "MARK = bookmark · HIGHLIGHT = best moment · SYNC = beep for camera sync"
+          }
+        },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "MARK = この瞬間をブックマーク · SYNC = カメラ同期用の音"
+            "value": "MARK = ブックマーク · HIGHLIGHT = 見どころ · SYNC = カメラ同期用の音"
           }
         }
       }

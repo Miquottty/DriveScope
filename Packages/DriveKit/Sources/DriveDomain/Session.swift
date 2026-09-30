@@ -77,10 +77,32 @@ public enum RecorderPhase: String, Sendable, Equatable {
     case interrupted
 }
 
+/// Raw values are persisted (SwiftData, JSON `markers[].kind`).
 public enum MarkerKind: String, Codable, Sendable {
     /// Video-sync reference point (t = 0 for the VlogTrack).
     case sync
+    /// Bookmark: "look at this later".
     case mark
+    /// A moment worth cutting to the front camera in the vlog.
+    case highlight
+
+    /// `aux` of this marker's `EventKind.marker` record in `events.bin`. Persisted — never renumber.
+    public var eventAux: UInt32 {
+        switch self {
+        case .mark: 0
+        case .sync: 1
+        case .highlight: 2
+        }
+    }
+
+    public init?(eventAux: UInt32) {
+        switch eventAux {
+        case 0: self = .mark
+        case 1: self = .sync
+        case 2: self = .highlight
+        default: return nil
+        }
+    }
 }
 
 public enum EventSource: UInt8, Codable, Sendable {
@@ -111,6 +133,7 @@ public enum EventKind: UInt16, Codable, Sendable, CaseIterable {
     /// value = battery level 0…1 (-1 unknown), aux = UIDevice.BatteryState raw value.
     case batterySnapshot = 16
     case batteryLowSuggested = 17
+    /// aux = `MarkerKind.eventAux`; value = the watch's press time (unix s), 0 for the phone and Live Activity.
     case marker = 18
     case sessionResumed = 19
     /// Robust mode continued the session by itself after iOS relaunched the app (value = gap, s).

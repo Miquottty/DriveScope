@@ -18,9 +18,10 @@ struct RecordingView: View {
             preset: recorder.session?.preset,
             isSaving: recorder.phase == .stopping || recorder.phase == .finalizing,
             onMark: { await recorder.mark(.mark) },
+            onHighlight: { await recorder.mark(.highlight) },
             onSync: {
                 let tapped = Date()
-                await recorder.sync(beep: beeper?.play(), pressedAt: tapped)
+                await recorder.sync(beep: await beeper?.play(), pressedAt: tapped)
             },
             onStop: { await recorder.stop() },
             onRotateMount: { await recorder.rotateMount() },
@@ -30,15 +31,20 @@ struct RecordingView: View {
         // The HUD is glanced at on a mount for hours; auto-lock would hide it mid-drive.
         .onAppear {
             UIApplication.shared.isIdleTimerDisabled = true
-            if beeper == nil { beeper = SyncBeeper() }
-            beeper?.prepare()
+            if beeper == nil { beeper = SyncBeeper.make() }
+            Task { await beeper?.prepare() }
         }
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
-            beeper?.stop()
+            Task { await beeper?.stop() }
         }
         .onChange(of: scenePhase) { _, phase in
-            if phase == .active { beeper?.prepare() } else if phase == .background { beeper?.stop() }
+            let beeper = beeper
+            if phase == .active {
+                Task { await beeper?.prepare() }
+            } else if phase == .background {
+                Task { await beeper?.stop() }
+            }
         }
     }
 }

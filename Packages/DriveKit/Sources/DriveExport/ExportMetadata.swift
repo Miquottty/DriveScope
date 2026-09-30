@@ -1,7 +1,7 @@
 import DriveDomain
 import Foundation
 
-/// A SYNC / MARK marker as exported (PLAN §3: elapsed and absolute time both kept).
+/// A SYNC / MARK / HIGHLIGHT marker as exported (PLAN §3: elapsed and absolute time both kept).
 public struct ExportMarker: Sendable, Equatable {
     public var kind: MarkerKind
     /// Seconds since session start.

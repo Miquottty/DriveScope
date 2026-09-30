@@ -342,17 +342,15 @@ private struct ReplayMarkerChips: View {
         ScrollView(.horizontal) {
             HStack(spacing: 10) {
                 ForEach(player.timeline?.markers ?? []) { marker in
-                    let isSync = marker.kind == .sync
                     Button {
                         player.seek(to: marker.elapsed)
                     } label: {
                         Text(verbatim: ReplayFormat.markerChip(kind: marker.kind, elapsed: marker.elapsed))
                             .font(.hudNumber(size: 15))
-                            .foregroundStyle(isSync ? Theme.good : Theme.textPrimary)
+                            .foregroundStyle(marker.kind.color)
                             .padding(.horizontal, 14)
                             .frame(height: 44)
-                            .background(isSync ? Theme.syncChipFill : Theme.replayControl,
-                                        in: RoundedRectangle(cornerRadius: 10))
+                            .background(marker.kind.chipFill, in: RoundedRectangle(cornerRadius: 10))
                             // 44 pt visible, 52 pt to the finger (the scroll view's 4 pt insets make room).
                             .contentShape(Rectangle().inset(by: -4))
                     }

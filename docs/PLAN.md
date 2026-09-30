@@ -28,7 +28,7 @@ iPhone 単体で車載 Vlog 向けテレメトリ（位置・速度・高度・�
 | Live Activities | V2 | **MVP** | 画面 OFF・StandBy・CarPlay・Watch で「記録中」が見えることは信頼性そのもの |
 | Apple Watch | V2 | **MVP は Smart Stack 表示 + Double Tap MARK（Watch アプリなし）**、Watch アプリは V1.1、心拍は V2 検討 | 最小コストで「ハンドルを握ったまま MARK」を実現 |
 | Recording 画面のミニ Map | あり | **なし** | 描画コストが高く、ロガー用途では数値 HUD に集中すべき。Map は Detail / Replay で見せる |
-| SYNC / MARK | V1.1 | **MVP**（Recording 常設） | 実装は数行で、Vlog 同期の中核 |
+| SYNC / MARK | V1.1 | **MVP**（Recording 常設）。HIGHLIGHT（見どころ）を V1.1 で追加 | 実装は数行で、Vlog 同期の中核 |
 | 時刻基準 | elapsedTime のみ | **`startedAt(Date)` + `startUptime(systemUptime)` ペアを保存** | Motion の timestamp は boot 基準。絶対時刻に戻せないと動画同期ができない |
 | Mount Calibration | 「基準姿勢を記録」 | **重力で pitch/roll + 発進加速で yaw 自動決定 + 90° 手動補正** | 重力だけでは前方向が決まらない |
 | 地名 | 未定義 | STOP 時に `MKReverseGeocodingRequest` で代表点を逆ジオコーディングし保存 | `CLGeocoder` は iOS 26 で非推奨 |
@@ -216,7 +216,7 @@ Application Support/Sessions/<sessionID>/
 
 @Model final class Marker {
     var id: UUID
-    var kind: MarkerKind               // sync / mark
+    var kind: MarkerKind               // sync / mark / highlight
     var elapsed: TimeInterval
     var date: Date
     var label: String?
@@ -370,7 +370,7 @@ STOP: removePendingNotificationRequests
 サスペンド・クラッシュ・強制終了のどれでも、最終延期から 180 秒後に OS が単独で通知。通知タップでアプリ復帰 → `state == .recording` のセッションを再開・同じファイルに追記。
 
 ### 9.4 events ストリーム
-`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep` を elapsed 付きで記録。Quality 画面と JSON Export に出す。
+`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep` を elapsed 付きで記録。Quality 画面と JSON Export に出す。`marker` の aux はマーカーの種類（0 = MARK、1 = SYNC、2 = HIGHLIGHT。永続化されるので番号は変えない）。
 
 ### 9.5 堅牢モード（V1.1）
 - 設定 → 記録 →「堅牢モード」（既定オフ）。オンにすると位置情報の「常に」許可を求める（`NSLocationAlwaysAndWhenInUseUsageDescription`）。未許可なら設定アプリへのリンクを出す。
@@ -398,7 +398,7 @@ STOP: removePendingNotificationRequests
   - iPhone 側 `WatchLink`: フェーズ変化で application context、記録中は到達可能なとき 1 Hz で状態を送る。Watch のコマンドを ID で重複排除して実行し、ack を返す。
   - 画面: 記録中は REC + 経過・速度・大きな MARK（Double Tap = `handGestureShortcut(.primaryAction)`、MARK 件数バッジ）・STOP（確認あり）。待機中は「記録していません」、堅牢モードが有効なら START。ack で成功 / エラーの触覚。iPhone のアプリ内言語に従う。
   - MARK は `source = watch`、elapsed は iPhone の受信時刻、events の value に Watch で押した時刻（UNIX 秒）。キューに溜めない（遅れて届くと時刻がずれるため）。
-  - START は堅牢モードが有効（Always + 正確な位置）なときだけ。許可ダイアログは出さない。SYNC は iPhone のみ。
+  - START は堅牢モードが有効（Always + 正確な位置）なときだけ。許可ダイアログは出さない。SYNC と HIGHLIGHT は iPhone のみ（MARK 件数バッジも MARK だけを数える）。
   - 実機（2026-09-30、Series 9 + iPhone 16 Pro Max）: MARK 4 件すべて `source = watch` で記録、重複なし、1 秒以内の連打も取りこぼしなし。押下時刻 − 受信時刻は −360〜−322 ms（Watch と iPhone の時計差を含むため絶対値は測れないが、ばらつき 38 ms）。
 
 ---
@@ -408,11 +408,11 @@ STOP: removePendingNotificationRequests
 | # | 画面 | 要点 |
 |---|---|---|
 | 1 | Home / Ready | センサー状態（GPS 精度・Precise・Motion Hz・気圧・給電・背景許可）、START、最近のセッション、タブ（Record / Sessions / Quality） |
-| 2 | Recording HUD（縦） | 速度 132pt、ALT / COURSE / DIST、G メーター、MARK / SYNC、STOP。ミニ Map なし |
-| 8 | Recording HUD（横） | 同じ情報を 3 カラム配置。横幅クラスで `VStack` / `HStack` を切り替える 1 つの View |
+| 2 | Recording HUD（縦） | 速度 132pt、ALT / COURSE / DIST、G メーター、MARK / HIGHLIGHT / SYNC（3 等分、アイコンを文字の上に積む）、STOP（全幅・長押し）。ミニ Map なし |
+| 8 | Recording HUD（横） | 同じ情報を 3 カラム配置。横幅クラスで `VStack` / `HStack` を切り替える 1 つの View。ボタンは MARK / HIGHLIGHT / SYNC / STOP を 4 等分（iPad も同じ 4 等分、キーボードは M / H / S） |
 | 3 | Sessions | `@Query(sectionBy:)` で月別、ルートサムネ、RECOVERED バッジ |
-| 4 | Session Detail | Map（開始 / 終了 / MARK）、6 指標、Log Quality 行、Replay / Export |
-| 5 | Timeline Replay | Map 追従、速度スパークライン（Swift Charts）、スライダー、SYNC / MARK ジャンプ、再生速度 |
+| 4 | Session Detail | Map（開始 / 終了 / マーカー）、6 指標、Log Quality 行、Replay / Export |
+| 5 | Timeline Replay | Map 追従、速度スパークライン（Swift Charts）、スライダー、マーカー（SYNC / MARK / HIGHLIGHT）ジャンプ、再生速度 |
 | 6 | Lock Screen Live Activity | REC・経過・速度・距離・GPS、MARK / STOP |
 | 7 | Crash Recovery Sheet | item-binding の alert / sheet |
 | 9 | StandBy | 200% 拡大、ボタンなし |
@@ -421,6 +421,8 @@ STOP: removePendingNotificationRequests
 | — | Settings | プリセット（5 種、電池・データ量の目安付き）、単位、言語、堅牢モード（V1.1） |
 
 デザイン: ダーク単一テーマ、数値は等幅（SF Mono 相当）、アクセントは琥珀 1 色 + REC 赤 + GPS 良好の緑。Liquid Glass はタブバー・ボタンのシステム標準に任せ、HUD 本体はフラットな黒。
+
+マーカー: MARK = ブックマーク（白）、SYNC = カメラ同期の基準（緑）、HIGHLIGHT = 見どころ（琥珀。Vlog で前方カメラに切り替える瞬間）。HIGHLIGHT は MARK と同じ確認表示（チェック + 触覚）だけで、音やフラッシュは出さない。Live Activity と Watch には MARK だけを置く。Sessions の一覧はマーク件数と見どころ件数を別々に出す。
 
 ---
 
@@ -434,7 +436,7 @@ STOP: removePendingNotificationRequests
   - climb / descent: 走行距離 50 m ごとの高度（3 ビン平均）で、直近 200 m の勾配が ±3% 以上の連続区間。500 m 以上かつ |Δ高度| 15 m 以上。
   - STOP / 復旧時の `SessionFinalizer.ensureSections` で計算して `DriveSession.sections` に保存（同時に `MountSolver` によるキャリブレーションの置き換え、Peak G とその時刻、manifest の開始時刻・終了時刻の修復 — §7）。古いセッションは詳細・Replay・書き出し時に遅延計算。しきい値を変えたら `SectionDetector.version` を上げる（2 = V1.1.1）。
 - Export
-  - **JSON** = Master（lossless、session / places / markers / **sections**（V1.1、派生） / events / location / motion / altitude）
+  - **JSON** = Master（lossless、session / places / markers（kind = `sync` / `mark` / `highlight`） / **sections**（V1.1、派生） / events / location / motion / altitude）
   - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）
   - **GPX** = 互換。`<trkpt>` は 1 秒サマリだけ（50 Hz は JSON の役目）。`<extensions>` は `ds:` 名前空間（`urn:drivescope:gpx:1`）:
     - `ds:speed`（m/s）・`ds:course`・`ds:hAcc`、`ds:vAcc`（vertical accuracy ≥ 0 のときだけ）
@@ -443,7 +445,7 @@ STOP: removePendingNotificationRequests
     - Garmin TrackPointExtension v2（`gpxtpx:speed` m/s・`gpxtpx:course` 度）: `ds:` を知らないツール向けに `ds:speed` / `ds:course` と同じ値を併記
   - **G の符号と単位（JSON・CSV・GPX 共通）**: エンジンの ISO 8855 のまま — 横 G ＋ = 左、前後 G ＋ = 加速、上下 G ＋ = 上、1 g = 9.80665 m/s²。画面の G メーターは体感する力（逆向き）で描くが表示だけの話で、ファイルには出さない。GPX は `<metadata>` の最後の `<extensions>` に 1 回だけ宣言する: `<ds:axes lateral="+left" longitudinal="+accelerating" vertical="+up"/>`、`<ds:gUnit>9.80665</ds:gUnit>`（1 g の m/s²）、`<ds:gWindow>1.0</ds:gWindow>`（サマリの窓、秒）、`<ds:gSource>`。
     - `ds:gSource` = `motion`（キャリブレーション済みモーション。横・前後・ピーク。マウント外の秒は省略）/ `gps-estimate`（モーション G が全く無いセッション。GPS の速度 × 方位変化率による横 G だけで `ds:longG` は出さない）/ `none`（G なし）。1 ファイルの中で混ぜない（`SectionDetector.peakLateral` と同じ考え方）
-  - **GPX の `<wpt>`**: マーカーと検出区間を時刻順に並べ、どれも `<type>` を持つ（`<name>` の後）。マーカーは `<type>` = `MarkerKind.rawValue`（`sync` / `mark`）、名前は SYNC を時刻順に「SYNC 1」「SYNC 2」…と番号付け（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）、MARK は「MARK」、ラベルがあれば「: ラベル」を付ける。名前の対応は `MarkerKind` の exhaustive `switch`（マーカーの種類を足したらコンパイルエラーで気づく）。区間は `<type>` = `DriveSection.Kind.rawValue`（`corner` / `climb` / `descent` / `stop`）、名前は英語の「Corner 3 · 0.45 G」「Climb 1 · +36 m」「Stop 2 · 83 s」（種類ごとの通し番号）。位置と時刻は corner = 横 G が最大の点、climb / descent / stop = 区間の開始
+  - **GPX の `<wpt>`**: マーカーと検出区間を時刻順に並べ、どれも `<type>` を持つ（`<name>` の後）。マーカーは `<type>` = `MarkerKind.rawValue`（`sync` / `mark` / `highlight`）、名前は SYNC を時刻順に「SYNC 1」「SYNC 2」…と番号付け（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）、MARK は「MARK」、HIGHLIGHT は「HIGHLIGHT」、ラベルがあれば「: ラベル」を付ける。名前の対応は `MarkerKind` の exhaustive `switch`（マーカーの種類を足したらコンパイルエラーで気づく）。区間は `<type>` = `DriveSection.Kind.rawValue`（`corner` / `climb` / `descent` / `stop`）、名前は英語の「Corner 3 · 0.45 G」「Climb 1 · +36 m」「Stop 2 · 83 s」（種類ごとの通し番号）。位置と時刻は corner = 横 G が最大の点、climb / descent / stop = 区間の開始
   - `ShareLink` / `UIActivityViewController`
 
 ---
@@ -458,7 +460,7 @@ STOP: removePendingNotificationRequests
   - Live Activity / Widget: `ContentState` に `languageCode` を含め、Widget 側でも `.environment(\.locale, …)`。
   - `AppleLanguages` の UserDefaults 書き換えは再起動が必要なので使わない。
 - 数値・単位は `Measurement` + `MeasurementFormatter` を locale 付きで。数字は両言語とも Latin 数字・等幅。
-- 日本語 UI でも HUD のラベル（ALT / COURSE / DIST / LAT G）と操作ボタンの表記（START / MARK / SYNC / STOP）は英語のまま。START の下の補足（「ドライブを記録」）、アクセシビリティのラベル、説明文・設定・通知・タイトルは翻訳。
+- 日本語 UI でも HUD のラベル（ALT / COURSE / DIST / LAT G）と操作ボタンの表記（START / MARK / HIGHLIGHT / SYNC / STOP）は英語のまま。START の下の補足（「ドライブを記録」）、アクセシビリティのラベル、説明文・設定・通知・タイトルは翻訳。
 
 ---
 

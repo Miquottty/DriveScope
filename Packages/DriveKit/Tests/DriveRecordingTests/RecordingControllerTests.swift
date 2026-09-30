@@ -35,6 +35,7 @@ struct RecordingControllerTests {
         let tapped = Date(timeIntervalSince1970: 1_790_000_100.5)
         let beep = SyncBeep(onsetUptime: ProcessInfo.processInfo.systemUptime + 0.1, outputLatency: 0.012, route: .wireless)
         await controller.sync(beep: beep, pressedAt: tapped)
+        await controller.mark(.highlight)
         // A watch MARK (V1.1): marker at the iPhone's receive time, the wrist's press time in the event value.
         let pressed = Date(timeIntervalSince1970: 1_790_000_123.25)
         await controller.mark(.mark, source: .watch, pressedAt: pressed)
@@ -55,9 +56,13 @@ struct RecordingControllerTests {
         #expect(session.locationSampleCount == locations.count)
         #expect(Double(motion.count) > session.duration * 50 * 0.9)
         #expect(session.motionDropRate < 0.1)
-        // The beep is ahead of the tap, so the two markers' order depends on the 100× clock: compare as a set.
-        #expect(Set(session.sortedMarkers.map(\.kind)) == [.sync, .mark])
-        let syncMark = try #require(events.first { $0.kind == .marker && $0.aux == 1 && $0.source == .phone })
+        // The beep is ahead of the tap, so the markers' order depends on the 100× clock: compare as a set.
+        #expect(Set(session.sortedMarkers.map(\.kind)) == [.sync, .highlight, .mark])
+        // events.bin tells the kinds apart by aux (JSON export, Quality); file order is call order.
+        let markerEvents = events.filter { $0.kind == .marker }
+        #expect(markerEvents.map(\.aux) == [1, 2, 0])
+        #expect(markerEvents.map(\.source) == [.phone, .phone, .watch])
+        let syncMark = markerEvents[0]
         let beepEvent = try #require(events.first { $0.kind == .syncBeep })
         #expect(syncMark.value == tapped.timeIntervalSince1970)
         #expect(beepEvent.elapsed == syncMark.elapsed && beepEvent.aux == 1 && beepEvent.value == 0.012)

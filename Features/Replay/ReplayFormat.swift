@@ -17,11 +17,11 @@ enum ReplayFormat {
 
     static func isLongForm(duration: TimeInterval) -> Bool { duration >= 3600 }
 
-    /// "SYNC 00:00:12" (always h:m:s — the camera-sync offset) / "MARK 12:42".
+    /// "SYNC 00:00:12" (always h:m:s — the camera-sync offset) / "MARK 12:42" / "HIGHLIGHT 12:42".
     static func markerChip(kind: MarkerKind, elapsed: TimeInterval) -> String {
         switch kind {
         case .sync: "SYNC " + HUDFormat.elapsed(elapsed)
-        case .mark: "MARK " + clock(elapsed, longForm: isLongForm(duration: elapsed))
+        case .mark, .highlight: kind.title + " " + clock(elapsed, longForm: isLongForm(duration: elapsed))
         }
     }
 
