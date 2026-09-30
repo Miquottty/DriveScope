@@ -54,7 +54,8 @@ struct EventFormat {
         case .thermalStateChanged:
             return thermalState(Int(event.aux))
         case .lowPowerModeChanged:
-            return event.aux == 0 ? language.string("Off") : language.string("On")
+            // Recorded in `value` (1 = on), unlike the thermal state's `aux`.
+            return event.value == 0 ? language.string("Off") : language.string("On")
         default:
             return ""
         }

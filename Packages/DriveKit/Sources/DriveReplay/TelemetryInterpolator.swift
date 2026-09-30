@@ -339,17 +339,21 @@ public struct VlogTrack: Sequence, Sendable {
         self.syncElapsed = syncElapsed ?? 0
     }
 
-    public var frameCount: Int { Int(interpolator.duration * fps) + 1 }
+    // Frames sit on a grid through SYNC, so there is a frame at exactly t = 0 and every frame lands on a video frame.
+    private var firstIndex: Int { Int((-syncElapsed * fps).rounded(.up)) }
+    private var lastIndex: Int { Int(((interpolator.duration - syncElapsed) * fps).rounded(.down)) }
+
+    public var frameCount: Int { Swift.max(0, lastIndex - firstIndex + 1) }
 
     public func makeIterator() -> AnyIterator<ReplayTelemetryFrame> {
-        var index = 0
-        let count = frameCount
+        var index = firstIndex
+        let last = lastIndex
         return AnyIterator {
-            guard index < count else { return nil }
-            let t = Double(index) / fps
+            guard index <= last else { return nil }
+            let time = Double(index) / fps
             index += 1
-            var frame = interpolator.frame(at: t)
-            frame.time = t - syncElapsed
+            var frame = interpolator.frame(at: syncElapsed + time)
+            frame.time = time
             return frame
         }
     }
