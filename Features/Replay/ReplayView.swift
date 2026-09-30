@@ -30,10 +30,6 @@ struct ReplayView: View {
     @Query private var sessions: [DriveSession]
     @State private var player = ReplayPlayer()
 
-    /// Mock map height, measured from the top of the screen (it runs under the status bar).
-    private static let mapHeight: CGFloat = 380
-    /// The map extends under the status bar (`ReplayMap` ignores the top safe area); Dynamic Island iPhones ≈ 62 pt.
-    private static let statusBarAllowance: CGFloat = 62
     /// Mock width of the lower panel; the panel's width beside the map in landscape.
     private static let panelWidth: CGFloat = 390
 
@@ -69,7 +65,7 @@ struct ReplayView: View {
         Group {
             // Regular × regular is an iPad-sized window (artboard 14); a Max iPhone in landscape (regular × compact)
             // stays on the phone layout.
-            if horizontalSizeClass == .regular, verticalSizeClass == .regular {
+            if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
                 ReplayIPadLayout(player: player, session: session) { dismiss() }
             } else {
                 phoneContent(session)
@@ -78,30 +74,31 @@ struct ReplayView: View {
         .task(id: session.id) { await load(session) }
     }
 
-    /// Portrait is the mock: map on top, panel below. Landscape puts the panel beside the map. One `AnyLayout`
+    /// Portrait is the mock: map on top, panel below with the player controls at the bottom (like an audio player);
+    /// the map takes whatever height the panel leaves. Landscape puts the panel beside the map. One `AnyLayout`
     /// keeps the map's identity (FOLLOW / 3D, camera) across rotation.
     private func phoneContent(_ session: DriveSession) -> some View {
         let landscape = verticalSizeClass == .compact
         let layout = landscape ? AnyLayout(HStackLayout(alignment: .top, spacing: 0)) : AnyLayout(VStackLayout(spacing: 0))
         return layout {
-            // Fixed frame: measuring the safe-area inset and feeding it back into the layout looped during the push.
             ReplayMap(player: player, previewRoute: session.routePreview) { dismiss() }
-                .frame(height: landscape ? nil : Self.mapHeight - Self.statusBarAllowance)
-                .frame(maxHeight: landscape ? .infinity : nil)
+                .frame(maxHeight: .infinity)
             VStack(spacing: 14) {
                 ReplayReadout(player: player)
+                ReplaySectionStrip(player: player, includesMarkers: true)
+                if landscape { Spacer(minLength: 0) }
                 VStack(spacing: 6) {
                     SpeedSparkline(player: player)
                     ReplayScrubber(player: player)
                     ReplayClockRow(player: player)
                 }
-                ReplaySectionStrip(player: player)
                 ReplayControls(player: player)
             }
             .padding(.horizontal, 20)
             .padding(.top, 16)
+            .padding(.bottom, 8)
             .frame(width: landscape ? Self.panelWidth : nil)
-            .frame(maxHeight: .infinity, alignment: .top)
+            .frame(maxHeight: landscape ? .infinity : nil, alignment: .top)
         }
     }
 
@@ -194,74 +191,63 @@ private struct ReplayClockRow: View {
 
 // MARK: - Controls
 
-/// Marker chips (left) and step back / play / rate (right).
+/// The transport row at the bottom, laid out like an audio player: back to start · previous marker · play ·
+/// next marker · playback speed.
 private struct ReplayControls: View {
     let player: ReplayPlayer
 
     var body: some View {
-        HStack(spacing: 10) {
-            ScrollView(.horizontal) {
-                HStack(spacing: 6) {
-                    ForEach(player.timeline?.markers ?? []) { marker in
-                        MarkerChip(marker: marker) { player.seek(to: marker.elapsed) }
-                    }
-                }
+        HStack {
+            Button { player.seek(to: 0) } label: {
+                Image(systemName: "backward.end.fill")
+                    .font(.system(size: 18))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(width: 48, height: 48)
             }
-            .scrollIndicators(.hidden)
-            .scrollBounceBehavior(.basedOnSize, axes: .horizontal)
-            HStack(spacing: 10) {
-                Button { player.stepBack() } label: {
-                    Image(systemName: "backward.end.fill")
-                        .font(.system(size: 16))
-                        .foregroundStyle(Theme.textPrimary)
-                        .frame(width: 44, height: 44)
-                        .background(Theme.surface, in: Circle())
-                }
-                .accessibilityLabel(Text("Previous mark"))
-                Button { player.togglePlay() } label: {
-                    Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
-                        .font(.system(size: 20))
-                        .foregroundStyle(Theme.background)
-                        .frame(width: 56, height: 56)
-                        .background(Theme.accent, in: Circle())
-                        .contentTransition(.symbolEffect(.replace))
-                }
-                .accessibilityLabel(player.isPlaying ? Text("Pause") : Text("Play"))
-                .accessibilityIdentifier("replayPlayButton")
-                Button { player.cycleRate() } label: {
-                    Text(verbatim: player.rate.label)
-                        .font(.hudNumber(size: 13, weight: .medium))
-                        .foregroundStyle(Theme.textPrimary)
-                        .padding(.horizontal, 10)
-                        .frame(minWidth: 44, minHeight: 44)
-                        .background(Theme.surface, in: Capsule())
-                }
-                .accessibilityLabel(Text("Playback speed"))
-                .accessibilityValue(Text(verbatim: player.rate.label))
-                .accessibilityIdentifier("replayRateButton")
+            .accessibilityLabel(Text("Back to start"))
+            Spacer()
+            Button { player.stepBack() } label: {
+                Image(systemName: "backward.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 56, height: 56)
+                    .background(Theme.surface, in: Circle())
             }
-            .buttonStyle(HUDButtonStyle())
-            .disabled(!player.canPlay)
-            .opacity(player.canPlay ? 1 : 0.4)
+            .accessibilityLabel(Text("Previous marker"))
+            Spacer()
+            Button { player.togglePlay() } label: {
+                Image(systemName: player.isPlaying ? "pause.fill" : "play.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(Theme.background)
+                    .frame(width: 72, height: 72)
+                    .background(Theme.accent, in: Circle())
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .accessibilityLabel(player.isPlaying ? Text("Pause") : Text("Play"))
+            .accessibilityIdentifier("replayPlayButton")
+            Spacer()
+            Button { player.stepForward() } label: {
+                Image(systemName: "forward.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(width: 56, height: 56)
+                    .background(Theme.surface, in: Circle())
+            }
+            .accessibilityLabel(Text("Next marker"))
+            Spacer()
+            Button { player.cycleRate() } label: {
+                Text(verbatim: player.rate.label)
+                    .font(.hudNumber(size: 15, weight: .semibold))
+                    .foregroundStyle(Theme.textTertiary)
+                    .frame(minWidth: 48, minHeight: 48)
+            }
+            .accessibilityLabel(Text("Playback speed"))
+            .accessibilityValue(Text(verbatim: player.rate.label))
+            .accessibilityIdentifier("replayRateButton")
         }
-    }
-}
-
-private struct MarkerChip: View {
-    let marker: ReplayTimeline.Marker
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Text(verbatim: ReplayFormat.markerChip(kind: marker.kind, elapsed: marker.elapsed))
-                .font(.hudNumber(size: 11))
-                .foregroundStyle(marker.kind == .sync ? Theme.good : Theme.textPrimary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 5)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 6))
-                .contentShape(Rectangle().inset(by: -8))
-        }
+        .padding(.horizontal, 4)
         .buttonStyle(HUDButtonStyle())
-        .accessibilityHint(Text("Jumps to this marker"))
+        .disabled(!player.canPlay)
+        .opacity(player.canPlay ? 1 : 0.4)
     }
 }

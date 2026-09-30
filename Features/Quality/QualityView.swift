@@ -12,6 +12,7 @@ struct QualityView: View {
     @Environment(AppModel.self) private var model
     @Environment(AppLanguage.self) private var appLanguage
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.verticalSizeClass) private var verticalSizeClass
     @Query(sort: \DriveSession.startedAt, order: .reverse) private var allSessions: [DriveSession]
     @State private var selectedID: UUID?
     @State private var loaded: Loaded?
@@ -34,7 +35,7 @@ struct QualityView: View {
         let format = SessionFormat(language: appLanguage)
 
         Group {
-            if horizontalSizeClass == .regular {
+            if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
                 iPadBody(format)
             } else {
                 phoneBody(format)

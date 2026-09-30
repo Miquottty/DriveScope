@@ -39,16 +39,21 @@ enum SectionFormat {
 }
 
 /// The session's sections as chips under the timeline; tapping one plays from just before it. The chip the
-/// playhead is in is highlighted.
+/// playhead is in is highlighted. `includesMarkers` puts the MARK / SYNC chips first on the same row (iPhone).
 struct ReplaySectionStrip: View {
     let player: ReplayPlayer
+    var includesMarkers = false
 
     var body: some View {
         let sections = player.timeline?.sections ?? []
-        if !sections.isEmpty {
+        let markers = includesMarkers ? player.timeline?.markers ?? [] : []
+        if !sections.isEmpty || !markers.isEmpty {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal) {
                     HStack(spacing: 6) {
+                        ForEach(markers) { marker in
+                            MarkerChip(marker: marker) { player.seek(to: marker.elapsed) }
+                        }
                         ForEach(sections) { section in
                             chip(section, active: section.start <= player.time && player.time <= section.end)
                                 .id(section.id)
@@ -85,5 +90,24 @@ struct ReplaySectionStrip: View {
         .accessibilityLabel(SectionFormat.label(section))
         .accessibilityValue(Text(verbatim: SectionFormat.chip(section)))
         .accessibilityHint(Text("Jumps to this section"))
+    }
+}
+
+struct MarkerChip: View {
+    let marker: ReplayTimeline.Marker
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Text(verbatim: ReplayFormat.markerChip(kind: marker.kind, elapsed: marker.elapsed))
+                .font(.hudNumber(size: 11))
+                .foregroundStyle(marker.kind == .sync ? Theme.good : Theme.textPrimary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 5)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 6))
+                .contentShape(Rectangle().inset(by: -8))
+        }
+        .buttonStyle(HUDButtonStyle())
+        .accessibilityHint(Text("Jumps to this marker"))
     }
 }

@@ -11,15 +11,19 @@
 |---|---|---|
 | `canvas.json` | キャンバスのレイアウト（配置・タイトル・注記） | — |
 | `Main.dc.html` | 1 · Home / Ready | 390×844 |
+| `MainLandscape.dc.html` | 1b · Home / Ready · iPhone 横（Record ダッシュボード。Pro Max 横も iPad の分割表示にしない） | 844×390 |
+| `MainLandscapeMax.dc.html` | 1c · Home / Ready · iPhone 横 · Pro Max | 956×440 |
 | `Recording.dc.html` | 2 · Recording HUD（縦。速度・REC 経過時間・G をマウント越しに読める大きさに。2026-09-30 改訂） | 390×844 |
 | `RecordingPortraitV2Max.dc.html` | 2b · Recording HUD · Pro Max（余った高さは G メーターへ） | 440×956 |
 | `RecordingPortraitV2Start.dc.html` | 2c · Recording HUD · 開始直後（測位前・GPS EST.） | 390×844 |
 | `Sessions.dc.html` | 3 · Sessions | 390×844 |
 | `Detail.dc.html` | 4 · Session Detail | 390×844 |
-| `Replay.dc.html` | 5 · Timeline Replay | 390×844 |
+| `Replay.dc.html` | 5 · Timeline Replay（地図は伸縮、操作ボタンは下にオーディオプレイヤー風。2026-09-30 改訂） | 390×844 |
+| `ReplayV2Max.dc.html` | 5b · Timeline Replay · Pro Max | 440×956 |
 | `LiveActivity.dc.html` | 6 · Lock Screen Live Activity | 390×200 |
 | `Recovery.dc.html` | 7 · Crash Recovery Sheet | 390×200 |
-| `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape | 844×390 |
+| `RecordingLandscape.dc.html` | 8 · Recording HUD · Landscape（速度は MARK / SYNC の上、G は STOP の上。2026-09-30 改訂） | 844×390 |
+| `RecordingLandscapeV2Max.dc.html` | 8b · Recording HUD · Landscape · Pro Max | 956×440 |
 | `StandBy.dc.html` | 9 · StandBy | 844×390 |
 | `DynamicIsland.dc.html` | 10 · Dynamic Island / CarPlay small | 844×260 |
 | `iPadHome.dc.html` | 11 · iPad · Record ダッシュボード（サイドバー + START + センサー） | 1210×834 |

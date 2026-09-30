@@ -37,7 +37,8 @@ iPhone drive-telemetry logger (GPS + Core Motion + barometer → replay / export
   `#if os(iOS)` and keep protocol + Fake / Simulated implementations platform-neutral.
 - Raw sensor data is stored untouched in device coordinates (PLAN §18). Smoothing / calibration only in derived data.
 - UI: dark single theme; use `Theme` colors, never literal colors. Numbers use `.monospacedDigit()` (SF Mono look).
-  HUD labels (ALT / COURSE / DIST / LAT G) stay English in both languages; everything else is localized.
+  HUD labels (ALT / COURSE / DIST / LAT G) and the START / MARK / SYNC / STOP button titles stay English in both
+  languages; everything else (including their accessibility labels) is localized.
 - Strings: String Catalog (`Localizable.xcstrings`), development language `en`, plus `ja`. Every user-facing string
   added must have both en and ja entries. Non-View code resolves strings via `AppLanguage` (see PLAN §13).
   Put `.relocalizing(appLanguage)` on every `NavigationStack` (UIKit nav titles otherwise keep the old language).

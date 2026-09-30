@@ -13,16 +13,9 @@ struct TelemetryValue: View {
         var labelWeight = Font.Weight.regular
         var unitColor = Theme.textSecondary
 
-        /// Portrait metric row (ALT / COURSE / DIST).
-        static let metric = Style(valueSize: 26, unitSize: 13)
-        /// Landscape right column.
-        static let metricLarge = Style(valueSize: 34, unitSize: 14, unitGap: 4, spacing: 0)
-        /// G readouts next to the meter.
-        static let gForce = Style(valueSize: 28, unitSize: 12, spacing: 0)
-        static let gForceLarge = Style(valueSize: 30, unitSize: 12, spacing: 0)
-        /// Portrait: LATERAL / LONG side by side above the meter.
+        /// Phone HUD G readouts (portrait: side by side above the meter; landscape: stacked beside it).
         static let gForceStacked = Style(valueSize: 40, unitSize: 16, unitGap: 4, labelSize: 12, spacing: 2)
-        /// Portrait metric row, label left of the value (`InlineTelemetryValue`).
+        /// Phone HUD metric row, label left of the value (`InlineTelemetryValue`).
         static let metricInline = Style(valueSize: 24, unitSize: 13, labelSize: 11, spacing: 6)
 
         // iPad (mock artboards 12 / 16): semibold 15 pt labels, units in the lighter secondary color.
@@ -64,7 +57,7 @@ struct TelemetryValue: View {
     }
 }
 
-/// A `TelemetryValue` on one line: the label sits left of the value on its baseline (portrait ALT / COURSE / DIST row).
+/// A `TelemetryValue` on one line: the label sits left of the value on its baseline (the phone HUD's ALT / COURSE / DIST row).
 struct InlineTelemetryValue: View {
     var label: String
     var value: String
