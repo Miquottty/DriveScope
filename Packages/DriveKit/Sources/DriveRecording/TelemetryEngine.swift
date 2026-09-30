@@ -141,6 +141,12 @@ public actor TelemetryEngine {
 
     public var elapsed: TimeInterval { suite.clock.uptime - manifest.clock.startUptime }
 
+    /// Session elapsed at a `ProcessInfo.systemUptime` instant (e.g. a scheduled beep). Taken as an offset from
+    /// now so a scaled simulation clock stays consistent; with the system clock it is exact.
+    public func elapsed(systemUptime: TimeInterval) -> TimeInterval {
+        elapsed + (systemUptime - ProcessInfo.processInfo.systemUptime)
+    }
+
     public func currentStatistics() -> SessionStatistics { statistics }
 
     // MARK: - Streams

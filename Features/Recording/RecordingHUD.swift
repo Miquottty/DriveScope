@@ -103,7 +103,7 @@ struct RecordingHUD: View {
                 syncButton(height: 64)
             }
             .padding(.top, 12)
-            Text("MARK = bookmark this moment · SYNC = clap / flash for camera sync")
+            Text("MARK = bookmark this moment · SYNC = beep for camera sync")
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)

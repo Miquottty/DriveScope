@@ -144,6 +144,10 @@ Marker / Event  : elapsed + Date の両方
 - `startedAt` は Location と Motion をつなぐ基準なので、manifest には小数秒（µs）まで書く。秒で切り捨てると GPS がモーションより最大 1 秒遅れる（初回実車で 0.8 秒。V1.1.1 で修正、古い manifest は SwiftData の値で `ensureSections` 時に修復）。
 - 実測: Core Location の速度はモーションより約 0.6 秒遅れる（初回実車で dv/dt と前後加速度の相関が最大になるずれ）。現状は補正しない。
 - 動画同期は SYNC マーカーの `elapsed` を t=0 とするオフセット方式（VlogTrack 参照）。
+- SYNC はビープを鳴らす（V1.2、フラッシュなし）。パターン `chirp3-v1`: 2.5 kHz・40 ms のパルス 3 発、間隔 120 ms → 200 ms（不等間隔なので 1 発ずれで一致しない）、5 ms の立ち上がり / 立ち下がり。カメラと DJI Mic の音声からこのパターンを検出すれば、サンプル単位で合わせられる。
+  - SYNC マーカーの `elapsed` は **1 発目がスピーカーから出た時刻**（タップ時刻ではない）。AVAudioEngine でホスト時刻を 0.1 s 先（エンジン停止中からは 0.3 s 先）に予約し、`AVAudioSession.outputLatency` を足す。タップ時刻は marker イベントの value（unix 秒）。
+  - 同じ elapsed で `syncBeep` イベントを記録（value = 足した出力遅延 s、aux = 出力先 0 スピーカー / 1 Bluetooth・車載・AirPlay / 2 その他）。Bluetooth や CarPlay では実際の遅延が報告値とずれることがあるので、aux ≠ 0 の SYNC は ±0.2 s 程度を見込む。
+  - カテゴリは `.playback` + `.mixWithOthers`（消音スイッチでも鳴り、音楽は止めない）。音量はシステム音量に従う。HUD 表示中だけエンジンを起動し、バックグラウンドでは止める（`audio` バックグラウンドモードは使わない）。音が出せないときは従来どおりタップ時刻で記録し、`syncBeep` は残さない。
 
 ---
 
@@ -366,7 +370,7 @@ STOP: removePendingNotificationRequests
 サスペンド・クラッシュ・強制終了のどれでも、最終延期から 180 秒後に OS が単独で通知。通知タップでアプリ復帰 → `state == .recording` のセッションを再開・同じファイルに追記。
 
 ### 9.4 events ストリーム
-`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed` を elapsed 付きで記録。Quality 画面と JSON Export に出す。
+`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep` を elapsed 付きで記録。Quality 画面と JSON Export に出す。
 
 ### 9.5 堅牢モード（V1.1）
 - 設定 → 記録 →「堅牢モード」（既定オフ）。オンにすると位置情報の「常に」許可を求める（`NSLocationAlwaysAndWhenInUseUsageDescription`）。未許可なら設定アプリへのリンクを出す。
