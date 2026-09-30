@@ -31,9 +31,18 @@ public enum GPXExporter {
         // A marker's position needs fixes to interpolate between; without any, a waypoint would be a lie at 0,0.
         if !reader.locations.isEmpty {
             let interpolator = TelemetryInterpolator(reader: reader)
-            for marker in metadata.markers {
+            // SYNCs are numbered in time order ("SYNC 1", "SYNC 2", …) so a video editor can tell which clip each
+            // one starts when the camera was restarted during the drive.
+            var syncCount = 0
+            for marker in metadata.markers.sorted(by: { $0.elapsed < $1.elapsed }) {
                 let frame = interpolator.frame(at: marker.elapsed)
-                var name = marker.kind == .sync ? "SYNC" : "MARK"
+                var name: String
+                if marker.kind == .sync {
+                    syncCount += 1
+                    name = "SYNC \(syncCount)"
+                } else {
+                    name = "MARK"
+                }
                 if let label = marker.label, !label.isEmpty { name += ": " + label }
                 var wpt = "<wpt lat=\""
                 wpt.appendFixed(frame.latitude, decimals: 7)

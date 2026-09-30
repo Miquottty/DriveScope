@@ -432,7 +432,7 @@ STOP: removePendingNotificationRequests
 - Export
   - **JSON** = Master（lossless、session / places / markers / **sections**（V1.1、派生） / events / location / motion / altitude）
   - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）
-  - **GPX** = 互換（`<trkpt>` + extensions: speed / course / hAcc）
+  - **GPX** = 互換（`<trkpt>` + extensions: speed / course / hAcc）。マーカーは `<wpt>`（実時刻付き）で、SYNC は時刻順に「SYNC 1」「SYNC 2」…と番号を付ける（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）
   - `ShareLink` / `UIActivityViewController`
 
 ---

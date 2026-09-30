@@ -133,7 +133,9 @@ struct ExporterTests {
         let fx = try await Fixture(preset: .logger)
         defer { try? FileManager.default.removeItem(at: fx.root) }
         let title = #"R&D <"Akagi"> 'run'"#
+        // Out of order on purpose: SYNCs are numbered by time, not by list position.
         let markers = [
+            ExportMarker(kind: .sync, elapsed: 60, date: fx.reader.clock.date(elapsed: 60)),
             ExportMarker(kind: .sync, elapsed: 10, date: fx.reader.clock.date(elapsed: 10)),
             ExportMarker(kind: .mark, elapsed: 40, date: fx.reader.clock.date(elapsed: 40), label: "a<b&c"),
         ]
@@ -164,8 +166,8 @@ struct ExporterTests {
         #expect(parser.parse(), "\(String(describing: parser.parserError))")
         let valid = fx.reader.locations.filter { $0.horizontalAccuracy > 0 }.count
         #expect(counter.trkpt == valid && counter.hAcc == valid && valid > 0)
-        #expect(counter.wpt == 2)
-        #expect(counter.names == [title, "SYNC", "MARK: a<b&c", title])
+        #expect(counter.wpt == 3)
+        #expect(counter.names == [title, "SYNC 1", "MARK: a<b&c", "SYNC 2", title])
         print("EXPORT SIZES logger 90s: gpx=\(fx.size(url))")
     }
 }
