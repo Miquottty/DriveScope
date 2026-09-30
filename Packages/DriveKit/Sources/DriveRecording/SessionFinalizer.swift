@@ -26,11 +26,20 @@ public struct MapKitGeocoder: ReverseGeocoder {
         return PlaceMeta(
             name: name,
             locality: address?.cityName,
-            administrativeArea: address?.regionName,
+            administrativeArea: Self.region(context: address?.cityWithContext(.short), city: address?.cityName),
             fullAddress: fullAddress,
             mapItemIdentifier: item?.identifier?.rawValue,
             latitude: latitude, longitude: longitude, role: role
         )
+    }
+
+    /// The prefecture / state: "群馬県太田市", "Ota, Gunma" or "Cupertino, CA" without the city. MapKit has no field
+    /// for it — `regionName` is the country.
+    static func region(context: String?, city: String?) -> String? {
+        guard var rest = context, let city, let range = rest.range(of: city) else { return nil }
+        rest.removeSubrange(range)
+        let region = rest.trimmingCharacters(in: CharacterSet(charactersIn: ",、").union(.whitespaces))
+        return region.isEmpty ? nil : region
     }
 }
 

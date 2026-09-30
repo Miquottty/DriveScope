@@ -98,22 +98,23 @@ struct ExporterTests {
         print("EXPORT SIZES logger 90s: binary=\(binary) json=\(fx.size(url)) (\(Double(fx.size(url)) / Double(binary))x)")
     }
 
-    /// The Vlog CSV lines up with video: t = 0 at SYNC, POSIX numbers whatever the locale.
+    /// The Vlog CSV lines up with video: a row at exactly t = 0 (SYNC between two frames of the session clock),
+    /// POSIX numbers whatever the locale.
     @Test func csvIsAlignedToSyncAndLocaleIndependent() async throws {
         let fx = try await Fixture(preset: .logger)
         defer { try? FileManager.default.removeItem(at: fx.root) }
-        let sync = ExportMarker(kind: .sync, elapsed: 10, date: fx.reader.clock.date(elapsed: 10))
+        let sync = ExportMarker(kind: .sync, elapsed: 10.01, date: fx.reader.clock.date(elapsed: 10.01))
         let meta = fx.metadata(markers: [ExportMarker(kind: .mark, elapsed: 5, date: fx.reader.clock.date(elapsed: 5)), sync])
         let url = fx.output("vlog.csv")
         try CSVExporter.export(reader: fx.reader, metadata: meta, rate: .fps30, to: url)
 
         let lines = try String(contentsOf: url, encoding: .utf8).split(separator: "\n").map(String.init)
         #expect(lines[0] == "time_s,elapsed_s,utc,latitude,longitude,speed_kmh,altitude_m,course_deg,lateral_g,longitudinal_g,vertical_g,roll_deg,pitch_deg,gps_accuracy_m,has_fix")
-        #expect(lines.count - 1 == VlogTrack(reader: fx.reader).frameCount)
+        #expect(lines.count - 1 == VlogTrack(reader: fx.reader, syncElapsed: 10.01).frameCount)
         let zero = try #require(lines.dropFirst().first { $0.hasPrefix("0.000,") })
-        #expect(zero.split(separator: ",")[1] == "10.000")
-        #expect(zero.split(separator: ",")[2] == "2026-09-21T14:13:30.000Z")
-        #expect(lines[1].hasPrefix("-10.000,0.000,"))
+        #expect(zero.split(separator: ",")[1] == "10.010")
+        #expect(zero.split(separator: ",")[2] == "2026-09-21T14:13:30.010Z")
+        #expect(lines[1].hasPrefix("-10.000,0.010,"))
         // '.' decimals only: a ',' decimal separator would change the field count.
         for line in lines.dropFirst() {
             let fields = line.split(separator: ",", omittingEmptySubsequences: false)
@@ -123,7 +124,7 @@ struct ExporterTests {
 
         try CSVExporter.export(reader: fx.reader, metadata: meta, rate: .hz10, to: fx.output("vlog10.csv"))
         let rows10 = try String(contentsOf: fx.output("vlog10.csv"), encoding: .utf8).split(separator: "\n").count - 1
-        #expect(rows10 == VlogTrack(reader: fx.reader, fps: 10).frameCount)
+        #expect(rows10 == VlogTrack(reader: fx.reader, fps: 10, syncElapsed: 10.01).frameCount)
         print("EXPORT SIZES logger 90s: csv30=\(fx.size(url)) csv10=\(fx.size(fx.output("vlog10.csv")))")
     }
 

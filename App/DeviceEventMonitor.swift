@@ -10,6 +10,8 @@ import UIKit
 final class DeviceEventMonitor: RecordingObserver {
     private let recorder: RecordingController
     private var tokens: [any NSObjectProtocol] = []
+    /// Last recorded screen state. iOS can post the protected-data notification twice for one unlock.
+    private var screenOn: Bool?
 
     init(recorder: RecordingController) {
         self.recorder = recorder
@@ -36,11 +38,11 @@ final class DeviceEventMonitor: RecordingObserver {
             recorder.flushBeforeTermination()
         }
         // With a passcode, protected data goes away when the screen locks — the best available screen-off signal.
-        observe(UIApplication.protectedDataWillBecomeUnavailableNotification) { [recorder] in
-            Task { await recorder.record(.screenOff) }
+        observe(UIApplication.protectedDataWillBecomeUnavailableNotification) { [weak self] in
+            self?.recordScreen(on: false)
         }
-        observe(UIApplication.protectedDataDidBecomeAvailableNotification) { [recorder] in
-            Task { await recorder.record(.screenOn) }
+        observe(UIApplication.protectedDataDidBecomeAvailableNotification) { [weak self] in
+            self?.recordScreen(on: true)
         }
         observe(ProcessInfo.thermalStateDidChangeNotification) { [recorder] in
             let state = ProcessInfo.processInfo.thermalState.rawValue
@@ -57,10 +59,17 @@ final class DeviceEventMonitor: RecordingObserver {
         }
     }
 
+    private func recordScreen(on: Bool) {
+        guard screenOn != on else { return }
+        screenOn = on
+        Task { [recorder] in await recorder.record(on ? .screenOn : .screenOff) }
+    }
+
     func recordingWatchdog(_ action: RecordingWatchdog.Action, session: DriveSession) {}
 
     func recordingDidStop(_ session: DriveSession) {
         for token in tokens { NotificationCenter.default.removeObserver(token) }
         tokens.removeAll()
+        screenOn = nil
     }
 }
