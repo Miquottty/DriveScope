@@ -66,4 +66,54 @@ struct SessionFinalizerTests {
         let across = PlaceMeta(locality: "前橋市", latitude: 36.41, longitude: 139.08, role: .end)
         #expect(SessionTitle.make(start: session.startPlace, end: across, loopWord: "Loop") == "前橋市")
     }
+
+    /// First real drive, after STOP: the live calibration came from the phone still in the hand, the phone spent a
+    /// while out of the mount, and the manifest had lost the start's fraction of a second and had no end.
+    /// Reprocessing solves the mount from the whole drive, ignores G out of the mount, and repairs the manifest.
+    @Test func reprocessingSolvesMountAndRepairsLegacyManifest() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeReprocess-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        // Landscape in the holder (device −x up); in the hand: portrait, tilted toward the face.
+        let truth = MountCalibration(rotation: [0, 0, -1, 0, -1, 0, -1, 0, 0], method: .manual, confidence: 1, calibratedAtElapsed: 0)
+        let hand = MountCalibration(rotation: [1, 0, 0, 0, 0.6, -0.8, 0, 0.8, 0.6], method: .auto, confidence: 0.51, calibratedAtElapsed: 2)
+        let offMount = 300.0..<330.0
+        let startedAt = Date(timeIntervalSince1970: 1_790_728_557.8)
+        let built = try await ScriptedSessionBuilder.write(
+            script: .akagi, preset: .logger, duration: 600, root: root, mount: truth, startedAt: startedAt,
+            calibrated: false, mountAt: { t in t < 15 || offMount.contains(t) ? hand : truth }
+        )
+        let files = SessionFiles(root: root, sessionID: built.manifest.sessionID)
+        var legacy = try files.readManifest()
+        legacy.clock.startedAt = Date(timeIntervalSince1970: 1_790_728_557)
+        legacy.endedAt = nil
+        legacy.calibration = hand
+        try files.writeManifest(legacy)
+
+        let store = SessionStore(context: .init(try SessionStore.makeContainer(inMemory: true)))
+        let session = try store.create(manifest: built.manifest)
+        session.state = .stopped
+        session.endedAt = startedAt.addingTimeInterval(600)
+        session.calibration = hand
+        let finalizer = SessionFinalizer(store: store, filesRoot: root, geocoder: FakeGeocoder(), locale: { Locale(identifier: "ja") }, loopWord: { "ループ" })
+        await finalizer.ensureSections(session)
+
+        let repaired = try files.readManifest()
+        #expect(abs(repaired.clock.startedAt.timeIntervalSince(startedAt)) < 0.001)
+        #expect(repaired.endedAt != nil)
+        let solved = try #require(session.calibration)
+        #expect(solved.method == .auto)
+        for row in 0..<3 {
+            let dot = (0..<3).reduce(0.0) { $0 + solved.rotation[row * 3 + $1] * truth.rotation[row * 3 + $1] }
+            #expect(dot > 0.98, "axis \(row)")
+        }
+        #expect(repaired.calibration == solved)
+
+        let interpolator = TelemetryInterpolator(reader: try TelemetryReader(files: files), calibration: solved)
+        #expect(interpolator.frame(at: 100).hasMotionG)
+        #expect(interpolator.frame(at: 450).hasMotionG)
+        #expect(!interpolator.frame(at: 315).hasMotionG)
+        #expect(!interpolator.frame(at: 5).hasMotionG)
+        if let peak = session.peakLateralElapsed { #expect(!offMount.contains(peak)) }
+        #expect(session.sectionsVersion == SectionDetector.version)
+    }
 }

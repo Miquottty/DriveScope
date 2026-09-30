@@ -141,6 +141,8 @@ Altitude sample : 同上（CMLogItem）
 Marker / Event  : elapsed + Date の両方
 ```
 - 全ストリームを `elapsed` に正規化して合成する。絶対時刻は `startedAt + elapsed` で復元。
+- `startedAt` は Location と Motion をつなぐ基準なので、manifest には小数秒（µs）まで書く。秒で切り捨てると GPS がモーションより最大 1 秒遅れる（初回実車で 0.8 秒。V1.1.1 で修正、古い manifest は SwiftData の値で `ensureSections` 時に修復）。
+- 実測: Core Location の速度はモーションより約 0.6 秒遅れる（初回実車で dv/dt と前後加速度の相関が最大になるずれ）。現状は補正しない。
 - 動画同期は SYNC マーカーの `elapsed` を t=0 とするオフセット方式（VlogTrack 参照）。
 
 ---
@@ -299,11 +301,19 @@ AltimeterSource─┘         │
 ---
 
 ## 7. Mount Calibration
-1. START 直後: 重力ベクトルから pitch / roll を決定（端末の「下」）。
-2. 最初の発進（GPS speed が 0 → 15 km/h 超、かつ userAcceleration の水平成分が 0.15 G 超）で加速方向を「前」と決定。
-3. yaw の 4 象限あいまい性は GPS course の変化と横 G の符号で検証。
-4. 結果を `MountCalibration` としてセッションに保存。Recording 画面に「90° 回転」の手動補正を用意。
-5. ホルダー内で端末が動いた場合は再キャリブレーション（Vlog 側では Marker として残す）。
+**記録中（`MountCalibrator`、HUD 用）**
+1. 「上」: 重力が 3 秒間安定（移動平均から 3° 以内、衝撃 0.6 G 未満）したときの平均重力の逆向き。
+2. 「前」: 最初の発進（GPS speed が 0 → 15 km/h 超、かつ userAcceleration の水平成分が 0.15 G 超）で加速方向を仮決め。
+3. GPS 照合: GPS 区間ごとの水平加速度と GPS の前後（dv/dt）・横（v × ヨーレート）加速度から、「上」まわりの回転角を 2 次元 Procrustes で推定（Σ GPS 加速度² ≥ 0.3 g² で採用）。発進なしでも決まり、90° / 180° の誤りも直る。confidence = 一致度（0…1）。
+4. 取り付け状態の変化: 重力が「上」から 15°（Eco は 25°）以上離れた状態が 2 秒続いたら破棄して 1 から（events に `mountChanged`）。新しい「上」が直前のマウント（最大 4 件）と 5° 以内なら同じマウントとして即復元（ホルダーごと揺れた・外して戻した）。
+5. Recording 画面に「90° 回転」の手動補正を用意（次の取り付け状態の変化まで自動推定より優先）。
+
+**STOP 後（`MountSolver`、保存・Replay・Export 用）** — 記録中の推定は過去しか見られず、START 時に手に持っていた数秒やホルダー外の区間に引きずられる（2026-09-30 の初回実車で全区間の横 G・ロール・ピッチが誤っていた）。
+1. 1 秒ごとの重力を集計し、±10° 以内に最も多くの秒が集まる向きをマウントとし、その平均重力から「上」。
+2. マウントの向きの区間だけで GPS 照合（上の 3.）を行い「前」を決める。
+3. 補間（`TelemetryInterpolator`）は前後 ±1.5 秒ずっと「上」から 15° 以内のときだけモーション由来の G・ロール・ピッチを使う（`hasMotionG`）。外れている間は横 G = GPS 推定、他は 0、速度のモーション補助もしない。
+4. `SessionFinalizer.ensureSections` が区間解析と一緒に実行し（`SectionDetector.version` 2）、セッションと manifest の calibration を置き換える。手動補正は solver の confidence < 0.5 なら残す。
+5. Peak G = コーナー区間内の最大横 G（モーション由来を優先）。ホルダーの調整や手で持った瞬間を拾わない。地名の peakG 地点もこの時刻。
 
 ---
 
@@ -413,12 +423,12 @@ STOP: removePendingNotificationRequests
 ## 12. Replay / 補間 / Export
 - `TelemetryInterpolator`: Location は線形（course は circular）、Motion は最近傍または線形。共通 API。
 - **速度のモーション補助（V1.1）**: fix 間の速度は、キャリブレーション済みの前後加速度を fix a から積分し、fix b での差分を区間内で線形に配分して求める（`v = max(0, va + ∫a + e·(t−ta)/T)`）。両端の fix で GPS 速度と一致し、区間内の一定バイアスは消える。キャリブレーションなし・confidence < 0.5・モーションなし（GPS Only）・fix 間隔 > 3 s（トンネル）・モーション欠落 > 0.25 s・|e|/T > 2 m/s² のときは線形補間。停車（両端 < 0.3 m/s）は 0。Eco は区間ごとの重力推定（前後 2 s の平均、|g| が 1 ± 0.03 のときのみ）。Replay・CSV・GPX に適用（`Options.speedFusion`）。
-- `ReplayTelemetryFrame { time, lat, lon, speed, altitude, course, lateralG, longitudinalG, verticalG, roll, pitch, yaw, gpsAccuracy }`。
+- `ReplayTelemetryFrame { time, lat, lon, speed, altitude, course, lateralG, longitudinalG, verticalG, roll, pitch, yaw, gpsAccuracy, hasFix, hasMotionG }`。`hasMotionG` = false はキャリブレーションなし、または端末がマウント外（§7）。速度のモーション補助も両端の fix がマウント内のときだけ。
 - **区間解析（V1.1）**: `SectionDetector`（DriveReplay、純関数）が 5 Hz の解析フレームから `DriveSection`（corner / climb / descent / stop）を作る。
   - corner: |横 G| ≥ 0.15 で開始、同符号で ≥ 0.08 の間継続（ヒステリシス）。1.5 s 以上・ピーク時 15 km/h 以上・方位変化 15° 以上。同じ向きで 1 s 未満の隙間は結合。左右・ピーク G・進入 / 脱出 / 最低速度。
   - stop: fix の速度 < 1 km/h が 10 s 以上（fix 間隔 > 5 s で途切れる → トンネルは停止にならない）。
   - climb / descent: 走行距離 50 m ごとの高度（3 ビン平均）で、直近 200 m の勾配が ±3% 以上の連続区間。500 m 以上かつ |Δ高度| 15 m 以上。
-  - STOP / 復旧時の `SessionFinalizer.ensureSections` で計算して `DriveSession.sections` に保存。古いセッションは詳細・Replay・書き出し時に遅延計算。しきい値を変えたら `SectionDetector.version` を上げる。
+  - STOP / 復旧時の `SessionFinalizer.ensureSections` で計算して `DriveSession.sections` に保存（同時に `MountSolver` によるキャリブレーションの置き換え、Peak G とその時刻、manifest の開始時刻・終了時刻の修復 — §7）。古いセッションは詳細・Replay・書き出し時に遅延計算。しきい値を変えたら `SectionDetector.version` を上げる（2 = V1.1.1）。
 - Export
   - **JSON** = Master（lossless、session / places / markers / **sections**（V1.1、派生） / events / location / motion / altitude）
   - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）

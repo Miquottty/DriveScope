@@ -25,6 +25,9 @@ public struct ReplayTelemetryFrame: Sendable, Equatable {
     public var gpsAccuracy: Double
     /// False inside a GPS gap (> 5 s between fixes): position is interpolated across it.
     public var hasFix: Bool
+    /// G, roll and pitch come from calibrated motion with the phone in its mount. False: lateral g is the GPS
+    /// estimate and the rest is 0 (no calibration, or the phone was out of the mount).
+    public var hasMotionG = false
 }
 
 /// Synthesizes frames at any time from the independent streams (PLAN §5, §12):
@@ -49,6 +52,9 @@ public struct TelemetryInterpolator: Sendable {
     }
 
     public static let gapThreshold: TimeInterval = 5
+    /// Gravity farther than this (degrees) from the calibrated up: the phone is out of its mount (in a hand, on a
+    /// seat), so its acceleration says nothing about the car. Road grade and body roll stay well below.
+    public static let mountTolerance = 15.0
     /// Longest fix interval bridged by integrating acceleration; longer gaps (tunnel) stay linear.
     public static let fusionMaxSpan: TimeInterval = 3
 
@@ -160,6 +166,9 @@ public struct TelemetryInterpolator: Sendable {
         // Parked: integrating noise would only make a stationary car creep.
         if max(va, vb) < 0.3 { return 0 }
         let start = reader.clock.startUptime
+        guard isMounted(atUptime: start + ta, calibration: calibration), isMounted(atUptime: start + tb, calibration: calibration) else {
+            return nil
+        }
         let forward = Array(calibration.rotation.prefix(3))
         guard let integral = longitudinalIntegral(from: start + ta, to: start + tb, forward: forward),
               let partial = longitudinalIntegral(from: start + ta, to: start + t, forward: forward) else { return nil }
@@ -235,12 +244,42 @@ public struct TelemetryInterpolator: Sendable {
         func rotate(_ v: SIMD3<Double>) -> SIMD3<Double> {
             SIMD3(r[0] * v.x + r[1] * v.y + r[2] * v.z, r[3] * v.x + r[4] * v.y + r[5] * v.z, r[6] * v.x + r[7] * v.y + r[8] * v.z)
         }
+        guard isMounted(atUptime: uptime, calibration: calibration) else { return }
         let a = rotate(user), g = rotate(gravity)
+        frame.hasMotionG = true
         frame.longitudinalG = a.x
         frame.lateralG = a.y
         frame.verticalG = a.z
         frame.pitch = atan2(-g.x, -g.z) * 180 / .pi
         frame.roll = atan2(-g.y, -g.z) * 180 / .pi
+    }
+
+    /// In the mount for the whole ±1.5 s around `uptime`: a phone being handled passes through the mount's
+    /// orientation for a moment, and its acceleration then is the hand's.
+    private func isMounted(atUptime uptime: Double, calibration: MountCalibration) -> Bool {
+        let r = calibration.rotation
+        let limit = cos(Self.mountTolerance * .pi / 180)
+        func mounted(_ g: SIMD3<Double>) -> Bool {
+            let z = r[6] * g.x + r[7] * g.y + r[8] * g.z
+            let length = (g * g).sum().squareRoot()
+            return length > 0 && -z / length >= limit
+        }
+        let samples = reader.motion
+        guard !samples.isEmpty else {
+            // Eco: the gravity estimate is already a 4 s mean.
+            return accelerometer(at: uptime).map { mounted($0.1) } ?? false
+        }
+        // Gravity is smooth: 4 checks a second are plenty (and this runs for every frame).
+        let step = max(1, Int(reader.manifest.preset.motion.hz / 4))
+        var i = samples.partitionIndex(where: { $0.timestamp }, isAtLeast: uptime - 1.5)
+        var checked = 0
+        while i < samples.count, samples[i].timestamp <= uptime + 1.5 {
+            let g = samples[i].gravity
+            guard mounted(SIMD3(Double(g.x), Double(g.y), Double(g.z))) else { return false }
+            checked += 1
+            i += step
+        }
+        return checked > 0
     }
 
     /// Mean user acceleration and gravity (device frame) over the window; nil in a motion gap.

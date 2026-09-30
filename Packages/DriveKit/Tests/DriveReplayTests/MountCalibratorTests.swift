@@ -70,4 +70,56 @@ struct MountCalibratorTests {
         #expect(lateral.sign == expected.sign)
         #expect(abs(lateral - expected) < 0.05)
     }
+
+    /// First real drive: the phone was still in the hand at START, then mounted, knocked in the holder, and later
+    /// taken out and put back. "Up" from the first second poisoned the whole drive. Now a mount change drops the
+    /// calibration, the mount is found again from the drive, and returning to the same mount restores it at once.
+    @Test func refindsMountAfterHandAtStartAndRestoresItAfterKnock() throws {
+        let truth = Self.awkwardMount
+        // Held portrait, tilted toward the face: gravity mostly along −y/−z, nothing like the mount.
+        let hand = MountCalibration(rotation: [1, 0, 0, 0, 0.6, -0.8, 0, 0.8, 0.6], method: .manual, confidence: 1, calibratedAtElapsed: 0)
+        func mount(at t: Double) -> MountCalibration { t < 20 || (250..<254).contains(t) ? hand : truth }
+        let script = DriveScript.akagi
+        var calibrator = MountCalibrator()
+        var rng = SplitMix64(seed: 9)
+        var yaw = 0.0, t = 0.0, nextFix = 0.0
+        let hz = 50.0
+        var updates: [(t: Double, update: MountCalibrator.Update)] = []
+        while t < 400 {
+            let s = script.state(at: t)
+            yaw += s.yawRate / hz
+            let dyn = MotionSynthesizer.Dynamics(longitudinal: s.longitudinalAcceleration, lateral: s.lateralAcceleration, yawRate: s.yawRate, yaw: yaw)
+            if case .deviceMotion(let m) = MotionSynthesizer(mount: mount(at: t), noise: 0.015).event(mode: .deviceMotion(hz: hz), timestamp: t, dynamics: dyn, rng: &rng),
+               let update = calibrator.add(m, elapsed: t) {
+                updates.append((t, update))
+            }
+            if t >= nextFix {
+                nextFix += 1
+                let fix = LocationSample(
+                    timestamp: t, latitude: s.latitude, longitude: s.longitude, altitude: s.altitude, receivedUptime: t,
+                    speed: Float(s.speed), course: s.speed > 0.5 ? Float(s.course) : -1, horizontalAccuracy: 5,
+                    verticalAccuracy: 5, speedAccuracy: 0.3, courseAccuracy: 3
+                )
+                if let update = calibrator.add(fix, elapsed: t) { updates.append((t, update)) }
+            }
+            t += 1 / hz
+        }
+
+        func matches(_ c: MountCalibration) -> Bool {
+            (0..<3).allSatisfy { row in
+                simd_dot(SIMD3(c.rotation[row * 3], c.rotation[row * 3 + 1], c.rotation[row * 3 + 2]),
+                         SIMD3(truth.rotation[row * 3], truth.rotation[row * 3 + 1], truth.rotation[row * 3 + 2])) > 0.98
+            }
+        }
+        // Found in the mount before the knock, dropped by it, and back within seconds of the phone settling.
+        let beforeKnock = updates.last { $0.t < 250 }
+        guard case .calibrated(let found)? = beforeKnock?.update else { Issue.record("no calibration before the knock"); return }
+        #expect(matches(found))
+        #expect(updates.contains { $0.update == .lost && (250..<254).contains($0.t) })
+        let restored = updates.first { $0.t > 254 }
+        guard case .calibrated(let back)? = restored?.update else { Issue.record("not restored"); return }
+        #expect(restored!.t < 254 + 5)
+        #expect(back == found)
+        #expect(try matches(#require(calibrator.calibration)))
+    }
 }

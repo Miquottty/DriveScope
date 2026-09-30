@@ -6,7 +6,8 @@ import Foundation
 /// parameters always give the same sections, so stored results are recomputed only when `version` changes.
 public enum SectionDetector {
     /// Bump when thresholds or logic change: stored sections older than this are recomputed lazily.
-    public static let version = 1
+    /// 2: mount solved from the whole recording (`MountSolver`), G ignored while the phone is out of the mount.
+    public static let version = 2
 
     public struct Parameters: Sendable {
         /// Frame rate of the analysis pass.
@@ -46,25 +47,37 @@ public enum SectionDetector {
         public var course: Double
         public var distance: Double
         public var altitude: Double
+        /// Lateral g from calibrated motion in the mount (false: GPS estimate).
+        public var hasMotionG: Bool
 
-        public init(time: TimeInterval, lateralG: Double, speed: Double, course: Double, distance: Double, altitude: Double) {
+        public init(
+            time: TimeInterval, lateralG: Double, speed: Double, course: Double, distance: Double, altitude: Double,
+            hasMotionG: Bool = false
+        ) {
             self.time = time
             self.lateralG = lateralG
             self.speed = speed
             self.course = course
             self.distance = distance
             self.altitude = altitude
+            self.hasMotionG = hasMotionG
         }
     }
 
     public static func detect(
         reader: TelemetryReader, calibration: MountCalibration?, parameters: Parameters = Parameters()
     ) -> [DriveSection] {
+        analyze(reader: reader, calibration: calibration, parameters: parameters).sections
+    }
+
+    /// Sections plus the peak lateral g, from one analysis pass.
+    public static func analyze(
+        reader: TelemetryReader, calibration: MountCalibration?, parameters: Parameters = Parameters()
+    ) -> (sections: [DriveSection], peakLateral: (g: Double, time: TimeInterval)?) {
         let samples = analysisSamples(reader: reader, calibration: calibration, rate: parameters.rate)
-        let sections = corners(samples, parameters: parameters)
-            + stops(reader: reader, parameters: parameters)
-            + grades(samples, parameters: parameters)
-        return sections.sorted { $0.start < $1.start }
+        let corners = corners(samples, parameters: parameters)
+        let sections = corners + stops(reader: reader, parameters: parameters) + grades(samples, parameters: parameters)
+        return (sections.sorted { $0.start < $1.start }, peakLateral(samples, corners: corners))
     }
 
     /// Frames at `rate` Hz with lightly smoothed speed and G (the detector wants shape, not display smoothness).
@@ -85,10 +98,24 @@ public enum SectionDetector {
             previous = frame
             samples.append(Sample(
                 time: frame.time, lateralG: frame.lateralG, speed: frame.speed, course: frame.course,
-                distance: distance, altitude: frame.altitude
+                distance: distance, altitude: frame.altitude, hasMotionG: frame.hasMotionG
             ))
         }
         return samples
+    }
+
+    /// The session's peak lateral g and when it happened: the strongest corner, measured by calibrated motion when
+    /// there is any. A corner has to last and turn the car, so a phone knocked or adjusted in its mount doesn't
+    /// count, and the GPS estimate (course change × speed) is only used for a drive without motion G at all.
+    /// A drive without corners falls back to every frame.
+    public static func peakLateral(_ samples: [Sample], corners: [DriveSection]) -> (g: Double, time: TimeInterval)? {
+        func strongest(_ pool: [Sample]) -> Sample? {
+            let motion = pool.filter(\.hasMotionG)
+            let candidates = motion.isEmpty && !samples.contains(where: \.hasMotionG) ? pool : motion
+            return candidates.max { abs($0.lateralG) < abs($1.lateralG) }
+        }
+        let inCorners = samples.filter { s in corners.contains { $0.start <= s.time && s.time <= $0.end } }
+        return (strongest(inCorners) ?? strongest(samples)).map { (abs($0.lateralG), $0.time) }
     }
 
     // MARK: - Corners
