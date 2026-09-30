@@ -4,8 +4,9 @@ iPhone drive-telemetry logger (GPS + Core Motion + barometer → replay / export
 `docs/PLAN.md`; the visual source of truth is `design/mock/` (tokens in `design/mock/README.md`).
 
 ## Toolchain
-- **Always use `scripts/xc.sh`** — it pins Xcode 27.2 beta via `DEVELOPER_DIR`. `xcode-select` points at Xcode 26.6
-  and must not be changed. Never call bare `xcodebuild` / `swift` without the wrapper.
+- **Always use `scripts/xc.sh`** — it pins Xcode 27.2 beta (`/Applications/Xcode-beta.app`) via `DEVELOPER_DIR`.
+  `xcode-select` may point at the same Xcode on some hosts but isn't guaranteed across machines, so never call bare
+  `xcodebuild` / `swift` without the wrapper.
 - `scripts/xc.sh test` — DriveKit package tests on macOS (fast; run this first)
 - `scripts/xc.sh build` — simulator build (iPhone 18 Pro, iOS 27.2); prints the `.app` path
 - `scripts/xc.sh test-ios` / `test-ui` — UI tests on the simulator
