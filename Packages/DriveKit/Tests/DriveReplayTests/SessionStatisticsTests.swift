@@ -30,6 +30,26 @@ struct SessionStatisticsTests {
         #expect(summary.gpsAccuracyP95 == 20)
         #expect(summary.peakLateralG == 0)
     }
+
+    /// iOS delivers "50 Hz" motion at 49.76 Hz, perfectly regular: that is not loss. Only a real hole counts,
+    /// and by how many samples it swallowed.
+    @Test func motionDropRateCountsHolesNotIosSampleRate() {
+        let clock = SessionClock(startedAt: Date(timeIntervalSince1970: 1_790_000_000), startUptime: 100)
+        func dropRate(holeAt: Int?) -> (rate: Double, count: Int) {
+            var stats = SessionStatistics(clock: clock, expectedMotionHz: 50)
+            var t = 100.0
+            for i in 0..<Int(60 * 49.76) {
+                t += i == holeAt ? 1.0 : 1 / 49.76
+                stats.addMotion(timestamp: t)
+            }
+            return (stats.summary(duration: 60).motionDropRate, stats.motionCount)
+        }
+
+        #expect(dropRate(holeAt: nil).rate == 0)
+        // A 1.0 s gap between two samples swallowed 49 samples at the nominal 50 Hz.
+        let holed = dropRate(holeAt: 1_000)
+        #expect(abs(holed.rate - 49 / Double(holed.count + 49)) < 1e-9)
+    }
 }
 
 struct BatteryUsageTests {

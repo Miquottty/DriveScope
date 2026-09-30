@@ -115,6 +115,9 @@ public enum EventKind: UInt16, Codable, Sendable, CaseIterable {
     case sessionResumed = 19
     /// Robust mode continued the session by itself after iOS relaunched the app (value = gap, s).
     case autoResumed = 20
+    /// The phone left its mount or moved in it (gravity far from the calibrated up); G is unavailable until the
+    /// mount is found again.
+    case mountChanged = 21
 }
 
 /// Maps each stream's native clock to session elapsed time (PLAN §3).

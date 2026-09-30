@@ -49,6 +49,8 @@ public final class DriveSession {
     /// the detector's. The defaults let existing stores migrate.
     @Attribute(.codable) public var sections: [DriveSection] = []
     public var sectionsVersion: Int = 0
+    /// When `peakLateralG` happened (session elapsed), set with the sections; nil before V1.1.1.
+    public var peakLateralElapsed: TimeInterval? = nil
     /// When the streams were compressed (V1.1, LZFSE); nil while raw. The default lets existing stores migrate.
     public var archivedAt: Date? = nil
 
@@ -92,6 +94,7 @@ public final class DriveSession {
         geocodePending = false
         sections = []
         sectionsVersion = 0
+        peakLateralElapsed = nil
         archivedAt = nil
         markers = []
     }

@@ -30,6 +30,7 @@ struct EventFormat {
         case .marker: "Marker"
         case .sessionResumed: "Session resumed"
         case .autoResumed: "Auto-resumed"
+        case .mountChanged: "Mount changed"
         }
     }
 

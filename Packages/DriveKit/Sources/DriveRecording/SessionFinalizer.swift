@@ -59,7 +59,7 @@ public final class SessionFinalizer {
         await ensureSections(session)
         let files = SessionFiles(root: filesRoot, sessionID: session.id)
         let clock = session.clock
-        let candidates = await Self.candidates(files: files, clock: clock)
+        let candidates = await Self.candidates(files: files, clock: clock, peakLateralElapsed: session.peakLateralElapsed)
         guard !candidates.isEmpty else {
             session.geocodePending = false
             try? store.save()
@@ -89,13 +89,21 @@ public final class SessionFinalizer {
         try? store.save()
     }
 
-    /// Computes the sections when missing or made by an older detector (sessions recorded before V1.1 get them the
-    /// first time Detail, Replay or Export needs them). Never for a session still recording.
+    /// Derived data made from the whole recording: the mount (`MountSolver`), the sections and the peak lateral g.
+    /// Computed when missing or made by an older detector (sessions recorded before get them the first time Detail,
+    /// Replay or Export needs them). Never for a session still recording.
     public func ensureSections(_ session: DriveSession) async {
         guard session.state != .recording, session.sectionsVersion < SectionDetector.version else { return }
         let files = SessionFiles(root: filesRoot, sessionID: session.id)
-        guard let sections = await Self.detectSections(files: files, calibration: session.calibration) else { return }
-        session.sections = sections
+        guard let result = await Self.analyze(
+            files: files, startedAt: session.startedAt, endedAt: session.endedAt, calibration: session.calibration
+        ) else { return }
+        session.calibration = result.calibration
+        session.sections = result.sections
+        if let peak = result.peakLateral {
+            session.peakLateralG = peak.g
+            session.peakLateralElapsed = peak.time
+        }
         session.sectionsVersion = SectionDetector.version
         try? store.save()
     }
@@ -107,13 +115,46 @@ public final class SessionFinalizer {
         }
     }
 
-    /// nil when the files can't be read (then nothing is stored and a later call tries again).
-    @concurrent nonisolated private static func detectSections(files: SessionFiles, calibration: MountCalibration?) async -> [DriveSection]? {
-        guard let reader = try? TelemetryReader(files: files) else { return nil }
-        return SectionDetector.detect(reader: reader, calibration: calibration)
+    private struct Analysis: Sendable {
+        var calibration: MountCalibration?
+        var sections: [DriveSection]
+        var peakLateral: (g: Double, time: TimeInterval)?
     }
 
-    @concurrent nonisolated private static func candidates(files: SessionFiles, clock: SessionClock) async -> [PlacePicker.Candidate] {
-        PlacePicker.candidates(locations: (try? files.locations()) ?? [], clock: clock)
+    /// nil when the files can't be read (then nothing is stored and a later call tries again).
+    @concurrent nonisolated private static func analyze(
+        files: SessionFiles, startedAt: Date, endedAt: Date?, calibration: MountCalibration?
+    ) async -> Analysis? {
+        guard var manifest = try? files.readManifest() else { return nil }
+        // Older manifests lost the start's fraction of a second — which put GPS up to 1 s behind motion — and
+        // never got endedAt. SwiftData kept both exactly.
+        let drift = abs(manifest.clock.startedAt.timeIntervalSince(startedAt))
+        let restoreStart = drift > 0.0005 && drift < 1
+        let restoreEnd = manifest.endedAt == nil && endedAt != nil
+        if restoreStart { manifest.clock.startedAt = startedAt }
+        if restoreEnd { manifest.endedAt = endedAt }
+        if restoreStart || restoreEnd { try? files.writeManifest(manifest) }
+        guard let reader = try? TelemetryReader(files: files) else { return nil }
+        let chosen = choose(solved: MountSolver.solve(reader: reader), live: calibration)
+        if chosen != manifest.calibration {
+            manifest.calibration = chosen
+            try? files.writeManifest(manifest)
+        }
+        let result = SectionDetector.analyze(reader: reader, calibration: chosen)
+        return Analysis(calibration: chosen, sections: result.sections, peakLateral: result.peakLateral)
+    }
+
+    /// The whole-recording solution wins over the live one, which only saw the drive up to each moment. A manual
+    /// rotation stays unless the solution is confident.
+    nonisolated static func choose(solved: MountCalibration?, live: MountCalibration?) -> MountCalibration? {
+        guard let solved else { return live }
+        if live?.method == .manual, solved.confidence < 0.5 { return live }
+        return solved
+    }
+
+    @concurrent nonisolated private static func candidates(
+        files: SessionFiles, clock: SessionClock, peakLateralElapsed: TimeInterval?
+    ) async -> [PlacePicker.Candidate] {
+        PlacePicker.candidates(locations: (try? files.locations()) ?? [], clock: clock, peakLateralElapsed: peakLateralElapsed)
     }
 }

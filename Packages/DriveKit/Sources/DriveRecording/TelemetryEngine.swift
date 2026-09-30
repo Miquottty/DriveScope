@@ -155,7 +155,7 @@ public actor TelemetryEngine {
         statistics.add(location)
         lastFixUptime = suite.clock.uptime
         hasFix = true
-        if let updated = calibrator.add(location, elapsed: elapsed) { await apply(updated) }
+        await apply(calibrator.add(location, elapsed: elapsed))
 
         if manifest.altitudeBaseline == nil, location.verticalAccuracy > 0, location.verticalAccuracy <= 20 {
             manifest.altitudeBaseline = location.altitude
@@ -182,7 +182,7 @@ public actor TelemetryEngine {
             await writer.append(sample, to: .motion)
             timestamp = sample.timestamp
             userAcceleration = sample.userAcceleration
-            if let updated = calibrator.add(sample, elapsed: manifest.clock.elapsed(uptime: timestamp)) { await apply(updated) }
+            await apply(calibrator.add(sample, elapsed: manifest.clock.elapsed(uptime: timestamp)))
         case .acceleration(let sample):
             lastMotionUptime = suite.clock.uptime
             await writer.append(sample, to: .accel)
@@ -192,9 +192,7 @@ public actor TelemetryEngine {
             let gravity = ecoGravity.map { $0 + (sample.acceleration - $0) * alpha } ?? sample.acceleration
             ecoGravity = gravity
             userAcceleration = sample.acceleration - gravity
-            if let updated = calibrator.add(sample, elapsed: manifest.clock.elapsed(uptime: timestamp), sampleRate: hz) {
-                await apply(updated)
-            }
+            await apply(calibrator.add(sample, elapsed: manifest.clock.elapsed(uptime: timestamp), sampleRate: hz))
         }
         statistics.addMotion(timestamp: timestamp)
         snapshot.motionCount = statistics.motionCount
@@ -212,6 +210,14 @@ public actor TelemetryEngine {
         snapshot.lateralG = filteredG.lat
     }
 
+    private func apply(_ update: MountCalibrator.Update?) async {
+        switch update {
+        case .calibrated(let updated): await apply(updated)
+        case .lost: await loseMount()
+        case nil: break
+        }
+    }
+
     private func apply(_ updated: MountCalibration) async {
         calibration = updated
         manifest.calibration = updated
@@ -224,9 +230,19 @@ public actor TelemetryEngine {
         onCalibration(updated)
     }
 
+    /// The phone left its mount: back to GPS-estimated lateral g until the calibrator finds the mount again. The
+    /// manifest keeps the last calibration for recovery; after STOP `MountSolver` replaces it anyway.
+    private func loseMount() async {
+        calibration = nil
+        snapshot.isCalibrated = false
+        snapshot.longitudinalG = 0
+        filteredG = (0, 0)
+        await writer.append(EventRecord(kind: .mountChanged, source: .system, elapsed: elapsed), to: .events)
+    }
+
     /// Manual "rotate 90°" from the Recording screen (PLAN §7-4).
     public func rotateMountManually() async {
-        if let updated = calibrator.rotateManually(elapsed: elapsed) { await apply(updated) }
+        await apply(calibrator.rotateManually(elapsed: elapsed))
     }
 
     private func handle(_ altitude: AltitudeSample) async {

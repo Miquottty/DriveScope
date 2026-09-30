@@ -10,7 +10,8 @@ public enum ScriptedSessionBuilder {
     public static func write(
         script: DriveScript, preset: CapturePreset, duration: TimeInterval, root: URL,
         mount: MountCalibration = MotionSynthesizer.portraitDashMount,
-        startedAt: Date = Date(timeIntervalSince1970: 1_790_000_000), calibrated: Bool = true
+        startedAt: Date = Date(timeIntervalSince1970: 1_790_000_000), calibrated: Bool = true,
+        mountAt: (@Sendable (TimeInterval) -> MountCalibration)? = nil
     ) async throws -> (manifest: SessionManifest, summary: SessionSummary, preview: [RoutePoint]) {
         let clock = SessionClock(startedAt: startedAt, startUptime: 1_000)
         var manifest = SessionManifest(
@@ -62,7 +63,10 @@ public enum ScriptedSessionBuilder {
                 let dynamics = MotionSynthesizer.Dynamics(
                     longitudinal: m.longitudinalAcceleration, lateral: m.lateralAcceleration, yawRate: m.yawRate, yaw: yaw
                 )
-                switch synthesizer.event(mode: preset.motion, timestamp: clock.startUptime + nextMotion, dynamics: dynamics, rng: &rng) {
+                var phone = synthesizer
+                // A phone that is out of its mount for a while (in the hand at START, on the seat).
+                if let mountAt { phone.mount = mountAt(nextMotion) }
+                switch phone.event(mode: preset.motion, timestamp: clock.startUptime + nextMotion, dynamics: dynamics, rng: &rng) {
                 case .deviceMotion(let sample):
                     await writer.append(sample, to: .motion)
                     statistics.addMotion(timestamp: sample.timestamp)
@@ -76,6 +80,8 @@ public enum ScriptedSessionBuilder {
             }
         }
         await writer.close()
+        manifest.endedAt = clock.date(elapsed: duration)
+        try files.writeManifest(manifest)
         return (manifest, statistics.summary(duration: duration), SessionStore.routePreview(from: locations))
     }
 }

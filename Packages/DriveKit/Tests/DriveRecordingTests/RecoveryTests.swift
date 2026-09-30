@@ -61,6 +61,7 @@ struct RecoveryTests {
         await fourth.recover(other)
         #expect(other.state == .recovered)
         #expect(other.locationSampleCount > 60 && other.distance > 0 && other.duration > 60)
+        #expect(try otherFiles.readManifest().endedAt != nil)
     }
 
     /// Robust mode only continues a session from the same boot and within 30 min of its last sample (wall clock:
