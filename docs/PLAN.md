@@ -432,7 +432,14 @@ STOP: removePendingNotificationRequests
 - Export
   - **JSON** = Master（lossless、session / places / markers / **sections**（V1.1、派生） / events / location / motion / altitude）
   - **CSV** = Vlog（VlogTrack 30 fps、または 10 Hz 選択可）
-  - **GPX** = 互換（`<trkpt>` + extensions: speed / course / hAcc）。マーカーは `<wpt>`（実時刻付き）で、SYNC は時刻順に「SYNC 1」「SYNC 2」…と番号を付ける（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）
+  - **GPX** = 互換。`<trkpt>` は 1 秒サマリだけ（50 Hz は JSON の役目）。`<extensions>` は `ds:` 名前空間（`urn:drivescope:gpx:1`）:
+    - `ds:speed`（m/s）・`ds:course`・`ds:hAcc`、`ds:vAcc`（vertical accuracy ≥ 0 のときだけ）
+    - `ds:latG` / `ds:longG` = fix 時刻を中心とした 1 秒間の平均、`ds:peakLatG` = その 1 秒間で絶対値が最大の横 G（符号付き）。`TelemetryInterpolator` のフレームを 10 Hz（モーション平均窓 0.1 s）で走査して集計する。G が無い秒は 3 つとも省略
+    - `ds:baroAlt` = 気圧高度の相対値（m、最初の高度サンプルが 0）。`<ele>` は GPS 高度のまま（他ツールは `<ele>` を GPS 高度として読むため混ぜない）。高度サンプルが無い、または 5 s を超えて欠けている秒は省略
+    - Garmin TrackPointExtension v2（`gpxtpx:speed` m/s・`gpxtpx:course` 度）: `ds:` を知らないツール向けに `ds:speed` / `ds:course` と同じ値を併記
+  - **G の符号と単位（JSON・CSV・GPX 共通）**: エンジンの ISO 8855 のまま — 横 G ＋ = 左、前後 G ＋ = 加速、上下 G ＋ = 上、1 g = 9.80665 m/s²。画面の G メーターは体感する力（逆向き）で描くが表示だけの話で、ファイルには出さない。GPX は `<metadata>` の最後の `<extensions>` に 1 回だけ宣言する: `<ds:axes lateral="+left" longitudinal="+accelerating" vertical="+up"/>`、`<ds:gUnit>9.80665</ds:gUnit>`（1 g の m/s²）、`<ds:gWindow>1.0</ds:gWindow>`（サマリの窓、秒）、`<ds:gSource>`。
+    - `ds:gSource` = `motion`（キャリブレーション済みモーション。横・前後・ピーク。マウント外の秒は省略）/ `gps-estimate`（モーション G が全く無いセッション。GPS の速度 × 方位変化率による横 G だけで `ds:longG` は出さない）/ `none`（G なし）。1 ファイルの中で混ぜない（`SectionDetector.peakLateral` と同じ考え方）
+  - **GPX の `<wpt>`**: マーカーと検出区間を時刻順に並べ、どれも `<type>` を持つ（`<name>` の後）。マーカーは `<type>` = `MarkerKind.rawValue`（`sync` / `mark`）、名前は SYNC を時刻順に「SYNC 1」「SYNC 2」…と番号付け（カメラを撮り直したときに、動画ファイルごとの基準を VLOG 側で選べるように）、MARK は「MARK」、ラベルがあれば「: ラベル」を付ける。名前の対応は `MarkerKind` の exhaustive `switch`（マーカーの種類を足したらコンパイルエラーで気づく）。区間は `<type>` = `DriveSection.Kind.rawValue`（`corner` / `climb` / `descent` / `stop`）、名前は英語の「Corner 3 · 0.45 G」「Climb 1 · +36 m」「Stop 2 · 83 s」（種類ごとの通し番号）。位置と時刻は corner = 横 G が最大の点、climb / descent / stop = 区間の開始
   - `ShareLink` / `UIActivityViewController`
 
 ---
