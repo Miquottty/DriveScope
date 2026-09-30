@@ -123,7 +123,8 @@ struct HomeIPadLayout: View {
     private var startButton: some View {
         Button(action: onStart) {
             VStack(spacing: 2) {
-                Text("START")
+                // English in every language, like the HUD's MARK / SYNC / STOP.
+                Text(verbatim: "START")
                     .font(.system(size: 52, weight: .semibold))
                     .tracking(2.1)
                     .lineLimit(1)

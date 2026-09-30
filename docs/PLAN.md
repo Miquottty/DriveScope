@@ -447,7 +447,7 @@ STOP: removePendingNotificationRequests
   - Live Activity / Widget: `ContentState` に `languageCode` を含め、Widget 側でも `.environment(\.locale, …)`。
   - `AppleLanguages` の UserDefaults 書き換えは再起動が必要なので使わない。
 - 数値・単位は `Measurement` + `MeasurementFormatter` を locale 付きで。数字は両言語とも Latin 数字・等幅。
-- 日本語 UI でも HUD のラベル（ALT / COURSE / DIST / LAT G）は英略語のまま。説明文・設定・通知・タイトルは翻訳。
+- 日本語 UI でも HUD のラベル（ALT / COURSE / DIST / LAT G）と操作ボタンの表記（START / MARK / SYNC / STOP）は英語のまま。START の下の補足（「ドライブを記録」）、アクセシビリティのラベル、説明文・設定・通知・タイトルは翻訳。
 
 ---
 

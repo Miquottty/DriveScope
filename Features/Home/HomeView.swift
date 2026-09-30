@@ -321,7 +321,8 @@ struct HomeView: View {
             Task { await start() }
         } label: {
             VStack(spacing: 4) {
-                Text("START")
+                // English in every language, like the HUD's MARK / SYNC / STOP; the line below says it in words.
+                Text(verbatim: "START")
                     .font(.system(size: size * 0.16, weight: .semibold))
                     .tracking(size * 0.0096)
                     .foregroundStyle(Theme.background)

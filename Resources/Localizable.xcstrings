@@ -2961,22 +2961,6 @@
         }
       }
     },
-    "START": {
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "START"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "開始"
-          }
-        }
-      }
-    },
     "Samples": {
       "localizations": {
         "en": {
