@@ -15,6 +15,7 @@ import Foundation
 /// to the identical bit pattern). Non-finite values are `null`. `startedAt` / `endedAt` / marker dates are
 /// ISO 8601 UTC with milliseconds; `startedAtUnix` carries the exact start as a raw Double.
 ///
+/// `markers.kind` is `sync` / `mark` / `highlight`; the matching `marker` event carries it as `aux` 1 / 0 / 2.
 /// Row layouts are given by each block's `fields` array. `location.flags` is `LocationSample.Flags.rawValue`.
 /// `session.summary` uses SI units (m, m/s, s, g).
 public enum JSONExporter {

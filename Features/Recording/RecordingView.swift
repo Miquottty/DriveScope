@@ -15,6 +15,7 @@ struct RecordingView: View {
             preset: recorder.session?.preset,
             isSaving: recorder.phase == .stopping || recorder.phase == .finalizing,
             onMark: { await recorder.mark(.mark) },
+            onHighlight: { await recorder.mark(.highlight) },
             onSync: { await recorder.mark(.sync) },
             onStop: { await recorder.stop() },
             onRotateMount: { await recorder.rotateMount() },

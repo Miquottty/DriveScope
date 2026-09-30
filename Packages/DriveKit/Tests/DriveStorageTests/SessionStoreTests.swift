@@ -36,6 +36,7 @@ struct SessionStoreTests {
         #expect(session.clock == clock)
         try store.addMarker(kind: .mark, elapsed: 30, date: clock.date(elapsed: 30), label: "later", to: session)
         try store.addMarker(kind: .sync, elapsed: 5, date: clock.date(elapsed: 5), to: session)
+        try store.addMarker(kind: .highlight, elapsed: 20, date: clock.date(elapsed: 20), to: session)
 
         var summary = SessionSummary()
         summary.duration = 3600
@@ -56,7 +57,7 @@ struct SessionStoreTests {
         #expect(loaded.startPlace?.locality == "Maebashi")
         #expect(loaded.viaPlaces.count == 1)
         #expect(loaded.calibration == .identity)
-        #expect(loaded.sortedMarkers.map(\.kind) == [.sync, .mark])
+        #expect(loaded.sortedMarkers.map(\.kind) == [.sync, .highlight, .mark])
         #expect(reread.sessions(in: .stopped).count == 1)
         #expect(reread.sessions(in: .recording).isEmpty)
 

@@ -138,6 +138,7 @@ struct ExporterTests {
             ExportMarker(kind: .sync, elapsed: 60, date: fx.reader.clock.date(elapsed: 60)),
             ExportMarker(kind: .sync, elapsed: 10, date: fx.reader.clock.date(elapsed: 10)),
             ExportMarker(kind: .mark, elapsed: 40, date: fx.reader.clock.date(elapsed: 40), label: "a<b&c"),
+            ExportMarker(kind: .highlight, elapsed: 50, date: fx.reader.clock.date(elapsed: 50)),
         ]
         let url = fx.output("track.gpx")
         try GPXExporter.export(reader: fx.reader, metadata: fx.metadata(title: title, markers: markers), to: url)
@@ -166,8 +167,8 @@ struct ExporterTests {
         #expect(parser.parse(), "\(String(describing: parser.parserError))")
         let valid = fx.reader.locations.filter { $0.horizontalAccuracy > 0 }.count
         #expect(counter.trkpt == valid && counter.hAcc == valid && valid > 0)
-        #expect(counter.wpt == 3)
-        #expect(counter.names == [title, "SYNC 1", "MARK: a<b&c", "SYNC 2", title])
+        #expect(counter.wpt == 4)
+        #expect(counter.names == [title, "SYNC 1", "MARK: a<b&c", "HIGHLIGHT", "SYNC 2", title])
         print("EXPORT SIZES logger 90s: gpx=\(fx.size(url))")
     }
 }

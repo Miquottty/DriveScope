@@ -2,7 +2,7 @@ import Charts
 import DriveDomain
 import SwiftUI
 
-/// Speed over the whole session (mock: 44 pt amber area + line), SYNC / MARK rules, and the playhead rule.
+/// Speed over the whole session (mock: 44 pt amber area + line), marker rules, and the playhead rule.
 /// V1.1: corners and stops as faint bands behind the line, climbs / descents as a thin lane along the bottom.
 /// The chart itself never reads the playhead: only the overlay does, so playback redraws a 2 pt rule, not 600 points.
 struct SpeedSparkline: View {
@@ -45,7 +45,7 @@ struct SpeedSparkline: View {
                 .lineStyle(StrokeStyle(lineWidth: style.lineWidth, lineJoin: .round))
             ForEach(timeline?.markers ?? []) { marker in
                 RuleMark(x: .value("Marker", marker.elapsed))
-                    .foregroundStyle(marker.kind == .sync ? Theme.good : Theme.textPrimary)
+                    .foregroundStyle(marker.kind.color)
                     .lineStyle(StrokeStyle(lineWidth: 1.5, dash: style.ruleDash))
             }
         }

@@ -11,6 +11,7 @@ struct RecordingHUD: View {
     /// `stopping` / `finalizing`: buttons are disabled and STOP shows progress.
     var isSaving = false
     var onMark: () async -> Void = {}
+    var onHighlight: () async -> Void = {}
     var onSync: () async -> Void = {}
     var onStop: () async -> Void = {}
     /// Manual "rotate 90°" when the auto calibration picked the wrong axis (PLAN §7-4).
@@ -26,8 +27,8 @@ struct RecordingHUD: View {
         // the phone artboard.
         if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
             RecordingHUDIPadLayout(
-                snapshot: snapshot, preset: preset, isSaving: isSaving, onMark: onMark, onSync: onSync,
-                onStop: onStop, onRotateMount: onRotateMount, batteryLow: batteryLow)
+                snapshot: snapshot, preset: preset, isSaving: isSaving, onMark: onMark, onHighlight: onHighlight,
+                onSync: onSync, onStop: onStop, onRotateMount: onRotateMount, batteryLow: batteryLow)
         } else {
             phone
         }
@@ -98,12 +99,14 @@ struct RecordingHUD: View {
                 }
                 .padding(.top, 8)
 
+            // Three across leaves ~100 pt per button, too narrow for "HIGHLIGHT" beside its icon: stack them.
             HStack(spacing: 12) {
-                markButton(height: 64)
-                syncButton(height: 64)
+                markButton(height: 64, stacked: true)
+                highlightButton(height: 64, stacked: true)
+                syncButton(height: 64, stacked: true)
             }
             .padding(.top, 12)
-            Text("MARK = bookmark this moment · SYNC = clap / flash for camera sync")
+            Text("MARK = bookmark · HIGHLIGHT = best moment · SYNC = beep for camera sync")
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.textMuted)
                 .multilineTextAlignment(.center)
@@ -120,7 +123,8 @@ struct RecordingHUD: View {
     // MARK: - Landscape (artboard 8, 844×390; 8b 956×440)
 
     /// Same priorities as portrait: the metrics move to one line under the header, leaving two columns laid on the
-    /// buttons' 1:1:2 grid — speed centered over MARK + SYNC, G over STOP. Speed and meter follow the space.
+    /// buttons' four equal columns — speed centered over MARK + HIGHLIGHT, G over SYNC + STOP. Speed and meter follow
+    /// the space.
     private func landscape(size: CGSize) -> some View {
         VStack(spacing: 0) {
             header(presetLabel: preset.map(HUDFormat.presetLabel), style: .phoneLarge)
@@ -128,7 +132,7 @@ struct RecordingHUD: View {
                 .padding(.top, 8)
 
             GeometryReader { proxy in
-                let unit = (proxy.size.width - 2 * 12) / 4
+                let unit = (proxy.size.width - 3 * 12) / 4
                 let speedWidth = 2 * unit + 12
                 // Three digits must fit the column; the digits plus the km/h row must fit the height.
                 let speedSize = min(240, speedWidth / 1.8, (proxy.size.height - 36) / 0.74)
@@ -156,17 +160,18 @@ struct RecordingHUD: View {
                         GMeterView(lateralG: snapshot.lateralG, longitudinalG: snapshot.longitudinalG,
                                    style: .pad(dotRadius: 10, labelSize: 12))
                     }
-                    .frame(width: 2 * unit)
+                    .frame(width: 2 * unit + 12)
                 }
                 .frame(maxHeight: .infinity)
             }
             .padding(.top, 10)
 
-            // Mock grid: 1fr 1fr 2fr.
+            // Mock grid: 1fr × 4. STOP needs no extra width: it only stops on a hold.
             GeometryReader { proxy in
-                let unit = (proxy.size.width - 2 * 12) / 4
+                let unit = (proxy.size.width - 3 * 12) / 4
                 HStack(spacing: 12) {
                     markButton(height: 56).frame(width: unit)
+                    highlightButton(height: 56).frame(width: unit)
                     syncButton(height: 56).frame(width: unit)
                     stopButton(height: 56, cornerRadius: 14, fontSize: 17, squareSize: 14)
                 }
@@ -252,14 +257,23 @@ struct RecordingHUD: View {
         }
     }
 
-    private func markButton(height: CGFloat) -> some View {
-        HUDActionButton(title: "MARK", systemImage: "flag", height: height, isEnabled: !isSaving, action: onMark)
+    private func markButton(height: CGFloat, stacked: Bool = false) -> some View {
+        HUDActionButton(title: "MARK", systemImage: "flag", height: height, isEnabled: !isSaving, stacked: stacked,
+                        action: onMark)
             .handGestureShortcut(.primaryAction)
             .accessibilityIdentifier("markButton")
     }
 
-    private func syncButton(height: CGFloat) -> some View {
-        HUDActionButton(title: "SYNC", systemImage: "bolt", height: height, isEnabled: !isSaving, action: onSync)
+    /// Deliberately silent: unlike SYNC it needs no cue the cameras can pick up, only an entry in the log.
+    private func highlightButton(height: CGFloat, stacked: Bool = false) -> some View {
+        HUDActionButton(title: "HIGHLIGHT", systemImage: "star", height: height, isEnabled: !isSaving,
+                        stacked: stacked, action: onHighlight)
+            .accessibilityIdentifier("highlightButton")
+    }
+
+    private func syncButton(height: CGFloat, stacked: Bool = false) -> some View {
+        HUDActionButton(title: "SYNC", systemImage: "bolt", height: height, isEnabled: !isSaving, stacked: stacked,
+                        action: onSync)
             .accessibilityIdentifier("syncButton")
     }
 

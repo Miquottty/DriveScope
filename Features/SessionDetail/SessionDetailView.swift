@@ -592,26 +592,26 @@ private struct MarkerPin: View {
         if large {
             // iPad: the label sits on a dark plate so it reads over any map tile (mock 13).
             HStack(spacing: 6) {
-                Circle().fill(kind == .sync ? Theme.good : Theme.textPrimary).frame(width: 12, height: 12)
+                Circle().fill(kind.color).frame(width: 12, height: 12)
                 Text(verbatim: label)
                     .font(.hudNumber(size: 14))
-                    .foregroundStyle(kind == .sync ? Theme.good : Theme.textPrimary)
+                    .foregroundStyle(kind.color)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 5)
                     .background(Theme.background.opacity(0.85), in: RoundedRectangle(cornerRadius: 8))
             }
         } else {
             HStack(spacing: 4) {
-                Circle().fill(Theme.textPrimary).frame(width: 10, height: 10)
+                Circle().fill(kind.color).frame(width: 10, height: 10)
                 Text(verbatim: label)
                     .font(.hudNumber(size: 10))
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(kind.color)
                     .shadow(color: Theme.background, radius: 2)
             }
         }
     }
 
-    private var label: String { "\(kind == .sync ? "SYNC" : "MARK") \(elapsedText)" }
+    private var label: String { "\(kind.title) \(elapsedText)" }
 
     private var elapsedText: String {
         let total = max(0, Int(elapsed.rounded()))

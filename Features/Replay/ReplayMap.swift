@@ -364,7 +364,7 @@ private struct ReplayMarkerPin: View {
     var isLarge = false
 
     var body: some View {
-        let color = marker.kind == .sync ? Theme.good : Theme.textPrimary
+        let color = marker.kind.color
         if isLarge {
             // iPad (mock artboard 14): 12 pt dot, 14 pt label on a dark plate.
             Circle()

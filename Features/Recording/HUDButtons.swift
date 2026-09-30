@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// MARK / SYNC: outlined dark buttons (mock: 64 pt portrait, 56 pt landscape, radius 14, 1.5 pt border).
+/// MARK / HIGHLIGHT / SYNC: outlined dark buttons (mock: 64 pt portrait, 56 pt landscape, radius 14, 1.5 pt border).
 /// After the action completes the button flashes amber with a checkmark so the driver gets confirmation
 /// in peripheral vision, plus a haptic.
 struct HUDActionButton: View {
@@ -9,7 +9,10 @@ struct HUDActionButton: View {
     var height: CGFloat
     var isEnabled = true
     var metrics = Metrics.phone
-    /// Hardware-keyboard key (no modifier) shown as a key cap after the title (iPad HUD: M / S).
+    /// Icon (and key cap) above the title, for rows too narrow for "HIGHLIGHT" beside its icon (phone and iPad
+    /// portrait).
+    var stacked = false
+    /// Hardware-keyboard key (no modifier) shown as a key cap next to the title (iPad HUD: M / H / S).
     var key: Character?
     var action: () async -> Void
 
@@ -18,13 +21,15 @@ struct HUDActionButton: View {
         var titleSize: CGFloat = 15
         var tracking: CGFloat = 1.2
         var spacing: CGFloat = 8
+        /// Icon row to title when stacked.
+        var stackSpacing: CGFloat = 5
         var cornerRadius: CGFloat = 14
         var borderWidth: CGFloat = 1.5
 
         static let phone = Metrics()
         /// Mock artboards 12 / 16: 22 pt title, a 23 pt symbol (≈ the mock's 26 pt icon box), radius 18, 2 pt border.
-        static let pad = Metrics(iconSize: 23, titleSize: 22, tracking: 22 * 0.08, spacing: 12, cornerRadius: 18,
-                                 borderWidth: 2)
+        static let pad = Metrics(iconSize: 23, titleSize: 22, tracking: 22 * 0.08, spacing: 12, stackSpacing: 8,
+                                 cornerRadius: 18, borderWidth: 2)
     }
 
     @State private var confirmations = 0
@@ -38,33 +43,57 @@ struct HUDActionButton: View {
                 confirm()
             }
         } label: {
-            HStack(spacing: metrics.spacing) {
-                Image(systemName: isConfirming ? "checkmark" : systemImage)
-                    .font(.system(size: metrics.iconSize, weight: .semibold))
-                    .frame(width: metrics.iconSize + 2, height: metrics.iconSize + 2)
-                Text(verbatim: title)
-                    .font(.system(size: metrics.titleSize, weight: .semibold))
-                    .tracking(metrics.tracking)
-                if let key {
-                    KeyCap(key: key)
+            content
+                .foregroundStyle(isConfirming ? Theme.accent : Theme.textPrimary)
+                // A few points of inset so a squeezed title scales instead of touching the border.
+                .padding(.horizontal, 6)
+                .frame(maxWidth: .infinity)
+                .frame(height: height)
+                .background(isConfirming ? Theme.accent.opacity(0.14) : HUDButtonStyle.fill,
+                            in: RoundedRectangle(cornerRadius: metrics.cornerRadius))
+                .overlay {
+                    RoundedRectangle(cornerRadius: metrics.cornerRadius)
+                        .strokeBorder(isConfirming ? Theme.accent : Theme.dividerStrong, lineWidth: metrics.borderWidth)
                 }
-            }
-            .foregroundStyle(isConfirming ? Theme.accent : Theme.textPrimary)
-            .frame(maxWidth: .infinity)
-            .frame(height: height)
-            .background(isConfirming ? Theme.accent.opacity(0.14) : HUDButtonStyle.fill,
-                        in: RoundedRectangle(cornerRadius: metrics.cornerRadius))
-            .overlay {
-                RoundedRectangle(cornerRadius: metrics.cornerRadius)
-                    .strokeBorder(isConfirming ? Theme.accent : Theme.dividerStrong, lineWidth: metrics.borderWidth)
-            }
-            .contentShape(RoundedRectangle(cornerRadius: metrics.cornerRadius))
+                .contentShape(RoundedRectangle(cornerRadius: metrics.cornerRadius))
         }
         .buttonStyle(HUDButtonStyle())
         .keyboardShortcut(key.map { KeyboardShortcut(KeyEquivalent($0), modifiers: []) })
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.4)
         .sensoryFeedback(.impact(weight: .medium), trigger: confirmations)
+    }
+
+    @ViewBuilder private var content: some View {
+        if stacked {
+            VStack(spacing: metrics.stackSpacing) {
+                HStack(spacing: metrics.spacing) {
+                    icon
+                    if let key { KeyCap(key: key) }
+                }
+                titleText
+            }
+        } else {
+            HStack(spacing: metrics.spacing) {
+                icon
+                titleText
+                if let key { KeyCap(key: key) }
+            }
+        }
+    }
+
+    private var icon: some View {
+        Image(systemName: isConfirming ? "checkmark" : systemImage)
+            .font(.system(size: metrics.iconSize, weight: .semibold))
+            .frame(width: metrics.iconSize + 2, height: metrics.iconSize + 2)
+    }
+
+    private var titleText: some View {
+        Text(verbatim: title)
+            .font(.system(size: metrics.titleSize, weight: .semibold))
+            .tracking(metrics.tracking)
+            .lineLimit(1)
+            .minimumScaleFactor(0.7)
     }
 
     private func confirm() {

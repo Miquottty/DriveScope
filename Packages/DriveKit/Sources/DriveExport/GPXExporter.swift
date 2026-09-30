@@ -40,6 +40,8 @@ public enum GPXExporter {
                 if marker.kind == .sync {
                     syncCount += 1
                     name = "SYNC \(syncCount)"
+                } else if marker.kind == .highlight {
+                    name = "HIGHLIGHT"
                 } else {
                     name = "MARK"
                 }
