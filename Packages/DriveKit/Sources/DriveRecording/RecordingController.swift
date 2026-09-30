@@ -159,10 +159,12 @@ public final class RecordingController {
         let statistics = await engine.stop()
         let duration = max(0, await engine.elapsed)
         phase = .finalizing
+        let endedAt = session.clock.date(elapsed: duration)
+        writeEnd(endedAt, to: files)
         do {
             let preview = SessionStore.routePreview(from: (try? files.locations()) ?? [])
             try store.finish(
-                session, state: .stopped, endedAt: session.clock.date(elapsed: duration),
+                session, state: .stopped, endedAt: endedAt,
                 summary: Self.summary(statistics, duration: duration, files: files), routePreview: preview
             )
         } catch {
@@ -244,8 +246,10 @@ public final class RecordingController {
             let manifest = try files.readManifest()
             let (statistics, duration) = try await Self.recompute(files: files, manifest: manifest)
             let preview = SessionStore.routePreview(from: (try? files.locations()) ?? [])
+            let endedAt = manifest.clock.date(elapsed: duration)
+            writeEnd(endedAt, to: files)
             try store.finish(
-                unfinished, state: .recovered, endedAt: manifest.clock.date(elapsed: duration),
+                unfinished, state: .recovered, endedAt: endedAt,
                 summary: Self.summary(statistics, duration: duration, files: files), routePreview: preview
             )
             await onFinished?(unfinished)
@@ -326,6 +330,19 @@ public final class RecordingController {
             lastError = String(describing: error)
             phase = .idle
             return false
+        }
+    }
+
+    /// Exports read `endedAt` from the manifest, not SwiftData. Called once the engine has stopped, so re-reading
+    /// keeps its latest manifest writes (calibration, baseline) and nothing races. A failure must not keep the
+    /// session from finishing.
+    private func writeEnd(_ endedAt: Date, to files: SessionFiles) {
+        do {
+            var manifest = try files.readManifest()
+            manifest.endedAt = endedAt
+            try files.writeManifest(manifest)
+        } catch {
+            lastError = String(describing: error)
         }
     }
 

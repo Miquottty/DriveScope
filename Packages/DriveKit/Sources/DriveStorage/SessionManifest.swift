@@ -88,13 +88,22 @@ public struct SessionFiles: Sendable, Equatable {
     public func writeManifest(_ manifest: SessionManifest) throws {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-        encoder.dateEncodingStrategy = .iso8601
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(ManifestDate.string(from: date))
+        }
         try encoder.encode(manifest).write(to: manifestURL, options: .atomic)
     }
 
     public func readManifest() throws -> SessionManifest {
         let decoder = JSONDecoder()
-        decoder.dateDecodingStrategy = .iso8601
+        decoder.dateDecodingStrategy = .custom { decoder in
+            let text = try decoder.singleValueContainer().decode(String.self)
+            guard let date = ManifestDate.date(from: text) else {
+                throw DecodingError.dataCorrupted(.init(codingPath: decoder.codingPath, debugDescription: "Invalid ISO 8601 date: \(text)"))
+            }
+            return date
+        }
         return try decoder.decode(SessionManifest.self, from: Data(contentsOf: manifestURL))
     }
 
@@ -106,5 +115,32 @@ public struct SessionFiles: Sendable, Equatable {
     public func byteSize() -> Int {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: [.fileSizeKey])) ?? []
         return files.reduce(0) { $0 + ((try? $1.resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0) }
+    }
+}
+
+/// ISO 8601 with microsecond fractional seconds. The stock `.iso8601` strategy drops the fraction, which moved
+/// `clock.startedAt` (the reference for Location timestamps) by up to a second and so shifted GPS against motion.
+/// Manifests written before that fix carry whole seconds only and must still load.
+enum ManifestDate {
+    static func string(from date: Date) -> String {
+        let unix = date.timeIntervalSince1970
+        var whole = unix.rounded(.down)
+        var micros = Int(((unix - whole) * 1_000_000).rounded())
+        if micros == 1_000_000 {
+            whole += 1
+            micros = 0
+        }
+        let seconds = Date(timeIntervalSince1970: whole).formatted(.iso8601)
+        let digits = String(micros)
+        return seconds.dropLast() + "." + String(repeating: "0", count: 6 - digits.count) + digits + "Z"
+    }
+
+    static func date(from text: String) -> Date? {
+        guard let dot = text.firstIndex(of: ".") else { return try? Date(text, strategy: .iso8601) }
+        let digits = text[text.index(after: dot)...].prefix(while: \.isNumber)
+        guard !digits.isEmpty, let fraction = Double("0." + digits),
+              let whole = try? Date(String(text[..<dot]) + text[digits.endIndex...], strategy: .iso8601)
+        else { return nil }
+        return whole.addingTimeInterval(fraction)
     }
 }

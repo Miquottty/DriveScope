@@ -15,7 +15,7 @@ public struct SessionSummary: Sendable, Equatable, Codable {
     public var maxLocationGap: TimeInterval = 0
     public var locationSampleCount = 0
     public var motionSampleCount = 0
-    /// 1 - received / expected motion samples.
+    /// Fraction of motion samples missing, counted from timestamp gaps (not from the nominal rate).
     public var motionDropRate: Double = 0
     /// Battery drain, %/h, when measurable (non-charging snapshots).
     public var batteryUsagePerHour: Double?

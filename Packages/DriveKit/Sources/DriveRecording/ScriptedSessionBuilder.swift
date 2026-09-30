@@ -76,6 +76,8 @@ public enum ScriptedSessionBuilder {
             }
         }
         await writer.close()
-        return (manifest, statistics.summary(duration: duration), SessionStore.routePreview(from: locations))
+        manifest.endedAt = clock.date(elapsed: duration)
+        try files.writeManifest(manifest)
+        return (manifest,statistics.summary(duration: duration), SessionStore.routePreview(from: locations))
     }
 }

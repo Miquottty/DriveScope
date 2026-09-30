@@ -25,7 +25,7 @@ public struct SessionStatistics: Sendable {
     /// Latest GPS-estimated lateral g (speed × course rate), signed, + = left.
     public private(set) var gpsLateralG = 0.0
     private var accuracies: [Float] = []
-    private var firstMotionTimestamp: Double?
+    private var motionDrops: MotionDropCounter
     private var lastMotionTimestamp: Double?
     private var baroGain = Climb(hysteresis: baroHysteresis)
     private var gpsGain = Climb(hysteresis: gpsHysteresis)
@@ -34,6 +34,7 @@ public struct SessionStatistics: Sendable {
     public init(clock: SessionClock, expectedMotionHz: Double) {
         self.clock = clock
         self.expectedMotionHz = expectedMotionHz
+        self.motionDrops = MotionDropCounter(nominalHz: expectedMotionHz)
     }
 
     public mutating func add(_ location: LocationSample) {
@@ -73,7 +74,7 @@ public struct SessionStatistics: Sendable {
 
     public mutating func addMotion(timestamp: Double) {
         motionCount += 1
-        if firstMotionTimestamp == nil { firstMotionTimestamp = timestamp }
+        motionDrops.add(timestamp: timestamp)
         lastMotionTimestamp = timestamp
     }
 
@@ -96,10 +97,7 @@ public struct SessionStatistics: Sendable {
         s.maxLocationGap = maxLocationGap
         s.locationSampleCount = locationCount
         s.motionSampleCount = motionCount
-        if expectedMotionHz > 0, let first = firstMotionTimestamp, let last = lastMotionTimestamp, last > first {
-            let expected = (last - first) * expectedMotionHz + 1
-            s.motionDropRate = max(0, 1 - Double(motionCount) / expected)
-        }
+        s.motionDropRate = motionDrops.rate
         return s
     }
 

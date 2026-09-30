@@ -62,6 +62,10 @@ struct RecordingControllerTests {
         #expect(abs(session.distance - scripted) < scripted * 0.1 + 30)
         #expect(!session.routePreview.isEmpty)
         #expect(try files.readManifest().altitudeBaseline != nil)
+        // Exports take `endedAt` from the manifest, which must agree with SwiftData (it was left null).
+        let manifestEnd = try #require(files.readManifest().endedAt)
+        let sessionEnd = try #require(session.endedAt)
+        #expect(abs(manifestEnd.timeIntervalSince(sessionEnd)) < 0.001)
         // The scripted stop-and-go at ~1 km lets the engine calibrate the mount (persisted in both places).
         #expect(session.calibration != nil)
         #expect(try files.readManifest().calibration == session.calibration)

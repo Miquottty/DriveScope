@@ -67,6 +67,34 @@ struct SessionStoreTests {
         #expect(orphanMarkers.isEmpty)
     }
 
+    /// `clock.startedAt` anchors every GPS timestamp, so a manifest round trip must not lose its fraction
+    /// (it once shifted GPS 0.8 s against motion); manifests from before the fix still have to load.
+    @Test func manifestKeepsFractionalSecondsAndReadsLegacyDates() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeManifest-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: root) }
+
+        let started = Date(timeIntervalSince1970: 1_790_728_557.8123)
+        var manifest = SessionManifest(
+            sessionID: UUID(), clock: SessionClock(startedAt: started, startUptime: 4242), timeZoneID: "Asia/Tokyo",
+            preset: .logger, appVersion: "1.0", deviceModel: "iPhone18,1", osVersion: "27.2"
+        )
+        manifest.endedAt = started.addingTimeInterval(2160.4567)
+        let files = SessionFiles(root: root, sessionID: manifest.sessionID)
+        try files.createDirectory()
+        try files.writeManifest(manifest)
+
+        let reread = try files.readManifest()
+        #expect(abs(reread.clock.startedAt.timeIntervalSince(started)) < 0.001)
+        let ended = try #require(reread.endedAt)
+        #expect(abs(ended.timeIntervalSince(started) - 2160.4567) < 0.001)
+
+        let json = try String(contentsOf: files.manifestURL, encoding: .utf8)
+        let legacy = json.replacing(/"startedAt" : "[^"]*"/, with: "\"startedAt\" : \"2026-09-30T00:35:57Z\"")
+        #expect(legacy != json)
+        try Data(legacy.utf8).write(to: files.manifestURL)
+        #expect(try files.readManifest().clock.startedAt == Date(timeIntervalSince1970: 1_790_728_557))
+    }
+
     @Test func routePreviewDownsamplesKeepingEnds() {
         var fixes = (0..<1000).map { fix($0) }
         fixes[500] = fix(500, accuracy: 80)  // dropped: too inaccurate

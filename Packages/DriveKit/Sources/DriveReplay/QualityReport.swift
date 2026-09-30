@@ -3,7 +3,7 @@ import DriveStorage
 import Foundation
 
 /// Log-quality figures for the Quality screen (PLAN §11 "Quality (Debug)").
-/// Reads only what it needs: all fixes (1 Hz), but just the size and first / last record of the motion stream.
+/// Reads only what it needs: all fixes (1 Hz), but just the timestamps of the motion stream.
 public struct QualityReport: Sendable {
     public struct Stream: Sendable {
         public var count = 0
@@ -20,7 +20,7 @@ public struct QualityReport: Sendable {
     public var altitude = Stream()
     public var accuracyP50: Double = 0
     public var accuracyP95: Double = 0
-    /// 1 - received / expected, over the motion span.
+    /// Fraction of motion samples missing, counted from gaps between timestamps (see `MotionDropCounter`).
     public var motionDropRate: Double?
     public var battery = BatteryUsage()
     /// Highest `ProcessInfo.ThermalState` raw value seen (0 nominal … 3 critical).
@@ -41,15 +41,11 @@ public struct QualityReport: Sendable {
         report.accuracyP50 = SessionStatistics.percentile(accuracies, 0.5)
         report.accuracyP95 = SessionStatistics.percentile(accuracies, 0.95)
 
-        if let kind = manifest.motionStream {
-            let count = files.recordCount(kind)
-            if count > 0, let (first, last) = try firstAndLastTimestamp(files: files, kind: kind) {
-                report.motion.count = count
-                report.motion.span = last - first
-                report.motion.meanInterval = count > 1 ? (last - first) / Double(count - 1) : nil
-                let expected = (last - first) * manifest.preset.motion.hz + 1
-                report.motionDropRate = expected > 0 ? max(0, 1 - Double(count) / expected) : nil
-            }
+        if let kind = manifest.motionStream, let scan = try scanMotion(files: files, kind: kind, hz: manifest.preset.motion.hz) {
+            report.motion.count = scan.drops.received
+            report.motion.span = scan.last - scan.first
+            report.motion.meanInterval = scan.drops.received > 1 ? (scan.last - scan.first) / Double(scan.drops.received - 1) : nil
+            report.motionDropRate = scan.drops.rate
         }
         report.altitude = stream(times: try files.altitudes().map(\.timestamp))
 
@@ -72,15 +68,24 @@ public struct QualityReport: Sendable {
         return s
     }
 
-    private static func firstAndLastTimestamp(files: SessionFiles, kind: StreamKind) throws -> (Double, Double)? {
+    /// Walks the motion stream reading only each record's leading timestamp, not the full samples.
+    private static func scanMotion(
+        files: SessionFiles, kind: StreamKind, hz: Double
+    ) throws -> (first: Double, last: Double, drops: MotionDropCounter)? {
         let data = try files.streamData(kind)
         let count = (data.count - StreamHeader.size) / kind.recordSize
         guard count > 0 else { return nil }
         // Every record starts with its Double timestamp.
         return data.withUnsafeBytes { buffer in
-            var first = RecordReader(buffer, at: StreamHeader.size)
-            var last = RecordReader(buffer, at: StreamHeader.size + (count - 1) * kind.recordSize)
-            return (first.double(), last.double())
+            var drops = MotionDropCounter(nominalHz: hz)
+            var first = 0.0, last = 0.0
+            for index in 0..<count {
+                var reader = RecordReader(buffer, at: StreamHeader.size + index * kind.recordSize)
+                last = reader.double()
+                if index == 0 { first = last }
+                drops.add(timestamp: last)
+            }
+            return (first, last, drops)
         }
     }
 }
