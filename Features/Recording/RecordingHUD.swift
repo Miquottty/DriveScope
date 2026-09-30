@@ -38,7 +38,7 @@ struct RecordingHUD: View {
             if proxy.size.width > proxy.size.height {
                 landscape
             } else {
-                portrait
+                portrait(size: proxy.size)
             }
         }
         .background(Theme.hudBackground.ignoresSafeArea())
@@ -55,39 +55,65 @@ struct RecordingHUD: View {
         }
     }
 
-    // MARK: - Portrait (artboard 2, 390×844)
+    // MARK: - Portrait (artboard 2, 390×844; 2c 440×956)
 
-    private var portrait: some View {
-        VStack(spacing: 0) {
-            header(presetLabel: nil)
+    /// Read from the mount while driving: speed first, then REC time, then G. Nothing is sized for one screen — the
+    /// speed follows the width (three digits and km/h always fit) and the G meter takes whatever height is left,
+    /// so a Pro Max gets a bigger meter instead of an empty band above the buttons.
+    private func portrait(size: CGSize) -> some View {
+        let speedSize = min(180, (size.width - 40 - 60) / 1.8, size.height * 0.215)
+        return VStack(spacing: 0) {
+            header(presetLabel: nil, style: .phoneLarge)
 
-            VStack(spacing: 6) {
+            VStack(spacing: 8) {
                 HStack(alignment: .firstTextBaseline, spacing: 10) {
-                    speedText(size: 132, tracking: -0.04)
+                    speedText(size: speedSize, tracking: -0.04)
                     Text(verbatim: "km/h")
-                        .font(.system(size: 20, weight: .medium))
+                        .font(.system(size: 22, weight: .medium))
                         .foregroundStyle(Theme.textSecondary)
                 }
                 caption("GPS SPEED", size: 12, color: Theme.textSecondary)
             }
-            .padding(.top, 36)
+            .padding(.top, 18)
 
-            HStack(alignment: .top, spacing: 12) {
-                altitude(.metric).frame(maxWidth: .infinity)
-                course(.metric).frame(maxWidth: .infinity)
-                distance(.metric).frame(maxWidth: .infinity)
+            HStack(alignment: .firstTextBaseline) {
+                InlineTelemetryValue(label: "ALT", value: HUDFormat.altitude(snapshot.altitude), unit: "m")
+                Spacer(minLength: 8)
+                InlineTelemetryValue(label: "COURSE", value: HUDFormat.course(snapshot.course),
+                                     unit: HUDFormat.courseUnit(snapshot.course))
+                Spacer(minLength: 8)
+                InlineTelemetryValue(label: "DIST", value: HUDFormat.distanceKm(snapshot.distance), unit: "km")
             }
-            .padding(.top, 30)
+            .padding(.vertical, 10)
+            .padding(.horizontal, 2)
+            .overlay(alignment: .top) { Theme.divider.frame(height: 1) }
+            .overlay(alignment: .bottom) { Theme.divider.frame(height: 1) }
+            .padding(.top, 22)
 
-            gForces(style: .gForce, meterSize: 150, spacing: 28, valueSpacing: 14)
-                .padding(.top, 28)
+            HStack(spacing: 12) {
+                TelemetryValue(label: "LATERAL", value: HUDFormat.signedG(snapshot.lateralG), unit: "G",
+                               style: .gForceStacked, valueColor: Theme.accent)
+                    .frame(maxWidth: .infinity)
+                TelemetryValue(label: "LONG", value: HUDFormat.signedG(snapshot.longitudinalG), unit: "G",
+                               style: .gForceStacked)
+                    .frame(maxWidth: .infinity)
+            }
+            .padding(.top, 18)
 
-            Spacer(minLength: 16)
+            // Fixed-size dot and a "1.0 G" label (the iPad drawing): scaled with the meter, the dot would balloon.
+            GMeterView(lateralG: snapshot.lateralG, longitudinalG: snapshot.longitudinalG,
+                       style: .pad(dotRadius: 10, labelSize: 12))
+                .frame(maxWidth: .infinity, minHeight: 120, maxHeight: .infinity)
+                .overlay(alignment: .bottomTrailing) {
+                    calibrationControl.padding(.bottom, 4)
+                }
+                .padding(.top, 8)
 
             HStack(spacing: 12) {
                 markButton(height: 64)
                 syncButton(height: 64)
             }
+            .padding(.top, 12)
             Text("MARK = bookmark this moment · SYNC = clap / flash for camera sync")
                 .font(.system(size: 11))
                 .foregroundStyle(Theme.textMuted)
@@ -149,10 +175,11 @@ struct RecordingHUD: View {
 
     // MARK: - Pieces
 
-    private func header(presetLabel: String?) -> some View {
+    private func header(presetLabel: String?, style: RecordingHeader.Style = .phone) -> some View {
         RecordingHeader(
             elapsed: snapshot.elapsed, gpsStatus: snapshot.gpsStatus,
-            horizontalAccuracy: snapshot.horizontalAccuracy, presetLabel: presetLabel, isRecording: !isSaving)
+            horizontalAccuracy: snapshot.horizontalAccuracy, presetLabel: presetLabel, isRecording: !isSaving,
+            style: style)
     }
 
     private func speedText(size: CGFloat, tracking: CGFloat) -> some View {
@@ -278,6 +305,16 @@ private extension TelemetrySnapshot {
 }
 
 #Preview("Landscape", traits: .landscapeLeft) {
+    RecordingHUD(snapshot: .mock, preset: .logger)
+}
+
+#Preview("Portrait · 188 km/h, Pro Max size", traits: .fixedLayout(width: 440, height: 860)) {
+    var fast = TelemetrySnapshot.mock
+    fast.speed = 188 / 3.6
+    return RecordingHUD(snapshot: fast, preset: .logger)
+}
+
+#Preview("Portrait · small phone", traits: .fixedLayout(width: 375, height: 647)) {
     RecordingHUD(snapshot: .mock, preset: .logger)
 }
 

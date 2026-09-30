@@ -11,7 +11,9 @@
 |---|---|---|
 | `canvas.json` | キャンバスのレイアウト（配置・タイトル・注記） | — |
 | `Main.dc.html` | 1 · Home / Ready | 390×844 |
-| `Recording.dc.html` | 2 · Recording HUD | 390×844 |
+| `Recording.dc.html` | 2 · Recording HUD（縦。速度・REC 経過時間・G をマウント越しに読める大きさに。2026-09-30 改訂） | 390×844 |
+| `RecordingPortraitV2Max.dc.html` | 2b · Recording HUD · Pro Max（余った高さは G メーターへ） | 440×956 |
+| `RecordingPortraitV2Start.dc.html` | 2c · Recording HUD · 開始直後（測位前・GPS EST.） | 390×844 |
 | `Sessions.dc.html` | 3 · Sessions | 390×844 |
 | `Detail.dc.html` | 4 · Session Detail | 390×844 |
 | `Replay.dc.html` | 5 · Timeline Replay | 390×844 |
