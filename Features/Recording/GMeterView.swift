@@ -2,8 +2,9 @@ import SwiftUI
 
 /// Friction-circle G meter (mock: 150 pt portrait, 170 pt landscape, drawn on a 150-unit grid).
 ///
-/// Rings at ⅓ / ⅔ / 1 of `range`. Direction follows the mock: positive lateral (the engine's "+ = left")
-/// plots to the right, i.e. the way the driver is pushed in a left turn; accelerating plots up.
+/// Rings at ⅓ / ⅔ / 1 of `range`. The dot moves the way the driver is pushed (a ball in a bowl, like the
+/// factory G monitors): a left turn (+lateral, the engine's "+ = left") plots right, a right turn plots left,
+/// braking plots up (forward) and accelerating plots down. The LATERAL / LONG numbers keep the engine's signs.
 /// The amber wedge is the recent trail swept from the centre (the mock's translucent sector).
 struct GMeterView: View {
     var lateralG: Double
@@ -22,8 +23,10 @@ struct GMeterView: View {
         case pad(dotRadius: CGFloat, labelSize: CGFloat?)
     }
 
-    /// The dot shows the car's acceleration vector: a left turn (+lateral) plots left, accelerating plots up.
-    static let lateralSign: Double = -1
+    /// Screen direction of the dot per g, as the driver is pushed: +lateral (left turn) plots right (+x);
+    /// +longitudinal (accelerating) plots down, so braking plots up.
+    static let lateralSign: Double = 1
+    static let longitudinalSign: Double = -1
 
     @State private var trail: [Sample] = []
 
@@ -147,7 +150,7 @@ struct GMeterView: View {
 
     private func point(_ sample: Sample, center: CGPoint, radius: CGFloat, limit: Double) -> CGPoint {
         var x = Self.lateralSign * sample.lateral / range
-        var y = sample.longitudinal / range
+        var y = Self.longitudinalSign * sample.longitudinal / range
         let magnitude = (x * x + y * y).squareRoot()
         if magnitude > limit {
             x *= limit / magnitude
