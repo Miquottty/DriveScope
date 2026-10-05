@@ -83,7 +83,7 @@ struct SessionsView: View {
 
     private func listBody(_ format: SessionFormat) -> some View {
         List {
-            ForEach(sections) { section in
+            ForEach(sections.newestMonthFirst) { section in
                 Section {
                     ForEach(section) { session in
                         SessionRow(session: session, format: format) {
@@ -142,6 +142,12 @@ struct SessionsView: View {
             deleteError = String(describing: error)
         }
     }
+}
+
+extension SectionedResults<DriveSession, String> {
+    /// `@Query(sectionBy:)` lists sections by key ascending whatever the sort order (which only orders the rows inside
+    /// each section); the "yyyy-MM" keys sort lexically, so this puts the latest month on top.
+    var newestMonthFirst: [ResultsSection<DriveSession, String>] { sorted { $0.title > $1.title } }
 }
 
 private struct SessionRow: View {
