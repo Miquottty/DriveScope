@@ -76,7 +76,7 @@ struct IPadRootView: View {
                     .sidebarRow(isSelected: selection == .quality)
                     .tag(IPadDestination.quality)
             }
-            ForEach(sections) { section in
+            ForEach(sections.newestMonthFirst) { section in
                 Section {
                     ForEach(section) { session in
                         IPadSessionRow(session: session, format: format, isRecording: recorder.session?.id == session.id)
