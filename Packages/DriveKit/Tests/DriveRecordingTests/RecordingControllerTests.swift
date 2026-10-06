@@ -1,5 +1,6 @@
 import DriveDomain
 import DriveRecording
+import DriveReplay
 import DriveSensors
 import DriveStorage
 import Foundation
@@ -10,7 +11,8 @@ import Testing
 struct RecordingControllerTests {
     /// START → record a scripted drive at 100× through the real engine and writer → SYNC / MARK → STOP: the state machine,
     /// the files on disk and the persisted statistics must agree with the script. Core Location's cached fix
-    /// (delivered first, 2 min old, elsewhere) must not become part of the drive.
+    /// (delivered first, 2 min old, elsewhere) must not become part of the drive, and the satellite lock after
+    /// 10 s of Wi‑Fi-only fixes is logged once.
     @Test func recordsScriptedDriveEndToEnd() async throws {
         let root = FileManager.default.temporaryDirectory.appending(path: "DriveScopeRecording-\(UUID())")
         defer { try? FileManager.default.removeItem(at: root) }
@@ -20,7 +22,8 @@ struct RecordingControllerTests {
             environment: AppEnvironment(appVersion: "test", deviceModel: "test", osVersion: "test"),
             makeSuite: {
                 var suite = ScriptPlayback.suite(script: .akagi, rate: 100, label: "test")
-                suite.location = CachedFixFirst(inner: suite.location, clock: suite.clock)
+                let coarse = CoarseStartLocationSource(inner: suite.location, clock: suite.clock, delay: 10)
+                suite.location = CachedFixFirst(inner: coarse, clock: suite.clock)
                 return suite
             }
         )
@@ -69,6 +72,12 @@ struct RecordingControllerTests {
         #expect(session.sortedMarkers.contains { $0.kind == .sync && $0.elapsed == syncMark.elapsed })
         let watchMark = try #require(events.first { $0.kind == .marker && $0.source == .watch })
         #expect(watchMark.value == pressed.timeIntervalSince1970 && watchMark.elapsed > 0)
+
+        let lock = try #require(events.first { $0.kind == .satelliteAcquired })
+        #expect(events.count { $0.kind == .satelliteAcquired } == 1)
+        #expect((9...13).contains(lock.value))
+        let report = try QualityReport.make(files: files)
+        #expect(abs(try #require(report.firstSatelliteFix) - lock.value) < 1)
 
         // Distance along the script, within GPS noise.
         let scripted = DriveScript.akagi.state(at: session.duration).distance

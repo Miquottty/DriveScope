@@ -8,6 +8,9 @@ import DriveRecording
 /// Pattern "chirp3-v1" (keep the editor's detector in step): 40 ms pips, gaps 120 ms then 200 ms — uneven, so
 /// the pattern cannot line up with a copy of itself shifted by one pip.
 ///
+/// It also plays the satellite chime (two rising tones at 1.0 / 1.5 kHz, far from the pips and unlike them, so the
+/// SYNC detector never takes it for a beep).
+///
 /// An actor: activating the audio session and starting the engine block, sometimes for long (a CI simulator
 /// without audio hardware never returned), so none of it may run on the main actor.
 actor SyncBeeper {
@@ -23,9 +26,22 @@ actor SyncBeeper {
     /// Raised-cosine ramps so the pips don't click (a click is broadband and blurs the onset).
     private static let ramp = 0.005
 
+    private struct Tone {
+        var onset: TimeInterval
+        var duration: TimeInterval
+        var frequency: Double
+    }
+
+    private static let syncTones = pipOnsets.map { Tone(onset: $0, duration: pipDuration, frequency: frequency) }
+    private static let chimeTones = [
+        Tone(onset: 0, duration: 0.080, frequency: 1_000),
+        Tone(onset: 0.120, duration: 0.120, frequency: 1_500),
+    ]
+
     private let engine = AVAudioEngine()
     private let player = AVAudioPlayerNode()
     private let buffer: AVAudioPCMBuffer?
+    private let chime: AVAudioPCMBuffer?
 
     /// nil under `-UITest`: UI tests don't depend on audio hardware (same as the notification prompt).
     static func make() -> SyncBeeper? {
@@ -33,7 +49,8 @@ actor SyncBeeper {
     }
 
     init() {
-        buffer = Self.makeBuffer()
+        buffer = Self.makeBuffer(Self.syncTones)
+        chime = Self.makeBuffer(Self.chimeTones)
         engine.attach(player)
         if let buffer {
             engine.connect(player, to: engine.mainMixerNode, format: buffer.format)
@@ -71,6 +88,12 @@ actor SyncBeeper {
         )
     }
 
+    /// The first satellite fix of the run (PLAN §9.3): tells the driver it is fine to set off. Timing is not recorded.
+    func playChime() {
+        guard let chime, startIfNeeded() else { return }
+        player.scheduleBuffer(chime)
+    }
+
     private func startIfNeeded() -> Bool {
         if engine.isRunning, player.isPlaying { return true }
         do {
@@ -94,8 +117,8 @@ actor SyncBeeper {
         }
     }
 
-    private static func makeBuffer() -> AVAudioPCMBuffer? {
-        let total = pipOnsets.last! + pipDuration
+    private static func makeBuffer(_ tones: [Tone]) -> AVAudioPCMBuffer? {
+        let total = tones.map { $0.onset + $0.duration }.max() ?? 0
         guard let format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1),
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: AVAudioFrameCount(total * sampleRate)),
               let samples = buffer.floatChannelData?[0]
@@ -103,14 +126,14 @@ actor SyncBeeper {
         buffer.frameLength = buffer.frameCapacity
         let count = Int(buffer.frameLength)
         for i in 0..<count { samples[i] = 0 }
-        let pipFrames = Int(pipDuration * sampleRate)
         let rampFrames = Double(ramp * sampleRate)
-        for onset in pipOnsets {
-            let start = Int(onset * sampleRate)
-            for j in 0..<pipFrames where start + j < count {
-                let edge = Double(min(j, pipFrames - 1 - j))
+        for tone in tones {
+            let start = Int(tone.onset * sampleRate)
+            let frames = Int(tone.duration * sampleRate)
+            for j in 0..<frames where start + j < count {
+                let edge = Double(min(j, frames - 1 - j))
                 let gain = edge < rampFrames ? 0.5 - 0.5 * cos(.pi * edge / rampFrames) : 1
-                samples[start + j] = Float(0.9 * gain * sin(2 * .pi * frequency * Double(j) / sampleRate))
+                samples[start + j] = Float(0.9 * gain * sin(2 * .pi * tone.frequency * Double(j) / sampleRate))
             }
         }
         return buffer

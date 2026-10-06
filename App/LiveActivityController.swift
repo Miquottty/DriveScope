@@ -267,7 +267,8 @@ final class LiveActivityController: RecordingObserver {
             elapsed: snapshot.elapsed.rounded(),
             speedKmh: snapshot.speed.map { Units.kmh(fromMetersPerSecond: max(0, $0)).rounded() },
             distanceKm: (snapshot.distance / 100).rounded() / 10,
-            gpsAccuracyM: snapshot.horizontalAccuracy.map { $0.rounded() },
+            // Before the satellite lock the fixes are Wi‑Fi ones (±40 m): not an accuracy worth showing.
+            gpsAccuracyM: snapshot.gpsStatus == .good ? snapshot.horizontalAccuracy.map { $0.rounded() } : nil,
             lateralG: (snapshot.lateralG * 100).rounded() / 100,
             status: status,
             languageCode: language().languageCode,

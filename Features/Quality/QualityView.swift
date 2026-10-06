@@ -151,6 +151,7 @@ struct QualityView: View {
             QualityRow(label: "Max gap", value: report.location.maxGap.map { format.seconds($0).text } ?? none)
             QualityRow(label: "Accuracy P50", value: format.meters(report.accuracyP50).text)
             QualityRow(label: "Accuracy P95", value: format.meters(report.accuracyP95).text)
+            QualityRow(label: "Satellite fix after", value: report.firstSatelliteFix.map { format.seconds($0).text } ?? none)
         }
         QualityCard(title: "Motion") {
             QualityRow(label: "Samples", value: report.motion.count > 0 ? format.integer(report.motion.count) : none)
@@ -346,6 +347,7 @@ struct QualityView: View {
             IPadQualityRow(label: "Mean interval", value: interval(report.location.meanInterval))
             IPadQualityRow(label: "Max gap", value: report.location.maxGap.map { format.seconds($0).text } ?? none)
             IPadQualityRow(label: Text(verbatim: "P50 / P95"), value: accuracy)
+            IPadQualityRow(label: "Satellite fix after", value: report.firstSatelliteFix.map { format.seconds($0).text } ?? none)
             // Barometer stream: sample count and mean interval.
             IPadQualityRow(
                 label: "Altitude",

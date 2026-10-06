@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("capturePreset") private var presetRaw = CapturePreset.default.rawValue
     @AppStorage("locationBackend") private var locationBackend = SensorEnvironment.LocationBackend.locationManager.rawValue
     @AppStorage(RobustMode.defaultsKey) private var robustMode = false
+    @AppStorage("satelliteChime") private var satelliteChime = true
     // Read by `AppModel.archiveAfterDays`; 0 = off.
     @AppStorage("archiveAfterDays") private var archiveAfterDays = 30
     #if DEBUG
@@ -84,6 +85,14 @@ struct SettingsView: View {
                     }
                 } footer: {
                     Text("If DriveScope is closed mid-drive (crash, low memory), iOS reopens it in the background and recording continues in the same session within 30 minutes. Needs location access \"Always\".")
+                }
+                Section {
+                    Toggle("Satellite fix chime", isOn: $satelliteChime)
+                        .tint(Theme.accent)
+                        .accessibilityIdentifier("satelliteChimeToggle")
+                        .listRowBackground(Theme.surface)
+                } footer: {
+                    Text("A short sound and haptic when GPS first locks onto satellites after START. Until then iOS may give only Wi‑Fi positions without speed, so wait for it before setting off. Plays while the HUD is on screen.")
                 }
                 Section {
                     Picker("Compress old sessions", selection: $archiveAfterDays) {

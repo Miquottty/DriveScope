@@ -369,8 +369,15 @@ STOP: removePendingNotificationRequests
 ```
 サスペンド・クラッシュ・強制終了のどれでも、最終延期から 180 秒後に OS が単独で通知。通知タップでアプリ復帰 → `state == .recording` のセッションを再開・同じファイルに追記。
 
+**衛星測位(V1.2.1)**: 衛星をつかむ前の Core Location は Wi‑Fi / 基地局の fix(speed = -1、約 6 s 間隔、±10〜50 m)しか出さないことがある
+(2026-10-06 実車: 最初の衛星 fix まで 60.8 s / 373 s、屋根の下で 4 分停車 → 発進後も 130 s 衛星なし)。速度が付く fix = 衛星 fix(`LocationSample.isSatelliteFix`)。
+- Watchdog・通知・デッドマンは従来どおり**全 fix** で判定(Wi‑Fi fix でもプロセスは生きている)。
+- HUD の GPS バッジは `SatelliteFixTracker` で判定: その run で衛星 fix がまだ無い → ACQUIRING(琥珀、時間で赤にしない)、取得後に衛星 fix が 15 s 途絶 → GPS SEARCHING(Live Activity / Watch も)。精度表示は衛星 fix のときだけ。
+- 最初の衛星 fix で `satelliteAcquired` イベント(value = run 開始からの秒)、HUD 表示中なら通知音(1.0 → 1.5 kHz の 2 音、SYNC の 2.5 kHz × 3 とは別物)と振動。設定でオフ可。
+- Home は表示中(フォアグラウンド・非記録・位置情報許可済み)に START 前から衛星を探し、GPS セルに「衛星を探索中」/ ±m を出す。
+
 ### 9.4 events ストリーム
-`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep` を elapsed 付きで記録。Quality 画面と JSON Export に出す。`marker` の aux はマーカーの種類（0 = MARK、1 = SYNC、2 = HIGHLIGHT。永続化されるので番号は変えない）。
+`events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep / satelliteAcquired` を elapsed 付きで記録。Quality 画面と JSON Export に出す。`marker` の aux はマーカーの種類（0 = MARK、1 = SYNC、2 = HIGHLIGHT。永続化されるので番号は変えない）。
 
 ### 9.5 堅牢モード（V1.1）
 - 設定 → 記録 →「堅牢モード」（既定オフ）。オンにすると位置情報の「常に」許可を求める（`NSLocationAlwaysAndWhenInUseUsageDescription`）。未許可なら設定アプリへのリンクを出す。
@@ -407,7 +414,7 @@ STOP: removePendingNotificationRequests
 
 | # | 画面 | 要点 |
 |---|---|---|
-| 1 | Home / Ready | センサー状態（GPS 精度・Precise・Motion Hz・気圧・給電・背景許可）、START、最近のセッション、タブ（Record / Sessions / Quality） |
+| 1 | Home / Ready | センサー状態（GPS: 表示中は START 前から衛星を探して「探索中」/ 精度、Precise・Motion Hz・気圧・給電・背景許可）、START、最近のセッション、タブ（Record / Sessions / Quality） |
 | 2 | Recording HUD（縦） | 速度 132pt、ALT / COURSE / DIST、G メーター、MARK / HIGHLIGHT / SYNC（3 等分、アイコンを文字の上に積む）、STOP（全幅・長押し）。ミニ Map なし |
 | 8 | Recording HUD（横） | 同じ情報を 3 カラム配置。横幅クラスで `VStack` / `HStack` を切り替える 1 つの View。ボタンは MARK / HIGHLIGHT / SYNC / STOP を 4 等分（iPad も同じ 4 等分、キーボードは M / H / S） |
 | 3 | Sessions | `@Query(sectionBy:)` で月別、ルートサムネ、RECOVERED バッジ |
