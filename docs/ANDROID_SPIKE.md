@@ -68,6 +68,10 @@ iPhone(nachoneko)の 2026-10-06「足利市 → 太田市」を端末から取�
 | リプレイ | ルート・再生済みの琥珀・車の矢印・ピン・追従・3D(60° 傾け)・32 倍速まで動作 | 同左 | — |
 | キー | 不要 | 不要(出典表示のみ) | 必要 |
 
+**結論: 地図は MapLibre(既定は OpenFreeMap の暗い地図、国土地理院は暗い配色に作り替えて選択肢に)。** 目的は Vlog 制作で、
+動画の地図や 3D フライオーバーは書き出したデータから別に作るため、アプリ内でリアルな地図を完璧に再現する必要はない。
+Google Maps(試作の `GoogleMapPane.kt`、Maps Compose 7.0.0)は保留し、#40 に残す。
+
 地名(Android の `Geocoder`、Pixel では Google の住所データ): 開始「栃木県 / 足利市」、終了「群馬県 / 太田市」で **iOS(MapKit)と一致**。
 
 ## 中核の共有(Swift on Android)— 結論: ① Swift のまま共有する
@@ -99,3 +103,28 @@ Android/swift/build-bridge.sh   # DriveKitBridge をビルドし、strip して 
 
 採用条件(計画): 囲む修正が小さい ✓ / APK に入れて Pixel で動く ✓ / macOS と結果が一致 ✓ / APK の増加 ✓(許容)。
 → **中核の計算・書き出しは Swift の DriveKit を Android でもそのまま使う。** Kotlin に移植しない。
+
+## 試作の結論
+
+| 問い | 結論 |
+|---|---|
+| センサーの決まり | 3 軸とも iOS = −Android / 9.80665。時計は elapsedRealtime に統一。生の加速度 200 Hz から 50 Hz の格子、気圧は 1 秒平均、衛星が来ない間だけ Wi‑Fi の位置 |
+| 中核の共有 | **① Swift の DriveKit を Android でもそのまま使う**(JNI)。Kotlin に移植しない |
+| 地図 | **MapLibre**。Google Maps は #40 |
+| 画面 OFF の記録 | 位置情報タイプのフォアグラウンドサービス + wake lock で 50 Hz・欠落 0.014% |
+| 残り(実車で確認) | ジャイロの符号、屋外での衛星の状態と最初の測位までの時間(iPhone と並走) |
+
+## 本実装のスプリント案(Android は iOS を後追い)
+
+役割分担: **センサー → .bin の記録と画面は Kotlin、計算・集計・補間・書き出しは DriveKit(Swift、JNI)**。
+
+| スプリント | 内容 | 終わりの条件 |
+|---|---|---|
+| A-S1 記録 | アプリの骨組み(ホーム・記録 HUD・設定)。ホームの衛星表示と緑の READY(Android は衛星の数と信号の強さまで出せる)。記録サービス(試作の書き込みを整理)、常駐通知に MARK / STOP。events.bin(マーカー・衛星取得・電池・温度)。SYNC の音(AAudio で出力時刻を取る) | 実車で START → MARK / SYNC → STOP、iPhone と同じ形式のセッションが残る |
+| A-S2 振り返り・書き出し | セッション一覧と詳細(地名は Android の Geocoder)、リプレイ(MapLibre + DriveKit のフレーム)、書き出し(DriveKit の JSON / GPX / CSV を共有メニューへ) | 書き出しが今の Vlog 制作の流れにそのまま入る |
+| A-S3 堅牢性・品質 | 落ちたときの復旧(DriveKit で再集計)、記録中の G(DriveKit の MountCalibrator を JNI で)、品質画面 | 2 時間記録・強制終了からの復旧 |
+| 後回し | Wear OS、Android Auto、Google Maps(#40)、APK の小型化(Foundation の国際化データを外す) | — |
+
+置き場所: 試作ブランチ(#39)は main に入れない。A-S1 の最初に、試作から使う部分(`Android/` の記録と JNI、DriveKit の移植対応、`drivekit-cli`)を整理して main に入れ、
+以後は iOS と同じく `feature/a-sN-…` のブランチで進める。
+
