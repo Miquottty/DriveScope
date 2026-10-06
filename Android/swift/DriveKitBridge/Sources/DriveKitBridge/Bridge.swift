@@ -65,3 +65,43 @@ public func quality(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: 
     }
     return env.jstring(result)
 }
+
+private extension UnsafeMutablePointer where Pointee == JNIEnv? {
+    func doubleArray(_ values: [Double]) -> jdoubleArray? {
+        guard let array = functions.NewDoubleArray(self, jsize(values.count)) else { return nil }
+        values.withUnsafeBufferPointer { functions.SetDoubleArrayRegion(self, array, 0, jsize(values.count), $0.baseAddress) }
+        return array
+    }
+}
+
+/// Fields per frame in `replayFrames`.
+private let frameStride = 7
+
+/// `replayFrames(sessionDir, hz)` → [t, lat, lon, speed m/s, course °, altitude m, lateral g] × frames, from the same
+/// interpolator and smoothing as the iOS Replay screen (`ReplayTimeline.options`), with the solved mount.
+@_cdecl("Java_com_miquottty_drivescope_bridge_DriveKitBridge_replayFrames")
+public func replayFrames(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: jstring?, hz: jdouble) -> jdoubleArray? {
+    guard let reader = try? TelemetryReader(files: SessionFiles(directory: URL(filePath: env.string(session), directoryHint: .isDirectory))),
+          reader.duration > 0, hz > 0
+    else { return env.doubleArray([]) }
+    let calibration = MountSolver.solve(reader: reader) ?? reader.manifest.calibration
+    let interpolator = TelemetryInterpolator(
+        reader: reader, calibration: calibration, options: .init(speedWindow: 1, gWindow: 0.2)
+    )
+    let count = Int(reader.duration * hz) + 1
+    var values: [Double] = []
+    values.reserveCapacity(count * frameStride)
+    for i in 0..<count {
+        let f = interpolator.frame(at: Double(i) / hz)
+        values += [f.time, f.latitude, f.longitude, f.speed, f.course, f.altitude, f.lateralG]
+    }
+    return env.doubleArray(values)
+}
+
+/// `markers(sessionDir)` → [elapsed, kind (0 MARK, 1 SYNC, 2 HIGHLIGHT)] × markers, from events.bin.
+@_cdecl("Java_com_miquottty_drivescope_bridge_DriveKitBridge_markers")
+public func markers(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: jstring?) -> jdoubleArray? {
+    let files = SessionFiles(directory: URL(filePath: env.string(session), directoryHint: .isDirectory))
+    let events = (try? files.events()) ?? []
+    return env.doubleArray(events.filter { $0.kind == .marker }.flatMap { [$0.elapsed, Double($0.aux)] })
+}

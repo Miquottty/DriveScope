@@ -57,7 +57,18 @@ iPhone(nachoneko)の 2026-10-06「足利市 → 太田市」を端末から取�
 
 ## 地図
 
-(未着手)
+比較画面(`Android/app/.../map/MapScreen.kt`): iPhone の「足利市 → 太田市」(34:49)のセッションのフォルダを
+`files/Imports` に push し、**リプレイのフレームは Android 上の DriveKit(Swift)の `TelemetryInterpolator` で作る**
+(iOS の Replay と同じ補間・平滑化。10 Hz × 20,892 フレームを 180 ms)。
+
+| | MapLibre + OpenFreeMap dark | MapLibre + 地理院 標準 | Google Maps |
+|---|---|---|---|
+| 表示 | ✓ 暗い地図、日本語の道路名(足利環状線など) | ✓(PMTiles の指定を Native 向けに書き換えて読み込む)。建物・神社・寺の記号まで | API キー待ち |
+| 色 | 暗い。お店などの表示は少ない | 明るい。使うなら暗い配色に作り替える(スタイルは自由に変えられる) | — |
+| リプレイ | ルート・再生済みの琥珀・車の矢印・ピン・追従・3D(60° 傾け)・32 倍速まで動作 | 同左 | — |
+| キー | 不要 | 不要(出典表示のみ) | 必要 |
+
+地名(Android の `Geocoder`、Pixel では Google の住所データ): 開始「栃木県 / 足利市」、終了「群馬県 / 太田市」で **iOS(MapKit)と一致**。
 
 ## 中核の共有(Swift on Android)— 結論: ① Swift のまま共有する
 

@@ -5,10 +5,16 @@ import android.content.pm.PackageManager
 import android.hardware.SensorManager
 import android.location.LocationManager
 import android.os.Bundle
+import java.io.File
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import com.miquottty.drivescope.map.MapScreen
 import com.miquottty.drivescope.probe.GnssProbe
 import com.miquottty.drivescope.probe.MotionProbe
 import com.miquottty.drivescope.probe.ProbeScreen
@@ -27,7 +33,15 @@ class MainActivity : ComponentActivity() {
         gnss = GnssProbe(getSystemService(LocationManager::class.java))
         motion = MotionProbe(getSystemService(SensorManager::class.java))
         setContent {
-            DriveScopeTheme { ProbeScreen(gnss, motion) }
+            DriveScopeTheme {
+                var mapSession by remember { mutableStateOf<File?>(null) }
+                val session = mapSession
+                if (session == null) {
+                    ProbeScreen(gnss, motion, onOpenMap = { mapSession = it })
+                } else {
+                    MapScreen(session, onBack = { mapSession = null })
+                }
+            }
         }
     }
 

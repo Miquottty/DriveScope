@@ -23,4 +23,12 @@ object DriveKitBridge {
 
     /** A few Quality-screen figures for `sessionDir`, computed by DriveKit. */
     external fun quality(sessionDir: String): String
+
+    /** [t, lat, lon, speed m/s, course °, altitude m, lateral g] × frames at `hz` — the iOS Replay interpolation. */
+    external fun replayFrames(sessionDir: String, hz: Double): DoubleArray
+
+    /** [elapsed, kind (0 MARK, 1 SYNC, 2 HIGHLIGHT)] × markers. */
+    external fun markers(sessionDir: String): DoubleArray
+
+    const val FRAME_STRIDE = 7
 }

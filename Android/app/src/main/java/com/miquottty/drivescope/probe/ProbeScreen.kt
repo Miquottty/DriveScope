@@ -47,7 +47,7 @@ import java.util.Locale
 
 /** S0 spike screen 1: satellites, the raw fix, every motion sensor, and the orientation check. */
 @Composable
-fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe) {
+fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe, onOpenMap: (File) -> Unit) {
     val satellites by gnss.snapshot.collectAsState()
     val readings by motion.readings.collectAsState()
     Column(
@@ -60,6 +60,7 @@ fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("DriveScope · sensor probe", color = Theme.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        MapCard(onOpenMap)
         RecordingCard()
         SwiftCoreCard()
         SatelliteCard(satellites)
@@ -113,6 +114,25 @@ private fun RecordingCard() {
             ),
             onClick = { if (s == null) RecordingService.start(context) else RecordingService.stop(context) },
         ) { Text(if (s == null) "START" else "STOP") }
+    }
+}
+
+/** S0 spike step 3: sessions pushed to files/Imports (an iPhone drive) or recorded here, opened on the map. */
+@Composable
+private fun MapCard(onOpenMap: (File) -> Unit) {
+    val context = LocalContext.current
+    val root = context.getExternalFilesDir(null)
+    val sessions = listOf("Imports", "Sessions").flatMap { dir ->
+        File(root, dir).listFiles()?.filter { File(it, "manifest.json").exists() }.orEmpty()
+    }.sortedByDescending { it.lastModified() }
+    Card("Map comparison") {
+        if (sessions.isEmpty()) Text("No session — adb push one to files/Imports", color = Theme.textSecondary, fontSize = 13.sp)
+        for (session in sessions.take(4)) {
+            Button(
+                colors = ButtonDefaults.buttonColors(containerColor = Theme.surface, contentColor = Theme.accent),
+                onClick = { onOpenMap(session) },
+            ) { Text("${session.parentFile?.name} / ${session.name.take(8)}", fontFamily = FontFamily.Monospace) }
+        }
     }
 }
 
