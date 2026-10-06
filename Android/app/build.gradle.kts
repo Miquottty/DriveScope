@@ -45,4 +45,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.maplibre.android)
+    testImplementation(libs.junit)
+    // org.json is part of Android but only stubbed in JVM unit tests.
+    testImplementation(libs.org.json)
 }

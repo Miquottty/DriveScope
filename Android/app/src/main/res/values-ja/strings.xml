@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Home -->
+    <string name="home_sensor_status">センサー状態</string>
+    <string name="home_gps_not_asked">未確認</string>
+    <string name="home_asked_on_start">START 時に確認</string>
+    <string name="home_searching_satellites">衛星を探索中</string>
+    <string name="home_motion">モーション</string>
+    <string name="home_barometer">気圧計</string>
+    <string name="home_power">電源</string>
+    <string name="home_recent">最近</string>
+    <string name="home_mount_hint">スマートフォンを固定してから開始してください。進行方向は最初の加速で自動的に検出されます。</string>
+    <string name="start_record_drive">ドライブを記録</string>
+    <string name="start_searching">衛星を探索中</string>
+    <string name="start_ready">READY · 衛星 OK</string>
+    <string name="available">利用可能</string>
+    <string name="unavailable">利用不可</string>
+    <string name="charging">充電中</string>
+    <string name="off">オフ</string>
+    <!-- Recording -->
+    <string name="hud_caption">MARK = ブックマーク · HIGHLIGHT = 見どころ · SYNC = カメラ同期用の音</string>
+    <string name="hud_hold_to_stop">長押しで停止</string>
+    <string name="notification_channel_recording">記録</string>
+    <string name="title_loop">ループ</string>
+    <!-- Settings -->
+    <string name="settings_title">設定</string>
+    <string name="settings_language">言語</string>
+    <string name="settings_language_system">システム</string>
+    <string name="settings_recording">記録</string>
+    <string name="settings_satellite_chime">衛星取得の通知音</string>
+    <string name="settings_satellite_chime_footer">START 後に GPS が初めて衛星をつかんだとき、短い音と振動で知らせます。それまでは Android が速度のない Wi‑Fi の位置しか出さないことがあるので、鳴ってから発進してください。HUD を表示している間に鳴ります。</string>
+    <string name="settings_debug">デバッグ</string>
+    <string name="settings_fast_watchdog">高速ウォッチドッグ (÷10)</string>
+    <string name="settings_sensor_probe">センサー確認と地図の比較(開発用)</string>
+</resources>

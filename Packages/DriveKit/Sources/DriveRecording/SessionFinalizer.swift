@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import DriveDomain
 import DriveReplay
 import DriveStorage
@@ -167,3 +168,4 @@ public final class SessionFinalizer {
         PlacePicker.candidates(locations: (try? files.locations()) ?? [], clock: clock, peakLateralElapsed: peakLateralElapsed)
     }
 }
+#endif

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Theme.accent (design/mock), for the notification. -->
+    <color name="accent">#F2A33A</color>
+</resources>

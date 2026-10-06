@@ -1,63 +1,106 @@
 package com.miquottty.drivescope
 
-import android.Manifest
-import android.content.pm.PackageManager
 import android.hardware.SensorManager
 import android.location.LocationManager
 import android.os.Bundle
-import java.io.File
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.safeDrawingPadding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import com.miquottty.drivescope.bridge.DriveKitBridge
+import com.miquottty.drivescope.home.HomeScreen
+import com.miquottty.drivescope.hud.RecordingHud
 import com.miquottty.drivescope.map.MapScreen
 import com.miquottty.drivescope.probe.GnssProbe
 import com.miquottty.drivescope.probe.MotionProbe
 import com.miquottty.drivescope.probe.ProbeScreen
+import com.miquottty.drivescope.recording.RecorderState
+import com.miquottty.drivescope.recording.RecordingService
+import com.miquottty.drivescope.settings.SettingsScreen
+import com.miquottty.drivescope.store.SessionStore
+import java.io.File
 
 class MainActivity : ComponentActivity() {
-    private lateinit var gnss: GnssProbe
-    private lateinit var motion: MotionProbe
-
-    private val locationPermission = registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        if (granted) gnss.start()
-    }
+    private lateinit var store: SessionStore
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
-        gnss = GnssProbe(getSystemService(LocationManager::class.java))
-        motion = MotionProbe(getSystemService(SensorManager::class.java))
-        setContent {
-            DriveScopeTheme {
-                var mapSession by remember { mutableStateOf<File?>(null) }
-                val session = mapSession
-                if (session == null) {
-                    ProbeScreen(gnss, motion, onOpenMap = { mapSession = it })
-                } else {
-                    MapScreen(session, onBack = { mapSession = null })
-                }
-            }
-        }
+        DriveKitBridge.configure(cacheDir.absolutePath)
+        store = SessionStore.forContext(this)
+        store.reload()
+        setContent { DriveScopeTheme { AppRoot(store) } }
     }
 
+    // iOS records appWillEnterForeground / appDidEnterBackground during a run (PLAN §9.4).
     override fun onStart() {
         super.onStart()
-        motion.start()
-        if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-            gnss.start()
-        } else {
-            locationPermission.launch(Manifest.permission.ACCESS_FINE_LOCATION)
-        }
+        RecordingService.event(this, RecordingService.EVENT_FOREGROUND)
     }
 
     override fun onStop() {
+        RecordingService.event(this, RecordingService.EVENT_BACKGROUND)
         super.onStop()
-        motion.stop()
-        gnss.stop()
     }
+}
+
+private sealed interface Route {
+    data object Home : Route
+    data object Settings : Route
+    data object Probe : Route
+    data class Map(val session: File) : Route
+}
+
+@Composable
+private fun AppRoot(store: SessionStore) {
+    val recorder by RecordingService.recorder.collectAsState()
+    var route by remember { mutableStateOf<Route>(Route.Home) }
+    // The HUD takes over the screen while a run is on (iOS shows it full screen too).
+    if (recorder.phase != RecorderState.Phase.IDLE) {
+        RecordingHud(recorder)
+        return
+    }
+    BackHandler(enabled = route != Route.Home) {
+        route = if (route is Route.Map) Route.Probe else Route.Home
+    }
+    Box(Modifier.fillMaxSize().background(Theme.background).safeDrawingPadding()) {
+        when (val r = route) {
+            Route.Home -> HomeScreen(
+                store, onOpenSettings = { route = Route.Settings },
+                onOpenSession = { route = Route.Map(store.directory(it.id)) },
+            )
+            Route.Settings -> SettingsScreen(onBack = { route = Route.Home }, onOpenProbe = { route = Route.Probe })
+            Route.Probe -> DeveloperProbe(onOpenMap = { route = Route.Map(it) }, onBack = { route = Route.Settings })
+            is Route.Map -> MapScreen(r.session, onBack = { route = Route.Home })
+        }
+    }
+}
+
+/** The S0 spike's sensor probe, kept as a developer screen; its sensors run only while it shows. */
+@Composable
+private fun DeveloperProbe(onOpenMap: (File) -> Unit, onBack: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val gnss = remember { GnssProbe(context.getSystemService(LocationManager::class.java)) }
+    val motion = remember { MotionProbe(context.getSystemService(SensorManager::class.java)) }
+    DisposableEffect(Unit) {
+        motion.start()
+        runCatching { gnss.start() }
+        onDispose {
+            motion.stop()
+            gnss.stop()
+        }
+    }
+    ProbeScreen(gnss, motion, onOpenMap, onBack)
 }

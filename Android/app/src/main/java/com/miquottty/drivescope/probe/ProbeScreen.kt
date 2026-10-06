@@ -4,6 +4,7 @@ import android.content.Context
 import android.os.SystemClock
 import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -35,7 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miquottty.drivescope.Theme
 import com.miquottty.drivescope.bridge.DriveKitBridge
-import com.miquottty.drivescope.recording.RecordingService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
@@ -47,7 +47,7 @@ import java.util.Locale
 
 /** S0 spike screen 1: satellites, the raw fix, every motion sensor, and the orientation check. */
 @Composable
-fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe, onOpenMap: (File) -> Unit) {
+fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe, onOpenMap: (File) -> Unit, onBack: () -> Unit) {
     val satellites by gnss.snapshot.collectAsState()
     val readings by motion.readings.collectAsState()
     Column(
@@ -59,9 +59,11 @@ fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe, onOpenMap: (File) -> Unit)
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Text("DriveScope · sensor probe", color = Theme.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        Row(verticalAlignment = androidx.compose.ui.Alignment.CenterVertically) {
+            Text("‹", color = Theme.accent, fontSize = 28.sp, modifier = Modifier.clickable(onClick = onBack).padding(end = 12.dp))
+            Text("Sensor probe (developer)", color = Theme.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        }
         MapCard(onOpenMap)
-        RecordingCard()
         SwiftCoreCard()
         SatelliteCard(satellites)
         FixCard(satellites)
@@ -94,29 +96,6 @@ private fun Row(label: String, value: String, tint: Color = Theme.textPrimary) {
 
 private fun f(value: Double?, digits: Int = 1) = value?.let { String.format(Locale.US, "%.${digits}f", it) } ?: "—"
 
-/** S0 spike screen 2: a Logger-preset recording into the iOS session format (pulled with adb, read by drivekit-cli). */
-@Composable
-private fun RecordingCard() {
-    val context = LocalContext.current
-    val status by RecordingService.status.collectAsState()
-    Card("Recording · Logger") {
-        val s = status
-        if (s == null) {
-            Row("state", "idle")
-        } else {
-            Row("state", "REC ${f(s.elapsed, 0)} s", Theme.rec)
-            Row("samples", "loc ${s.locations} · mot ${s.motion} · alt ${s.altitudes}")
-            Row("session", s.sessionID.take(8))
-        }
-        Button(
-            colors = ButtonDefaults.buttonColors(
-                containerColor = if (s == null) Theme.accent else Theme.rec, contentColor = Theme.background,
-            ),
-            onClick = { if (s == null) RecordingService.start(context) else RecordingService.stop(context) },
-        ) { Text(if (s == null) "START" else "STOP") }
-    }
-}
-
 /** S0 spike step 3: sessions pushed to files/Imports (an iPhone drive) or recorded here, opened on the map. */
 @Composable
 private fun MapCard(onOpenMap: (File) -> Unit) {
@@ -135,6 +114,7 @@ private fun MapCard(onOpenMap: (File) -> Unit) {
         }
     }
 }
+
 
 /** S0 spike step 5: DriveKit in Swift, on the phone, over the latest recording. */
 @Composable

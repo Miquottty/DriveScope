@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import DriveDomain
 import DriveReplay
 import DriveSensors
@@ -85,3 +86,4 @@ public enum ScriptedSessionBuilder {
         return (manifest, statistics.summary(duration: duration), SessionStore.routePreview(from: locations))
     }
 }
+#endif

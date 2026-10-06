@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import DriveDomain
 import DriveStorage
 import Foundation
@@ -49,3 +50,4 @@ public final class SessionArchiveService {
         try SessionArchiver.archive(files)
     }
 }
+#endif

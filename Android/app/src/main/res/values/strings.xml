@@ -1,4 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">DriveScope</string>
+    <!-- Home -->
+    <string name="home_sensor_status">Sensor status</string>
+    <string name="home_gps_not_asked">Not asked</string>
+    <string name="home_asked_on_start">Asked on START</string>
+    <string name="home_searching_satellites">Searching</string>
+    <string name="home_motion">Motion</string>
+    <string name="home_barometer">Barometer</string>
+    <string name="home_power">Power</string>
+    <string name="home_recent">Recent</string>
+    <string name="home_mount_hint">Mount the phone, then start. Forward direction is detected automatically on the first acceleration.</string>
+    <string name="start_record_drive">Record drive</string>
+    <string name="start_searching">Searching satellites</string>
+    <string name="start_ready">READY · satellites locked</string>
+    <string name="available">Available</string>
+    <string name="unavailable">Unavailable</string>
+    <string name="charging">Charging</string>
+    <string name="off">Off</string>
+    <!-- Recording -->
+    <string name="hud_caption">MARK = bookmark · HIGHLIGHT = best moment · SYNC = beep for camera sync</string>
+    <string name="hud_hold_to_stop">Hold to stop</string>
+    <string name="notification_channel_recording">Recording</string>
+    <string name="title_loop">Loop</string>
+    <!-- Settings -->
+    <string name="settings_title">Settings</string>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System</string>
+    <string name="settings_recording">Recording</string>
+    <string name="settings_satellite_chime">Satellite fix chime</string>
+    <string name="settings_satellite_chime_footer">A short sound and haptic when GPS first locks onto satellites after START. Until then Android may give only Wi‑Fi positions without speed, so wait for it before setting off. Plays while the HUD is on screen.</string>
+    <string name="settings_debug">Debug</string>
+    <string name="settings_fast_watchdog">Fast watchdog (÷10)</string>
+    <string name="settings_sensor_probe">Sensor probe and map comparison (developer)</string>
 </resources>
