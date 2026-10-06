@@ -59,6 +59,32 @@ iPhone(nachoneko)の 2026-10-06「足利市 → 太田市」を端末から取�
 
 (未着手)
 
-## 中核の共有(Swift on Android)
+## 中核の共有(Swift on Android)— 結論: ① Swift のまま共有する
 
-(未着手。NDK はユーザーが Android Studio で導入)
+環境: swiftly の Swift 6.4.0(シェルの設定は書き換えない。iOS は従来どおり Xcode 27.2 beta の Swift)、
+Swift SDK for Android 6.4.0(チェックサム確認済み)、NDK r30(30.0.16248370、Android Studio で導入)。
+
+```bash
+Android/swift/build-bridge.sh   # DriveKitBridge をビルドし、strip して app/src/main/jniLibs/arm64-v8a へ(libc++_shared.so も)
+```
+
+| 対象 | 手を加えずに | 変更後 |
+|---|---|---|
+| DriveDomain(記録形式・サンプル) | ビルド可 | — |
+| DriveSensors | ビルド可 | — |
+| DriveStorage | SwiftData・LZFSE/vImage・Darwin の POSIX で失敗 | `#if canImport(SwiftData)` / `canImport(Accelerate)`(Android では圧縮は未対応エラー)/ `import Android` |
+| DriveReplay | `import simd` で失敗 | simd の 4 関数(内積・長さ・正規化・外積)を `PortableSIMD.swift` で補う(Apple では本物の simd のまま) |
+| DriveExport | 上の 2 つ次第 | ビルド可 |
+| DriveRecording | MapKit・SwiftData | Android では使わない(記録は Kotlin 側) |
+
+- DriveKit の変更は新規ファイルを含めて約 60 行。iOS のテスト 31 件・シミュレータ向けビルドは変わらず成功。
+- JNI: `Android/swift/DriveKitBridge`(`@_cdecl` の 2 関数 `exportJson` / `quality`)+ Kotlin の `bridge/DriveKitBridge`。
+  共通の書き出しは `SessionExporter.exportDerivingMetadata`(DriveExport)で、`drivekit-cli` と同じ関数。
+- Android で踏んだ 2 点: Foundation の一時フォルダ(TMPDIR)が未設定 → アプリのキャッシュを設定 / `FileManager.copyItem` が
+  共有ストレージからの権限コピーで拒否される → ファイルの中身だけをコピー。
+- **結果: Pixel 7 上の Swift で書き出した JSON(1.7 MB)と、Mac の `drivekit-cli` の書き出しがバイト単位で一致。** 集計 + 書き出しで 48 ms。
+- 大きさ: `libDriveKitBridge.so` は strip 後 54 MB(圧縮 21 MB)+ `libc++_shared.so` 9 MB。APK は 29 MB → 93 MB。
+  大半は Foundation の国際化データと思われる。自分用なので許容。必要なら FoundationEssentials だけにして削る余地あり。
+
+採用条件(計画): 囲む修正が小さい ✓ / APK に入れて Pixel で動く ✓ / macOS と結果が一致 ✓ / APK の増加 ✓(許容)。
+→ **中核の計算・書き出しは Swift の DriveKit を Android でもそのまま使う。** Kotlin に移植しない。

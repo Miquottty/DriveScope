@@ -34,7 +34,10 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miquottty.drivescope.Theme
+import com.miquottty.drivescope.bridge.DriveKitBridge
 import com.miquottty.drivescope.recording.RecordingService
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -58,6 +61,7 @@ fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe) {
     ) {
         Text("DriveScope · sensor probe", color = Theme.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
         RecordingCard()
+        SwiftCoreCard()
         SatelliteCard(satellites)
         FixCard(satellites)
         MotionCard(motion, readings)
@@ -109,6 +113,44 @@ private fun RecordingCard() {
             ),
             onClick = { if (s == null) RecordingService.start(context) else RecordingService.stop(context) },
         ) { Text(if (s == null) "START" else "STOP") }
+    }
+}
+
+/** S0 spike step 5: DriveKit in Swift, on the phone, over the latest recording. */
+@Composable
+private fun SwiftCoreCard() {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var result by remember { mutableStateOf("Not run") }
+    var running by remember { mutableStateOf(false) }
+    Card("DriveKit (Swift) on Android") {
+        Text(result, color = Theme.textPrimary, fontSize = 12.sp, fontFamily = FontFamily.Monospace)
+        Button(
+            enabled = !running,
+            colors = ButtonDefaults.buttonColors(containerColor = Theme.accent, contentColor = Theme.background),
+            onClick = {
+                running = true
+                scope.launch {
+                    result = withContext(Dispatchers.IO) {
+                        val sessions = File(context.getExternalFilesDir(null), "Sessions")
+                        val latest = sessions.listFiles()?.filter { File(it, "manifest.json").exists() }?.maxByOrNull { it.lastModified() }
+                        if (latest == null) return@withContext "No session yet — record one first"
+                        DriveKitBridge.configure(context.cacheDir.absolutePath)
+                        val started = System.nanoTime()
+                        val quality = DriveKitBridge.quality(latest.absolutePath)
+                        val path = DriveKitBridge.exportJson(
+                            latest.absolutePath, latest.name, context.cacheDir.absolutePath,
+                            File(context.getExternalFilesDir(null), "Exports").absolutePath,
+                        )
+                        val ms = (System.nanoTime() - started) / 1_000_000
+                        Log.i("DriveScopeProbe", "DriveKit quality:\n$quality\nexport: $path ($ms ms)")
+                        val size = File(path).takeIf { it.exists() }?.length()?.let { " (${it / 1024} kB)" } ?: ""
+                        "$quality\nexport → ${if (path.startsWith("error")) path else path.substringAfterLast('/')}$size\n$ms ms"
+                    }
+                    running = false
+                }
+            },
+        ) { Text("Quality + JSON export of the latest session") }
     }
 }
 

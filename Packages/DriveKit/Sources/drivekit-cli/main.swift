@@ -10,8 +10,7 @@ import Foundation
 //   swift run drivekit-cli quality <session-dir>
 //   swift run drivekit-cli export json|gpx|csv|csv10 <session-dir> [--title <t>] [--out <dir>]
 //
-// Export derives what the app keeps in SwiftData from the files alone: markers from events.bin, the summary
-// (SessionStatistics), the mount (MountSolver) and the sections. No places (that needs MapKit's geocoder).
+// Export is `SessionExporter.exportDerivingMetadata` (what the app keeps in SwiftData, derived from the files).
 
 enum CLIError: Error, CustomStringConvertible {
     case usage
@@ -63,33 +62,9 @@ func export(_ kindName: String, _ files: SessionFiles, title: String, out: URL) 
     case "csv10": .csv10
     default: throw CLIError.usage
     }
-    // Work on a copy: the mount solution is written into the manifest, and the pulled folder stays as recorded.
-    let work = FileManager.default.temporaryDirectory.appending(path: "drivekit-cli-\(UUID().uuidString)", directoryHint: .isDirectory)
-    try FileManager.default.copyItem(at: files.directory, to: work)
-    defer { try? FileManager.default.removeItem(at: work) }
-    let copy = SessionFiles(directory: work)
-
-    var manifest = try copy.readManifest()
-    let reader = try TelemetryReader(files: copy)
-    let calibration = MountSolver.solve(reader: reader) ?? manifest.calibration
-    if calibration != manifest.calibration {
-        manifest.calibration = calibration
-        try copy.writeManifest(manifest)
-    }
-    let solved = try TelemetryReader(files: copy)
-    let analysis = SectionDetector.analyze(reader: solved, calibration: calibration)
-    let (statistics, lastSample) = try SessionStatistics.compute(files: copy, manifest: manifest)
-    // As the app: STOP time when the manifest has it (the last sample only for a recovered session).
-    let duration = manifest.endedAt.map { $0.timeIntervalSince(manifest.clock.startedAt) } ?? lastSample
-    var summary = statistics.summary(duration: duration)
-    summary.batteryUsagePerHour = BatteryUsage(events: solved.events).overall
-    if let peak = analysis.peakLateral { summary.peakLateralG = peak.g }
-    let markers = solved.events.compactMap { event -> ExportMarker? in
-        guard event.kind == .marker, let kind = MarkerKind(eventAux: event.aux) else { return nil }
-        return ExportMarker(kind: kind, elapsed: event.elapsed, date: manifest.clock.date(elapsed: event.elapsed))
-    }
-    let metadata = ExportMetadata(title: title, markers: markers, summary: summary, sections: analysis.sections)
-    return try SessionExporter.export(kind, files: copy, metadata: metadata, into: out)
+    return try SessionExporter.exportDerivingMetadata(
+        kind, files: files, title: title, workDirectory: FileManager.default.temporaryDirectory, into: out
+    )
 }
 
 let arguments = Array(CommandLine.arguments.dropFirst())

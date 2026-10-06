@@ -11,3 +11,5 @@ Android/build/
 Android/app/build/
 Android/local.properties
 Android/.idea/
+Android/app/src/main/jniLibs/
+Android/swift/DriveKitBridge/.build/
