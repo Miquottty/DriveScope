@@ -30,6 +30,18 @@ iPhone drive-telemetry logger (GPS + Core Motion + barometer → replay / export
 | `Packages/DriveKit/` | SwiftPM | `DriveDomain`, `DriveSensors`, `DriveStorage`, `DriveRecording`, `DriveReplay`, `DriveExport` |
 | `Config/` | — | Partial Info.plists merged with generated keys |
 
+## Android (personal-use port, docs/ANDROID.md)
+- `Android/` is a separate Gradle project (Kotlin + Compose + MapLibre); plan in `docs/ANDROID_PLAN.md`, spike results in
+  `docs/ANDROID_SPIKE.md`. Kotlin reads sensors, converts them to the iOS conventions (g with Core Motion's sign, kPa,
+  one elapsedRealtime clock) and owns UI / service / notification / geocoder / audio; DriveKit (Swift) does recording,
+  analysis, replay frames and exports through JNI (`Android/swift/DriveKitBridge`, built by `Android/swift/build-bridge.sh`
+  with swiftly's Swift 6.4.0 + Swift SDK for Android + NDK r30).
+- DriveKit must also build for Android: guard Apple-only code with `#if canImport(SwiftData)` / `canImport(MapKit)` /
+  `canImport(Accelerate)`, and keep iOS behaviour unchanged (`scripts/xc.sh test`).
+- Same design as iOS (design/mock tokens in `Android/.../Theme.kt`); strings in `res/values` + `res/values-ja`.
+- `drivekit-cli` (`scripts/xc.sh swift run --package-path Packages/DriveKit drivekit-cli quality|export …`) reads a
+  session folder pulled from either device.
+
 ## Conventions
 - Swift 6 language mode. App target: `SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor` + approachable concurrency.
   DriveKit: nonisolated by default; sensor callbacks never hop to the MainActor; HUD updates are throttled to 10 Hz.

@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import DriveDomain
 import Foundation
 import SwiftData
@@ -172,3 +173,4 @@ public final class Marker {
         self.label = label
     }
 }
+#endif

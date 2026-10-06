@@ -5,3 +5,11 @@ xcuserdata/
 .swiftpm/
 Packages/DriveKit/.build/
 .claude/worktrees/
+Android/.gradle/
+Android/.kotlin/
+Android/build/
+Android/app/build/
+Android/local.properties
+Android/.idea/
+Android/app/src/main/jniLibs/
+Android/swift/DriveKitBridge/.build/

@@ -33,6 +33,11 @@ let package = Package(
             swiftSettings: swiftSettings
         ),
         .target(name: "DriveExport", dependencies: ["DriveDomain", "DriveStorage", "DriveReplay"], swiftSettings: swiftSettings),
+        // Mac-side tool: quality figures and exports for a session folder pulled from a device (docs/ANDROID_SPIKE.md).
+        .executableTarget(
+            name: "drivekit-cli", dependencies: ["DriveDomain", "DriveStorage", "DriveReplay", "DriveExport"],
+            swiftSettings: swiftSettings
+        ),
 
         .testTarget(name: "DriveStorageTests", dependencies: ["DriveStorage"], swiftSettings: swiftSettings),
         .testTarget(name: "DriveSensorsTests", dependencies: ["DriveSensors"], swiftSettings: swiftSettings),
