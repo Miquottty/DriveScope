@@ -34,6 +34,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.miquottty.drivescope.Theme
+import com.miquottty.drivescope.recording.RecordingService
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.json.JSONArray
@@ -56,6 +57,7 @@ fun ProbeScreen(gnss: GnssProbe, motion: MotionProbe) {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text("DriveScope · sensor probe", color = Theme.textPrimary, fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        RecordingCard()
         SatelliteCard(satellites)
         FixCard(satellites)
         MotionCard(motion, readings)
@@ -86,6 +88,29 @@ private fun Row(label: String, value: String, tint: Color = Theme.textPrimary) {
 }
 
 private fun f(value: Double?, digits: Int = 1) = value?.let { String.format(Locale.US, "%.${digits}f", it) } ?: "—"
+
+/** S0 spike screen 2: a Logger-preset recording into the iOS session format (pulled with adb, read by drivekit-cli). */
+@Composable
+private fun RecordingCard() {
+    val context = LocalContext.current
+    val status by RecordingService.status.collectAsState()
+    Card("Recording · Logger") {
+        val s = status
+        if (s == null) {
+            Row("state", "idle")
+        } else {
+            Row("state", "REC ${f(s.elapsed, 0)} s", Theme.rec)
+            Row("samples", "loc ${s.locations} · mot ${s.motion} · alt ${s.altitudes}")
+            Row("session", s.sessionID.take(8))
+        }
+        Button(
+            colors = ButtonDefaults.buttonColors(
+                containerColor = if (s == null) Theme.accent else Theme.rec, contentColor = Theme.background,
+            ),
+            onClick = { if (s == null) RecordingService.start(context) else RecordingService.stop(context) },
+        ) { Text(if (s == null) "START" else "STOP") }
+    }
+}
 
 @Composable
 private fun SatelliteCard(s: GnssSnapshot) {
