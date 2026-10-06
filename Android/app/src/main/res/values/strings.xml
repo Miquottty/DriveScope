@@ -33,4 +33,49 @@
     <string name="settings_debug">Debug</string>
     <string name="settings_fast_watchdog">Fast watchdog (÷10)</string>
     <string name="settings_sensor_probe">Sensor probe and map comparison (developer)</string>
+    <!-- Sessions, Detail, Replay, Export -->
+    <string name="tab_record">Record</string>
+    <string name="tab_sessions">Sessions</string>
+    <string name="all_sessions">All sessions</string>
+    <string name="sessions_empty_title">No drives yet</string>
+    <string name="sessions_empty_body">Recorded drives appear here.</string>
+    <string name="section_left_corner">Left corner</string>
+    <string name="section_right_corner">Right corner</string>
+    <string name="section_stop">Stop</string>
+    <string name="section_climb">Climb</string>
+    <string name="section_descent">Descent</string>
+    <string name="no_route_recorded">No route recorded</string>
+    <string name="thumbnail_no_gps">No GPS</string>
+    <string name="replay">Replay</string>
+    <string name="export">Export</string>
+    <string name="delete_title">Delete this drive?</string>
+    <string name="delete_body">The recorded data is removed from this device.</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="metric_time">Time</string>
+    <string name="metric_distance">Distance</string>
+    <string name="metric_max">Max</string>
+    <string name="metric_avg">Avg</string>
+    <string name="metric_gain">Gain</string>
+    <string name="metric_peak_g">Peak G</string>
+    <string name="log_quality">Log Quality</string>
+    <string name="places">Places</string>
+    <string name="place_start">Start</string>
+    <string name="place_end">End</string>
+    <string name="place_via">Via</string>
+    <string name="notes">Notes</string>
+    <string name="add_notes">Add notes</string>
+    <string name="sections">Sections</string>
+    <string name="corners">Corners</string>
+    <string name="stops">Stops</string>
+    <string name="rename">Rename</string>
+    <string name="rename_hint">Leave empty to use the automatic name.</string>
+    <string name="save">Save</string>
+    <string name="export_sync_at">t = 0 at SYNC %1$s</string>
+    <string name="export_no_sync">No SYNC marker — t = 0 at session start</string>
+    <string name="export_json_detail">Lossless master with all raw streams, events and places</string>
+    <string name="export_gpx_detail">Track and markers, for maps and other apps</string>
+    <string name="export_csv30_detail">Vlog track at 30 fps, one row per video frame</string>
+    <string name="export_csv10_detail">Vlog track at 10 Hz, smaller files</string>
+    <string name="export_failed">Export failed</string>
 </resources>

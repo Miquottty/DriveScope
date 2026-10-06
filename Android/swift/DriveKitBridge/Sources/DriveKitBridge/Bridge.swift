@@ -53,9 +53,9 @@ public func quality(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: 
 }
 
 /// Fields per frame in `replayFrames`.
-private let frameStride = 7
+private let frameStride = 9
 
-/// `replayFrames(sessionDir, hz)` → [t, lat, lon, speed m/s, course °, altitude m, lateral g] × frames, from the same
+/// `replayFrames(sessionDir, hz)` → [t, lat, lon, speed m/s, course °, altitude m, lateral g, GPS accuracy m, longitudinal g] × frames, from the same
 /// interpolator and smoothing as the iOS Replay screen (`ReplayTimeline.options`), with the solved mount.
 @_cdecl("Java_com_miquottty_drivescope_bridge_DriveKitBridge_replayFrames")
 public func replayFrames(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: jstring?, hz: jdouble) -> jdoubleArray? {
@@ -71,7 +71,7 @@ public func replayFrames(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, sess
     values.reserveCapacity(count * frameStride)
     for i in 0..<count {
         let f = interpolator.frame(at: Double(i) / hz)
-        values += [f.time, f.latitude, f.longitude, f.speed, f.course, f.altitude, f.lateralG]
+        values += [f.time, f.latitude, f.longitude, f.speed, f.course, f.altitude, f.lateralG, f.gpsAccuracy, f.longitudinalG]
     }
     return env.doubleArray(values)
 }

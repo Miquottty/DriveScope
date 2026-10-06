@@ -32,4 +32,49 @@
     <string name="settings_debug">デバッグ</string>
     <string name="settings_fast_watchdog">高速ウォッチドッグ (÷10)</string>
     <string name="settings_sensor_probe">センサー確認と地図の比較(開発用)</string>
+    <!-- Sessions, Detail, Replay, Export -->
+    <string name="tab_record">記録</string>
+    <string name="tab_sessions">セッション</string>
+    <string name="all_sessions">すべてのセッション</string>
+    <string name="sessions_empty_title">ドライブはまだありません</string>
+    <string name="sessions_empty_body">記録したドライブがここに表示されます。</string>
+    <string name="section_left_corner">左コーナー</string>
+    <string name="section_right_corner">右コーナー</string>
+    <string name="section_stop">停止</string>
+    <string name="section_climb">登り</string>
+    <string name="section_descent">下り</string>
+    <string name="no_route_recorded">ルートが記録されていません</string>
+    <string name="thumbnail_no_gps">GPS なし</string>
+    <string name="replay">リプレイ</string>
+    <string name="export">書き出し</string>
+    <string name="delete_title">このドライブを削除しますか?</string>
+    <string name="delete_body">記録データはこのデバイスから削除されます。</string>
+    <string name="delete">削除</string>
+    <string name="cancel">キャンセル</string>
+    <string name="metric_time">時間</string>
+    <string name="metric_distance">距離</string>
+    <string name="metric_max">最高</string>
+    <string name="metric_avg">平均</string>
+    <string name="metric_gain">上昇</string>
+    <string name="metric_peak_g">最大 G</string>
+    <string name="log_quality">ログ品質</string>
+    <string name="places">地点</string>
+    <string name="place_start">出発</string>
+    <string name="place_end">到着</string>
+    <string name="place_via">経由地</string>
+    <string name="notes">メモ</string>
+    <string name="add_notes">メモを追加</string>
+    <string name="sections">区間</string>
+    <string name="corners">コーナー</string>
+    <string name="stops">停止</string>
+    <string name="rename">名前を変更</string>
+    <string name="rename_hint">空にすると自動の名前に戻ります。</string>
+    <string name="save">保存</string>
+    <string name="export_sync_at">t = 0 は SYNC %1$s の位置</string>
+    <string name="export_no_sync">SYNC マーカーなし — t = 0 はセッション開始</string>
+    <string name="export_json_detail">ロスレスのマスター。全ての生データ・イベント・地名を含む</string>
+    <string name="export_gpx_detail">軌跡とマーカー。地図や他のアプリ向け</string>
+    <string name="export_csv30_detail">Vlog トラック 30 fps。動画のフレームごとに 1 行</string>
+    <string name="export_csv10_detail">Vlog トラック 10 Hz。ファイルが小さい</string>
+    <string name="export_failed">書き出しに失敗しました</string>
 </resources>

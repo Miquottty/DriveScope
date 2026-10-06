@@ -68,7 +68,7 @@ enum class StartReadiness { UNKNOWN, SEARCHING, READY }
 
 /** Home / Ready (mock artboard 1). */
 @Composable
-fun HomeScreen(store: SessionStore, onOpenSettings: () -> Unit, onOpenSession: (SessionMeta) -> Unit) {
+fun HomeScreen(store: SessionStore, onOpenSettings: () -> Unit, onOpenSession: (SessionMeta) -> Unit, onShowAllSessions: () -> Unit) {
     val context = LocalContext.current
     val prefs = remember { Prefs(context) }
     var preset by remember { mutableStateOf(prefs.preset) }
@@ -133,7 +133,7 @@ fun HomeScreen(store: SessionStore, onOpenSettings: () -> Unit, onOpenSession: (
                 textAlign = TextAlign.Center, modifier = Modifier.padding(top = 14.dp),
             )
         }
-        RecentSessions(sessions.take(3), onOpenSession)
+        RecentSessions(sessions.take(3), onOpenSession, onShowAllSessions)
         Spacer(Modifier.height(24.dp))
     }
 }
@@ -236,9 +236,12 @@ fun presetSummary(preset: CapturePreset) = when (val m = preset.motion) {
 }
 
 @Composable
-private fun RecentSessions(sessions: List<SessionMeta>, onOpen: (SessionMeta) -> Unit) {
+private fun RecentSessions(sessions: List<SessionMeta>, onOpen: (SessionMeta) -> Unit, onShowAll: () -> Unit) {
     if (sessions.isEmpty()) return
-    Text(stringResource(R.string.home_recent).uppercase(), color = Theme.textSecondary, fontSize = 12.sp, letterSpacing = 1.sp)
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(stringResource(R.string.home_recent).uppercase(), color = Theme.textSecondary, fontSize = 12.sp, letterSpacing = 1.sp, modifier = Modifier.weight(1f))
+        Text(stringResource(R.string.all_sessions), color = Theme.accent, fontSize = 13.sp, fontWeight = FontWeight.Medium, modifier = Modifier.clickable(onClick = onShowAll))
+    }
     Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         for (session in sessions) SessionRow(session) { onOpen(session) }
     }
@@ -261,8 +264,14 @@ fun SessionRow(session: SessionMeta, onClick: () -> Unit) {
 /** A session's downsampled route as a line (no map tiles), as iOS `RouteThumbnail`. */
 @Composable
 fun RouteThumbnail(points: List<Pair<Double, Double>>, dashed: Boolean = false, modifier: Modifier = Modifier.size(56.dp, 44.dp)) {
+    // Fewer than two usable fixes (indoors: only Wi‑Fi positions) would leave an empty square that looks broken.
+    if (points.size < 2) {
+        Box(modifier.background(Theme.background, RoundedCornerShape(8.dp)), contentAlignment = Alignment.Center) {
+            Text(stringResource(R.string.thumbnail_no_gps), color = Theme.textTertiary, fontSize = 10.sp, textAlign = TextAlign.Center)
+        }
+        return
+    }
     Canvas(modifier.background(Theme.background, RoundedCornerShape(8.dp))) {
-        if (points.size < 2) return@Canvas
         val lats = points.map { it.first }
         val lons = points.map { it.second }
         val midLat = Math.toRadians((lats.min() + lats.max()) / 2)
@@ -282,5 +291,6 @@ fun RouteThumbnail(points: List<Pair<Double, Double>>, dashed: Boolean = false, 
             path, Theme.accent,
             style = Stroke(width = 2.2f * density, pathEffect = if (dashed) androidx.compose.ui.graphics.PathEffect.dashPathEffect(floatArrayOf(6f, 6f)) else null),
         )
+        drawCircle(Theme.textSecondary, radius = 2.5f * density, center = at(points.first()))
     }
 }

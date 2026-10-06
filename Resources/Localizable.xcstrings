@@ -2135,6 +2135,22 @@
         }
       }
     },
+    "No GPS": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No GPS"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GPS なし"
+          }
+        }
+      }
+    },
     "No GPS fix for a while. Recording continues.": {
       "localizations": {
         "en": {

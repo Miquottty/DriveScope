@@ -17,6 +17,8 @@ data class SessionMeta(
     val state: State = State.RECORDING,
     val title: String = "",
     val titleIsUserEdited: Boolean = false,
+    /** The automatic title (places), restored when a user's title is cleared. */
+    val autoTitle: String = "",
     val notes: String = "",
     val preset: String = "logger",
     /** Unix seconds. */
@@ -42,6 +44,7 @@ data class SessionMeta(
         put("state", state.raw)
         put("title", title)
         put("titleIsUserEdited", titleIsUserEdited)
+        put("autoTitle", autoTitle)
         put("notes", notes)
         put("preset", preset)
         put("startedAt", startedAt)
@@ -65,6 +68,7 @@ data class SessionMeta(
                 state = State.entries.firstOrNull { it.raw == o.optString("state") } ?: State.STOPPED,
                 title = o.optString("title"),
                 titleIsUserEdited = o.optBoolean("titleIsUserEdited"),
+                autoTitle = o.optString("autoTitle"),
                 notes = o.optString("notes"),
                 preset = o.optString("preset", "logger"),
                 startedAt = o.optDouble("startedAt", 0.0),
@@ -103,6 +107,13 @@ class SessionStore(val root: File) {
         tmp.writeText(meta.toJson().toString(2))
         tmp.renameTo(File(dir, "session.json"))
         all.value = (all.value.filterNot { it.id == meta.id } + meta).sortedByDescending { it.startedAt }
+    }
+
+    fun meta(id: String) = all.value.firstOrNull { it.id == id }
+
+    /** Changes one session's `session.json` (title, notes…). */
+    fun update(id: String, change: (SessionMeta) -> SessionMeta) {
+        meta(id)?.let { save(change(it)) }
     }
 
     fun delete(id: String) {
