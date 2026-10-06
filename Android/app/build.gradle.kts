@@ -3,6 +3,11 @@ plugins {
     alias(libs.plugins.compose.compiler)
 }
 
+// Google Maps key (spike): `MAPS_API_KEY=…` in Android/local.properties, which git ignores. Empty → the Google tab
+// says so instead of showing a blank map.
+val mapsApiKey = rootProject.file("local.properties").takeIf { it.exists() }?.readLines()
+    ?.firstOrNull { it.startsWith("MAPS_API_KEY=") }?.substringAfter("=")?.trim().orEmpty()
+
 android {
     namespace = "com.miquottty.drivescope"
     compileSdk = 37
@@ -14,6 +19,7 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "0.0.1-spike"
+        manifestPlaceholders["MAPS_API_KEY"] = mapsApiKey
         // DriveKitBridge is built for arm64 only (Pixel 7).
         ndk {
             abiFilters += "arm64-v8a"
@@ -45,4 +51,5 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.maplibre.android)
+    implementation(libs.maps.compose)
 }

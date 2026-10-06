@@ -72,8 +72,9 @@ import kotlin.math.abs
 
 /** S0 spike screen 3: the iOS Replay (route, played part, car arrow, FOLLOW / 3D) on MapLibre, frames from DriveKit. */
 enum class MapStyle(val label: String, val url: String) {
-    DARK("OpenFreeMap dark", "https://tiles.openfreemap.org/styles/dark"),
-    GSI("地理院 標準", "https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json"),
+    DARK("OFM dark", "https://tiles.openfreemap.org/styles/dark"),
+    GSI("地理院", "https://gsi-cyberjapan.github.io/optimal_bvmap/style/std.json"),
+    GOOGLE("Google", ""),
 }
 
 class Replay(val frames: DoubleArray, val markers: DoubleArray) {
@@ -126,6 +127,7 @@ fun MapScreen(sessionDir: File, onBack: () -> Unit) {
 
     // New style → route layers, then the camera fits the whole drive.
     LaunchedEffect(map, style, replay) {
+        if (style == MapStyle.GOOGLE) return@LaunchedEffect
         val m = map ?: return@LaunchedEffect
         val r = replay ?: return@LaunchedEffect
         loadedStyle = null
@@ -184,11 +186,23 @@ fun MapScreen(sessionDir: File, onBack: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(Theme.background).safeDrawingPadding()) {
         Row(Modifier.fillMaxWidth().padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Chip("‹ Back", false) { onBack() }
-            for (option in MapStyle.entries) Chip(option.label, style == option) { style = option }
+            Chip("‹", false) { onBack() }
+            for (option in MapStyle.entries) Chip(option.label, style == option) {
+                // The MapLibre view is disposed while Google shows; a new one reports its map when it comes back.
+                if (option == MapStyle.GOOGLE) {
+                    map = null
+                    loadedStyle = null
+                }
+                style = option
+            }
         }
         Box(Modifier.weight(1f).fillMaxWidth()) {
-            MapLibreView { map = it }
+            val r = replay
+            if (style == MapStyle.GOOGLE && r != null) {
+                GoogleMapPane(r, t, follow, threeD)
+            } else if (style != MapStyle.GOOGLE) {
+                MapLibreView { map = it }
+            }
             Row(Modifier.align(Alignment.TopEnd).padding(12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Chip("FOLLOW", follow) { follow = !follow }
                 Chip("3D", threeD) { threeD = !threeD }
@@ -330,7 +344,7 @@ private fun gsiStyleJson(url: String): String {
     return style.toString()
 }
 
-private fun arrowBitmap(): Bitmap {
+internal fun arrowBitmap(): Bitmap {
     val size = 72
     val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
     val canvas = Canvas(bitmap)
