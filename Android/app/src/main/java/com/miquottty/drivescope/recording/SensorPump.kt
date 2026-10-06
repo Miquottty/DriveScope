@@ -18,7 +18,8 @@ import com.miquottty.drivescope.bridge.DriveKitBridge
  *
  * - motion: the raw accelerometer at 200 Hz drives the preset's grid; device-motion presets subtract the fused
  *   gravity (which itself never runs faster than ~59 Hz) for the user acceleration
- * - pressure: one record per second, the mean of that second (the barometer ignores a 1 Hz request and sends ~36 Hz)
+ * - pressure: one record per second of the boot clock, the mean of that second (the barometer ignores a 1 Hz request
+ *   and sends 9–36 Hz)
  * - location: GPS fixes; network (Wi‑Fi / cell) fixes only while the satellites are silent, without speed — what
  *   Core Location delivers before a lock
  */
@@ -37,7 +38,7 @@ class SensorPump(
     private var magneticAccuracy = -1
     private var firstPressure: Float? = null
     private val pressureWindow = mutableListOf<Float>()
-    private var pressureWindowStart = 0L
+    private var pressureSecond = -1L
     private var lastSatelliteFixNs = 0L
     private var lastGnssEvent = 0L
 
@@ -139,15 +140,20 @@ class SensorPump(
         }
     }
 
+    /**
+     * Fixed one-second windows: a window that closed on "1 s since its first sample" also took the next sample's
+     * interval, so the records drifted to 1.12 s apart at the barometer's ~9 Hz.
+     */
     private fun onPressure(timestampNs: Long, hPa: Float) {
-        if (pressureWindow.isEmpty()) pressureWindowStart = timestampNs
+        val second = timestampNs / 1_000_000_000L
+        if (second != pressureSecond && pressureWindow.isNotEmpty()) {
+            val mean = pressureWindow.average().toFloat()
+            pressureWindow.clear()
+            val first = firstPressure ?: mean.also { firstPressure = it }
+            DriveKitBridge.pushAltitude(handle, pressureSecond + 0.5, SensorManager.getAltitude(first, mean), Conventions.toKPa(mean))
+        }
+        pressureSecond = second
         pressureWindow += hPa
-        if (timestampNs - pressureWindowStart < 1_000_000_000L) return
-        val mean = pressureWindow.average().toFloat()
-        val mid = pressureWindowStart + (timestampNs - pressureWindowStart) / 2
-        pressureWindow.clear()
-        val first = firstPressure ?: mean.also { firstPressure = it }
-        DriveKitBridge.pushAltitude(handle, mid / 1e9, SensorManager.getAltitude(first, mean), Conventions.toKPa(mean))
     }
 
     private fun onLocation(fix: Location) {
