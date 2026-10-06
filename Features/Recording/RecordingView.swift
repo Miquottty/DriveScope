@@ -11,6 +11,7 @@ struct RecordingView: View {
     @Environment(\.scenePhase) private var scenePhase
     /// Created on appear: an AVAudioEngine per view-struct init would be thrown away on every parent update.
     @State private var beeper: SyncBeeper?
+    @AppStorage("satelliteChime") private var satelliteChime = true
 
     var body: some View {
         RecordingHUD(
@@ -37,6 +38,15 @@ struct RecordingView: View {
         .onDisappear {
             UIApplication.shared.isIdleTimerDisabled = false
             Task { await beeper?.stop() }
+        }
+        // The first satellite fix of the run: until then the fixes are Wi‑Fi ones without speed (PLAN §9.3).
+        .onChange(of: recorder.live.snapshot.satelliteFixAfter) { old, new in
+            guard satelliteChime, old == nil, new != nil, scenePhase == .active else { return }
+            let beeper = beeper
+            Task { await beeper?.playChime() }
+        }
+        .sensoryFeedback(.success, trigger: recorder.live.snapshot.satelliteFixAfter) { old, new in
+            satelliteChime && old == nil && new != nil
         }
         .onChange(of: scenePhase) { _, phase in
             let beeper = beeper

@@ -28,6 +28,7 @@ struct HomeView: View {
     @State private var batterySuggestionDismissed = false
     @State private var isStarting = false
     @State private var issue: StartIssue?
+    @State private var probe = SatelliteProbe()
 
     private static var recentDescriptor: FetchDescriptor<DriveSession> {
         var descriptor = FetchDescriptor<DriveSession>(sortBy: [SortDescriptor(\.startedAt, order: .reverse)])
@@ -49,6 +50,40 @@ struct HomeView: View {
         scenePhase == .active && !isStarting && (recorder.phase == .idle || recorder.phase == .stopped)
     }
 
+    /// Search for satellites while Home is on screen and idle (PLAN §11). Never asks for permission: that stays
+    /// with START.
+    private var probeShouldRun: Bool {
+        scenePhase == .active && !isStarting && (recorder.phase == .idle || recorder.phase == .stopped)
+            && needsPermission && permission.canRecord && permission.isPrecise
+    }
+
+    /// The GPS cell's value while satellites are tracked — by the recording or by the Home search; nil otherwise.
+    /// Wi‑Fi fixes before the lock show as searching, never as an accuracy.
+    static func satelliteValue(
+        status: TelemetrySnapshot.GPSStatus?, accuracy: Double?, locale: Locale
+    ) -> (value: Text, tint: Color)? {
+        switch status {
+        case nil:
+            return nil
+        case .good?:
+            guard let accuracy else { return (Text("Searching"), Theme.accent) }
+            let text = Text(verbatim: "±\(accuracy.formatted(.number.precision(.fractionLength(1)).locale(locale))) m")
+            return (text, accuracy <= 10 ? Theme.good : Theme.textPrimary)
+        case .acquiring?, .searching?:
+            return (Text("Searching"), Theme.accent)
+        }
+    }
+
+    private var satelliteValue: (value: Text, tint: Color)? {
+        let recording = recorder.phase == .recording
+        let snapshot = recorder.live.snapshot
+        return Self.satelliteValue(
+            status: recording ? snapshot.gpsStatus : probe.status,
+            accuracy: recording ? snapshot.horizontalAccuracy : probe.accuracy,
+            locale: appLanguage.locale
+        )
+    }
+
     var body: some View {
         Group {
             if LayoutClass.isPad(horizontalSizeClass, verticalSizeClass) {
@@ -64,6 +99,10 @@ struct HomeView: View {
         }
         .onReceive(NotificationCenter.default.publisher(for: .NSProcessInfoPowerStateDidChange)) { _ in
             isLowPowerMode = ProcessInfo.processInfo.isLowPowerModeEnabled
+        }
+        .task(id: probeShouldRun) {
+            guard probeShouldRun, let source = model.sensorEnvironment.makeProbeSource() else { return }
+            await probe.run(source: source)
         }
         .onChange(of: permission.canRecord) { _, allowed in
             if allowed, issue == .denied { issue = nil }
@@ -82,6 +121,7 @@ struct HomeView: View {
             issue: issue,
             isLowPowerMode: isLowPowerMode,
             batterySuggestionPercent: showsBatterySuggestion ? Int(((battery.level ?? 0) * 100).rounded()) : nil,
+            satelliteValue: satelliteValue,
             recent: recent.filter { !$0.isDeleted && $0.modelContext != nil },
             onStart: { Task { await start() } },
             onDismissBatterySuggestion: { withAnimation { batterySuggestionDismissed = true } },
@@ -239,11 +279,8 @@ struct HomeView: View {
         let precise = permission.isPrecise || !needsPermission
         let preciseText = precise ? Text("Precise") : Text("Approximate")
         let cell: (Text, Color, Text?)
-        if recorder.phase == .recording, let accuracy = recorder.live.snapshot.horizontalAccuracy {
-            cell = (
-                Text(verbatim: "±\(accuracy.formatted(.number.precision(.fractionLength(1)).locale(appLanguage.locale))) m"),
-                accuracy <= 10 ? Theme.good : Theme.textPrimary, preciseText
-            )
+        if let live = satelliteValue {
+            cell = (live.value, live.tint, preciseText)
         } else if !needsPermission {
             cell = (Text("Simulated"), Theme.good, preciseText)
         } else {

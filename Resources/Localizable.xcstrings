@@ -217,6 +217,22 @@
         }
       }
     },
+    "A short sound and haptic when GPS first locks onto satellites after START. Until then iOS may give only Wi‑Fi positions without speed, so wait for it before setting off. Plays while the HUD is on screen.": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "A short sound and haptic when GPS first locks onto satellites after START. Until then iOS may give only Wi‑Fi positions without speed, so wait for it before setting off. Plays while the HUD is on screen."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "START 後に GPS が初めて衛星をつかんだとき、短い音と振動で知らせます。それまでは iOS が速度のない Wi‑Fi の位置しか出さないことがあるので、鳴ってから発進してください。HUD を表示している間に鳴ります。"
+          }
+        }
+      }
+    },
     "Accelerometer only": {
       "localizations": {
         "en": {
@@ -3049,6 +3065,54 @@
         }
       }
     },
+    "Satellite fix acquired": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satellite fix acquired"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "衛星測位を取得"
+          }
+        }
+      }
+    },
+    "Satellite fix after": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satellite fix after"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "衛星取得まで"
+          }
+        }
+      }
+    },
+    "Satellite fix chime": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satellite fix chime"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "衛星取得の通知音"
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "en": {
@@ -3125,6 +3189,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "スクリプト走行"
+          }
+        }
+      }
+    },
+    "Searching": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "衛星を探索中"
           }
         }
       }

@@ -7,10 +7,10 @@ import Foundation
 /// What the HUD shows, published at ≤10 Hz (PLAN §6).
 public struct TelemetrySnapshot: Sendable, Equatable {
     public enum GPSStatus: String, Sendable {
-        /// No fix yet.
+        /// No satellite fix yet this run (Wi‑Fi / cell fixes may be arriving).
         case acquiring
         case good
-        /// No fix for > 15 s (PLAN §9.3 stage 1).
+        /// No fix for > 15 s (PLAN §9.3 stage 1), or no satellite fix for > 15 s after the first one.
         case searching
     }
 
@@ -24,6 +24,8 @@ public struct TelemetrySnapshot: Sendable, Equatable {
     public var distance: Double = 0
     public var horizontalAccuracy: Double?
     public var gpsStatus: GPSStatus = .acquiring
+    /// Seconds from the run's start to its first satellite fix; nil until then.
+    public var satelliteFixAfter: TimeInterval?
     /// g, + = left. GPS-estimated until motion calibration exists (S3).
     public var lateralG: Double = 0
     /// g, + = accelerating.
@@ -55,16 +57,13 @@ public actor TelemetryEngine {
     /// Display / peak filter for vehicle G (~0.2 s time constant) — rejects road vibration.
     private var filteredG = (long: 0.0, lat: 0.0)
     private var lastMotionUptime: TimeInterval?
-    private var hasFix = false
     private var statistics: SessionStatistics
     private var snapshot = TelemetrySnapshot()
     private var tasks: [Task<Void, Never>] = []
     private var lastFixUptime: TimeInterval
-    /// Unix time this run (START or resume) began. Core Location hands over its cached fix first — on a device
-    /// seen 2 minutes old — which is not part of the drive: it would start the route wherever the phone was then.
-    private let runStartedAt: TimeInterval
-    /// Fixes stamped this long before the run are still accepted (a fix computed just before START).
-    static let staleFixTolerance: TimeInterval = 2
+    /// This run (START or resume): drops Core Location's cached fix, which would start the route wherever the
+    /// phone was minutes ago, and tells satellite fixes from Wi‑Fi ones.
+    private var satellites: SatelliteFixTracker
     private var baroRelativeAtBaseline: Double?
     private var lastRelativeAltitude: Double?
 
@@ -88,7 +87,7 @@ public actor TelemetryEngine {
         watchdog = RecordingWatchdog(policy: watchdogPolicy)
         // Silence is measured from (re)start, so a session that never gets a fix still escalates.
         let now = suite.clock.uptime
-        runStartedAt = suite.clock.now.timeIntervalSince1970
+        satellites = SatelliteFixTracker(runStartedAt: suite.clock.now.timeIntervalSince1970, runStartUptime: now)
         lastFixUptime = now
         lastMotionUptime = manifest.preset.motion == .none ? nil : now
         self.statistics = statistics ?? SessionStatistics(clock: manifest.clock, expectedMotionHz: manifest.preset.motion.hz)
@@ -152,15 +151,17 @@ public actor TelemetryEngine {
     // MARK: - Streams
 
     private func handle(_ location: LocationSample) async {
-        // Not recorded at all: a cached fix from before the run is not a sample of this drive (and not a sign
-        // that GPS is alive, so the watchdog doesn't count it either).
-        guard location.timestamp >= runStartedAt - Self.staleFixTolerance else { return }
+        // Not recorded at all, and not counted by the watchdog either.
+        guard !satellites.isStale(location) else { return }
         await writer.append(location, to: .location)
         (suite.motion as? any LocationFed)?.feed(location)
         (suite.altimeter as? any LocationFed)?.feed(location)
         statistics.add(location)
         lastFixUptime = suite.clock.uptime
-        hasFix = true
+        if let after = satellites.add(location, uptime: lastFixUptime) {
+            snapshot.satelliteFixAfter = after
+            await writer.append(EventRecord(kind: .satelliteAcquired, source: .system, elapsed: elapsed, value: after), to: .events)
+        }
         await apply(calibrator.add(location, elapsed: elapsed))
 
         if manifest.altitudeBaseline == nil, location.verticalAccuracy > 0, location.verticalAccuracy <= 20 {
@@ -272,7 +273,10 @@ public actor TelemetryEngine {
                 await writer.flushIfDue()
             }
             snapshot.elapsed = elapsed
-            snapshot.gpsStatus = !hasFix && watchdog.gpsStage == .ok ? .acquiring : (watchdog.gpsStage == .ok ? .good : .searching)
+            // Total silence (the watchdog's view) wins; otherwise what matters is whether the fixes are satellite ones.
+            snapshot.gpsStatus = watchdog.gpsStage == .ok
+                ? satellites.status(now: suite.clock.uptime, searchingAfter: watchdog.policy.gpsSearching)
+                : .searching
             onSnapshot(snapshot)
             ticks += 1
             try? await Task.sleep(for: .milliseconds(100))

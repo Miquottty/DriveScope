@@ -156,6 +156,8 @@ struct SensorEnvironment {
     var source: Source
     var locationBackend: LocationBackend
     var isUITest: Bool
+    /// DEBUG `-SatelliteDelay <s>`: the first seconds of fixes become Wi‑Fi-like (no speed), like a start under a roof.
+    var satelliteDelay: TimeInterval?
     /// `-UITestKeepData`: the UI-test store and files survive a relaunch (recovery test).
     var uiTestKeepsData: Bool { ProcessInfo.processInfo.arguments.contains("-UITestKeepData") }
 
@@ -166,15 +168,21 @@ struct SensorEnvironment {
         let backend = value(after: "-LocationBackend").flatMap(LocationBackend.init(rawValue:))
             ?? LocationBackend(rawValue: UserDefaults.standard.string(forKey: "locationBackend") ?? "") ?? .locationManager
         let isUITest = arguments.contains("-UITest")
+        var environment: SensorEnvironment
         if let name = value(after: "-DriveSim"), DriveScript.named(name) != nil {
             let rate = value(after: "-DriveSimSpeed").flatMap(Double.init) ?? 1
-            return SensorEnvironment(source: .script(name: name, rate: rate), locationBackend: backend, isUITest: isUITest)
+            environment = SensorEnvironment(source: .script(name: name, rate: rate), locationBackend: backend, isUITest: isUITest)
+        } else {
+            #if targetEnvironment(simulator)
+            environment = SensorEnvironment(source: .simulatorRoute, locationBackend: backend, isUITest: isUITest)
+            #else
+            environment = SensorEnvironment(source: .device, locationBackend: backend, isUITest: isUITest)
+            #endif
         }
-        #if targetEnvironment(simulator)
-        return SensorEnvironment(source: .simulatorRoute, locationBackend: backend, isUITest: isUITest)
-        #else
-        return SensorEnvironment(source: .device, locationBackend: backend, isUITest: isUITest)
+        #if DEBUG
+        environment.satelliteDelay = value(after: "-SatelliteDelay").flatMap(TimeInterval.init)
         #endif
+        return environment
     }
 
     /// Scripted drives need no location permission.
@@ -184,6 +192,14 @@ struct SensorEnvironment {
     }
 
     func makeSuite() -> SensorSuite {
+        var suite = makeBaseSuite()
+        if let satelliteDelay {
+            suite.location = CoarseStartLocationSource(inner: suite.location, clock: suite.clock, delay: satelliteDelay)
+        }
+        return suite
+    }
+
+    private func makeBaseSuite() -> SensorSuite {
         switch source {
         case .script(let name, let rate):
             return ScriptPlayback.suite(script: DriveScript.named(name) ?? .akagi, rate: rate, label: "script:\(name)")
@@ -199,6 +215,13 @@ struct SensorEnvironment {
                 altimeter: CoreAltimeterSource(), label: "device"
             )
         }
+    }
+
+    /// Core Location for the Home screen's satellite search; nil for scripted drives (nothing to search for).
+    func makeProbeSource() -> (any LocationSource)? {
+        if case .script = source { return nil }
+        let location = makeLocationSource()
+        return satelliteDelay.map { CoarseStartLocationSource(inner: location, clock: SystemClock(), delay: $0) } ?? location
     }
 
     private func makeLocationSource() -> any LocationSource {

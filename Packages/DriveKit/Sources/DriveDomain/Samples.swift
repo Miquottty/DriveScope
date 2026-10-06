@@ -53,6 +53,9 @@ public struct LocationSample: BinaryRecord, Equatable {
 
     public var hasValidSpeed: Bool { speed >= 0 }
     public var hasValidCourse: Bool { course >= 0 }
+    /// From the satellites, not Wi‑Fi / cell positioning: Core Location's speed is Doppler-derived, so only a
+    /// satellite fix carries one (on device the Wi‑Fi fixes before the first lock have speed and its accuracy -1).
+    public var isSatelliteFix: Bool { hasValidSpeed }
 
     public func encode(into buffer: UnsafeMutableRawBufferPointer, at offset: Int) {
         var w = RecordWriter(buffer, at: offset)

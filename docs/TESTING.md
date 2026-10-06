@@ -27,6 +27,7 @@ UI テスト（2 本）:
 | `-UITestKeepData` / `-UITestFresh` | UI テスト用データを再起動後も保持 / 初期化 |
 | `-SeedSession <秒>`（DEBUG） | Akagi のスクリプト走行セッションを生成（例: 7200 で 2 時間ログ） |
 | `-appLanguage ja` / `en` | アプリ内言語 |
+| `-SatelliteDelay <秒>`（DEBUG） | 最初の N 秒の fix を Wi‑Fi 風（速度なし・±40 m）にする。屋根の下からの START の再現（ACQUIRING → 衛星取得音） |
 | Settings → Debug → Fast watchdog | Watchdog の閾値を 1/10 に短縮 |
 
 主な単体テスト（テストは意図的に少数・高価値に絞っている）:
@@ -125,6 +126,7 @@ Live Activity の強制終了まわりは実機の XCUITest（一時的なテス
 |---|---|---|---|---|---|---|
 | A 静止 10 分 | | | | | | 距離が増えない、G ノイズ、高度ドリフト |
 | B 市街地 20–30 分 | 2026-09-30 | iPhone 16 Pro Max / iOS 27.2 | Logger | 36 分・14.5 km | 生データ良好 / 派生値に不具合 → V1.1.1 で修正 | Motion 49.76 Hz・欠落 0、GPS 1 Hz・P50 2.1 m / P95 5.3 m、気圧 0.75 Hz 欠落なし、電池 16.7 %/h。不具合: ①キャリブレーションの「上」を START 直後 1 秒（手持ち）で決めて見直さず、全区間の横 G・ロール・ピッチが誤り ② manifest が開始時刻を秒で切り捨て、GPS がモーションより 0.8 s 遅れ ③欠落率 0.48% は実レートの誤計上 ④ JSON の `endedAt` が常に null ⑤途中 10 分マウント外（手で持った）で Peak G 1.01 G。ほか軽微: `screenOn` 重複、`administrativeArea` が国名、`appVersion` 1.0 |
+| B 市街地（衛星取得） | 2026-10-06 | iPhone 16 Pro Max / iOS 27.2 | Logger | 23 分 / 35 分 | 最初の衛星 fix まで 60.8 s / 373 s → V1.2.1 で見える化 | それまでは Wi‑Fi fix のみ（speed −1、約 6 s 間隔）。373 s の回は屋根の下で約 4 分停車、発進後も約 130 s・800 m 衛星なし。衛星 fix 後は約 5 s で ±3 m |
 | C 峠 30–60 分 | | | | | | 獲得標高、横 G 符号、Calibration、トンネルの Watchdog |
 | D 長時間 2 時間以上 | | | | | | メモリ・容量・発熱・欠落・Recovery |
 | E 電池比較 60 分 × 3 | | | GPS Only / Eco / Logger | | | 画面 OFF・非充電の %/h → PLAN §2.2.2 を置き換え |

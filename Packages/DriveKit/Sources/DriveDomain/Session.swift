@@ -144,6 +144,9 @@ public enum EventKind: UInt16, Codable, Sendable, CaseIterable {
     /// The SYNC beep reached the speaker; the SYNC marker next to it has the same elapsed (the beep's onset).
     /// value = output latency included (s), aux = output route (`SyncBeep.Route`).
     case syncBeep = 22
+    /// The first satellite fix of a run (START or resume); value = seconds since that run began. Until then Core
+    /// Location may deliver Wi‑Fi / cell fixes only, without speed (PLAN §9.3).
+    case satelliteAcquired = 23
 }
 
 /// Maps each stream's native clock to session elapsed time (PLAN §3).

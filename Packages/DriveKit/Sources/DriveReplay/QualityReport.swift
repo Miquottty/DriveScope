@@ -20,6 +20,9 @@ public struct QualityReport: Sendable {
     public var altitude = Stream()
     public var accuracyP50: Double = 0
     public var accuracyP95: Double = 0
+    /// Session elapsed of the first satellite fix (Wi‑Fi / cell fixes before it have no speed). Read from the fixes,
+    /// so sessions recorded before the `satelliteAcquired` event existed have it too.
+    public var firstSatelliteFix: TimeInterval?
     /// Fraction of motion samples missing, counted from gaps between timestamps (see `MotionDropCounter`).
     public var motionDropRate: Double?
     public var battery = BatteryUsage()
@@ -40,6 +43,7 @@ public struct QualityReport: Sendable {
         let accuracies = fixes.map(\.horizontalAccuracy).filter { $0 > 0 }.sorted()
         report.accuracyP50 = SessionStatistics.percentile(accuracies, 0.5)
         report.accuracyP95 = SessionStatistics.percentile(accuracies, 0.95)
+        report.firstSatelliteFix = fixes.first(where: \.isSatelliteFix).map { manifest.clock.elapsed(unixTime: $0.timestamp) }
 
         if let kind = manifest.motionStream, let scan = try scanMotion(files: files, kind: kind, hz: manifest.preset.motion.hz) {
             report.motion.count = scan.drops.received

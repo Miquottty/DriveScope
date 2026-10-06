@@ -15,6 +15,8 @@ struct HomeIPadLayout: View {
     let isLowPowerMode: Bool
     /// Battery percent while the low-battery suggestion applies (PLAN §2.2.1), else nil.
     let batterySuggestionPercent: Int?
+    /// GPS tile value while satellites are tracked (`HomeView.satelliteValue`), else nil.
+    let satelliteValue: (value: Text, tint: Color)?
     let recent: [DriveSession]
     let onStart: () -> Void
     let onDismissBatterySuggestion: () -> Void
@@ -279,7 +281,9 @@ struct HomeIPadLayout: View {
         let precise = permission.isPrecise
         let detail: Text = precise ? Text("Precise · full accuracy") : Text("Approximate")
         let tile: (value: Text, tint: Color, detail: Text)
-        if !needsPermission {
+        if let live = satelliteValue {
+            tile = (live.value, live.tint, detail)
+        } else if !needsPermission {
             tile = (Text("Simulated"), Theme.good, Text("Scripted drive"))
         } else {
             switch permission.authorizationStatus {
