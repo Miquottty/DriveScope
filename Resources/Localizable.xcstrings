@@ -2747,6 +2747,22 @@
         }
       }
     },
+    "READY · satellites locked": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "READY · satellites locked"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "READY · 衛星 OK"
+          }
+        }
+      }
+    },
     "Ready": {
       "localizations": {
         "en": {
@@ -3199,6 +3215,22 @@
           "stringUnit": {
             "state": "translated",
             "value": "Searching"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "衛星を探索中"
+          }
+        }
+      }
+    },
+    "Searching satellites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Searching satellites"
           }
         },
         "ja": {

@@ -375,6 +375,7 @@ STOP: removePendingNotificationRequests
 - HUD の GPS バッジは `SatelliteFixTracker` で判定: その run で衛星 fix がまだ無い → ACQUIRING(琥珀、時間で赤にしない)、取得後に衛星 fix が 15 s 途絶 → GPS SEARCHING(Live Activity / Watch も)。精度表示は衛星 fix のときだけ。
 - 最初の衛星 fix で `satelliteAcquired` イベント(value = run 開始からの秒)、HUD 表示中なら通知音(1.0 → 1.5 kHz の 2 音、SYNC の 2.5 kHz × 3 とは別物)と振動。設定でオフ可。
 - Home は表示中(フォアグラウンド・非記録・位置情報許可済み)に START 前から衛星を探し、GPS セルに「衛星を探索中」/ ±m を出す。
+- START ボタンは衛星取得で緑になり、下の 1 行が「READY · 衛星 OK」に変わる(文字は START のまま。琥珀でも押せる)。
 
 ### 9.4 events ストリーム
 `events.bin` に `gpsLost / gpsResumed / motionStalled / motionResumed / appDidEnterBackground / appWillEnterForeground / watchdogFired / resumedFromNotification / calibrationUpdated / thermalStateChanged / lowPowerModeChanged / carPlayConnected / carPlayDisconnected / screenOn / screenOff / batterySnapshot（5 分ごと: 残量・充電状態・thermal）/ batteryLowSuggested / marker / sessionResumed / autoResumed / mountChanged / syncBeep / satelliteAcquired` を elapsed 付きで記録。Quality 画面と JSON Export に出す。`marker` の aux はマーカーの種類（0 = MARK、1 = SYNC、2 = HIGHLIGHT。永続化されるので番号は変えない）。

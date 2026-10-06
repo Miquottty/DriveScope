@@ -17,6 +17,7 @@ struct HomeIPadLayout: View {
     let batterySuggestionPercent: Int?
     /// GPS tile value while satellites are tracked (`HomeView.satelliteValue`), else nil.
     let satelliteValue: (value: Text, tint: Color)?
+    let readiness: StartReadiness
     let recent: [DriveSession]
     let onStart: () -> Void
     let onDismissBatterySuggestion: () -> Void
@@ -131,15 +132,17 @@ struct HomeIPadLayout: View {
                     .tracking(2.1)
                     .lineLimit(1)
                     .minimumScaleFactor(0.6)
-                Text("Record drive")
+                Text(readiness.caption)
                     .font(.system(size: 17, weight: .medium))
+                    .multilineTextAlignment(.center)
             }
             .foregroundStyle(Theme.background)
             .padding(.horizontal, 24)
             .frame(width: 260, height: 260)
-            .background(Theme.accent, in: Circle())
+            .background(readiness.fill, in: Circle())
             .padding(16)
-            .background(Theme.accentHalo, in: Circle())
+            .background(readiness == .ready ? Theme.good.opacity(0.1) : Theme.accentHalo, in: Circle())
+            .animation(.easeInOut(duration: 0.3), value: readiness)
             .contentShape(.interaction, Circle())
             .contentShape(.hoverEffect, Circle())
             .hoverEffect(.lift)
@@ -148,6 +151,7 @@ struct HomeIPadLayout: View {
         .disabled(!canStart)
         .opacity(canStart ? 1 : 0.4)
         .accessibilityLabel("Start recording")
+        .accessibilityValue(Text(readiness.caption))
         .accessibilityIdentifier("startButton")
     }
 

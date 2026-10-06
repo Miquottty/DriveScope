@@ -74,6 +74,8 @@ struct HomeView: View {
         }
     }
 
+    private var readiness: StartReadiness { StartReadiness(probe: probe.status) }
+
     private var satelliteValue: (value: Text, tint: Color)? {
         let recording = recorder.phase == .recording
         let snapshot = recorder.live.snapshot
@@ -122,6 +124,7 @@ struct HomeView: View {
             isLowPowerMode: isLowPowerMode,
             batterySuggestionPercent: showsBatterySuggestion ? Int(((battery.level ?? 0) * 100).rounded()) : nil,
             satelliteValue: satelliteValue,
+            readiness: readiness,
             recent: recent.filter { !$0.isDeleted && $0.modelContext != nil },
             onStart: { Task { await start() } },
             onDismissBatterySuggestion: { withAnimation { batterySuggestionDismissed = true } },
@@ -363,19 +366,21 @@ struct HomeView: View {
                     .font(.system(size: size * 0.16, weight: .semibold))
                     .tracking(size * 0.0096)
                     .foregroundStyle(Theme.background)
-                Text("Record drive")
+                Text(readiness.caption)
                     .font(.system(size: 12, weight: .medium))
                     .foregroundStyle(Theme.background.opacity(0.7))
             }
             .frame(width: size, height: size)
-            .background(Theme.accent, in: Circle())
+            .background(readiness.fill, in: Circle())
             .padding(size * 0.053)
-            .background(Theme.accent.opacity(0.08), in: Circle())
+            .background(readiness.fill.opacity(0.08), in: Circle())
+            .animation(.easeInOut(duration: 0.3), value: readiness)
         }
         .buttonStyle(.plain)
         .disabled(!canStart)
         .opacity(canStart ? 1 : 0.4)
         .accessibilityLabel("Start recording")
+        .accessibilityValue(Text(readiness.caption))
         .accessibilityIdentifier("startButton")
     }
 
