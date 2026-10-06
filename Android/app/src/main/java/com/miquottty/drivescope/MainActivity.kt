@@ -8,7 +8,19 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.runtime.Composable
@@ -22,7 +34,9 @@ import androidx.compose.ui.Modifier
 import com.miquottty.drivescope.bridge.DriveKitBridge
 import com.miquottty.drivescope.home.HomeScreen
 import com.miquottty.drivescope.hud.RecordingHud
-import com.miquottty.drivescope.map.MapScreen
+import com.miquottty.drivescope.map.ReplayScreen
+import com.miquottty.drivescope.sessions.SessionDetailScreen
+import com.miquottty.drivescope.sessions.SessionsScreen
 import com.miquottty.drivescope.probe.GnssProbe
 import com.miquottty.drivescope.probe.MotionProbe
 import com.miquottty.drivescope.probe.ProbeScreen
@@ -57,33 +71,80 @@ class MainActivity : ComponentActivity() {
 }
 
 private sealed interface Route {
-    data object Home : Route
+    data object Tabs : Route
     data object Settings : Route
     data object Probe : Route
-    data class Map(val session: File) : Route
+    data class Detail(val id: String) : Route
+    data class Replay(val dir: File, val id: String?) : Route
+}
+
+private enum class Tab(val icon: String, val label: Int) {
+    RECORD("◉", R.string.tab_record),
+    SESSIONS("☰", R.string.tab_sessions),
 }
 
 @Composable
 private fun AppRoot(store: SessionStore) {
     val recorder by RecordingService.recorder.collectAsState()
-    var route by remember { mutableStateOf<Route>(Route.Home) }
+    var route by remember { mutableStateOf<Route>(Route.Tabs) }
+    var tab by remember { mutableStateOf(Tab.RECORD) }
     // The HUD takes over the screen while a run is on (iOS shows it full screen too).
     if (recorder.phase != RecorderState.Phase.IDLE) {
         RecordingHud(recorder)
         return
     }
-    BackHandler(enabled = route != Route.Home) {
-        route = if (route is Route.Map) Route.Probe else Route.Home
+    BackHandler(enabled = route != Route.Tabs) {
+        route = when (val r = route) {
+            is Route.Replay -> r.id?.let { Route.Detail(it) } ?: Route.Probe
+            Route.Probe -> Route.Settings
+            else -> Route.Tabs
+        }
     }
     Box(Modifier.fillMaxSize().background(Theme.background).safeDrawingPadding()) {
         when (val r = route) {
-            Route.Home -> HomeScreen(
-                store, onOpenSettings = { route = Route.Settings },
-                onOpenSession = { route = Route.Map(store.directory(it.id)) },
+            Route.Tabs -> Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f)) {
+                    when (tab) {
+                        Tab.RECORD -> HomeScreen(
+                            store, onOpenSettings = { route = Route.Settings },
+                            onOpenSession = { route = Route.Detail(it.id) },
+                            onShowAllSessions = { tab = Tab.SESSIONS },
+                        )
+                        Tab.SESSIONS -> SessionsScreen(store) { route = Route.Detail(it.id) }
+                    }
+                }
+                TabBar(tab) { tab = it }
+            }
+            Route.Settings -> SettingsScreen(onBack = { route = Route.Tabs }, onOpenProbe = { route = Route.Probe })
+            Route.Probe -> DeveloperProbe(onOpenMap = { route = Route.Replay(it, null) }, onBack = { route = Route.Settings })
+            is Route.Detail -> SessionDetailScreen(
+                store, r.id, onBack = { route = Route.Tabs },
+                onReplay = { route = Route.Replay(store.directory(r.id), r.id) },
             )
-            Route.Settings -> SettingsScreen(onBack = { route = Route.Home }, onOpenProbe = { route = Route.Probe })
-            Route.Probe -> DeveloperProbe(onOpenMap = { route = Route.Map(it) }, onBack = { route = Route.Settings })
-            is Route.Map -> MapScreen(r.session, onBack = { route = Route.Home })
+            is Route.Replay -> ReplayScreen(r.dir, r.id?.let(store::meta)) {
+                route = r.id?.let { Route.Detail(it) } ?: Route.Probe
+            }
+        }
+    }
+}
+
+/** The bottom tab bar (iOS's Record / Sessions tabs), a floating pill like the mock. */
+@Composable
+private fun TabBar(selected: Tab, onSelect: (Tab) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 48.dp, vertical = 10.dp)
+            .background(Theme.surface, RoundedCornerShape(32.dp)).padding(6.dp),
+    ) {
+        for (tab in Tab.entries) {
+            val active = tab == selected
+            Column(
+                Modifier.weight(1f).background(if (active) Theme.background else Theme.surface, RoundedCornerShape(26.dp))
+                    .clickable { onSelect(tab) }.padding(vertical = 8.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Text(tab.icon, color = if (active) Theme.accent else Theme.textSecondary, fontSize = 20.sp)
+                Text(stringResource(tab.label), color = if (active) Theme.accent else Theme.textSecondary, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }

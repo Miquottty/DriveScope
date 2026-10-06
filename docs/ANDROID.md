@@ -55,3 +55,6 @@ scripts/xc.sh swift run --package-path Packages/DriveKit drivekit-cli export jso
 - `PowerManager.addThermalStatusListener` は登録した直後に現在の状態を 1 回知らせてくる(開始時に自分で記録しない)。
 - 端末を回すと Activity が作り直される(`configChanges` を指定済み)。
 - 国土地理院のスタイルは PMTiles を GL JS の書き方で指定しているので、MapLibre Native 向けに `url` に書き換えて読む。
+- スクロールする画面の中の MapLibre は既定の SurfaceView だと描かれない(真っ白)。詳細画面の地図は `textureMode = true`。
+- ルートの線は iOS と同じく誤差 50 m 以内の位置だけで描く(リプレイのフレームに GPS の誤差を含めて Android 側で選ぶ)。
+- 書き出しは `cache/exports` に書いて FileProvider(`${applicationId}.files`)で共有メニューへ渡す。

@@ -76,16 +76,25 @@ object DriveKitBridge {
     /** The app's JSON export of `sessionDir` into `outDir`; returns the file path or "error: …". */
     external fun exportJson(sessionDir: String, title: String, workDir: String, outDir: String): String
 
+    /** `kind` "json" / "gpx" / "csv30" / "csv10" with the session's title, notes and `PlaceMeta` array; path or "error: …". */
+    external fun exportFile(kind: String, sessionDir: String, title: String, notes: String, placesJson: String, workDir: String, outDir: String): String
+
+    /** The Quality screen's `QualityReport` (streams, accuracy, satellite fix, battery, thermal, every event) as JSON. */
+    external fun qualityJson(sessionDir: String): String
+
+    /** {summary, routePreview, lastSample} from the files alone (recovery). */
+    external fun recompute(sessionDir: String): String
+
     /** A few Quality-screen figures for `sessionDir`, computed by DriveKit. */
     external fun quality(sessionDir: String): String
 
-    /** [t, lat, lon, speed m/s, course °, altitude m, lateral g] × frames at `hz` — the iOS Replay interpolation. */
+    /** [t, lat, lon, speed m/s, course °, altitude m, lateral g, GPS accuracy m, longitudinal g] × frames at `hz` — the iOS Replay interpolation. */
     external fun replayFrames(sessionDir: String, hz: Double): DoubleArray
 
     /** [elapsed, kind (0 MARK, 1 SYNC, 2 HIGHLIGHT)] × markers. */
     external fun markers(sessionDir: String): DoubleArray
 
-    const val FRAME_STRIDE = 7
+    const val FRAME_STRIDE = 9
 }
 
 /** `DriveKitBridge.snapshot`, decoded (Recorder.swift `SnapshotField`). */

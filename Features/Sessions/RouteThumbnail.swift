@@ -27,7 +27,16 @@ struct RouteThumbnail: View {
         }
         .frame(width: size.width, height: size.height)
         .background(Theme.background, in: RoundedRectangle(cornerRadius: 8))
+        .overlay { if points.count < 2 { Self.noGPS(fontSize: 10) } }
         .accessibilityHidden(true)
+    }
+
+    /// Fewer than two usable fixes (indoors: only Wi‑Fi positions) would leave an empty square that looks broken.
+    static func noGPS(fontSize: CGFloat) -> some View {
+        Text("No GPS")
+            .font(.system(size: fontSize))
+            .foregroundStyle(Theme.textTertiary)
+            .multilineTextAlignment(.center)
     }
 
     /// Equirectangular projection (longitude scaled by cos(latitude)), fitted into `rect` with the aspect kept.

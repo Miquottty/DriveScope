@@ -5,13 +5,14 @@ import Foundation
 
 extension SessionExporter {
     /// Exports a session from its folder alone — no SwiftData — deriving what the app keeps there: markers from
-    /// events.bin, the summary (`SessionStatistics`), the mount (`MountSolver`) and the sections. No places (the
-    /// geocoder is MapKit). Used by `drivekit-cli` on the Mac and by the Android app through JNI.
+    /// events.bin, the summary (`SessionStatistics`), the mount (`MountSolver`) and the sections. Title, notes and places
+    /// come from the caller (the Mac tool has none; the Android app passes its `session.json`).
     ///
     /// Works on a copy in `workDirectory` (the mount solution is written into its manifest), so the recorded folder
     /// stays as it was.
     public static func exportDerivingMetadata(
-        _ kind: ExportKind, files: SessionFiles, title: String, workDirectory: URL, into directory: URL
+        _ kind: ExportKind, files: SessionFiles, title: String, notes: String = "", places: [PlaceMeta] = [],
+        workDirectory: URL, into directory: URL
     ) throws -> URL {
         let fm = FileManager.default
         let work = workDirectory.appending(path: "export-\(UUID().uuidString)", directoryHint: .isDirectory)
@@ -43,7 +44,9 @@ extension SessionExporter {
             guard event.kind == .marker, let kind = MarkerKind(eventAux: event.aux) else { return nil }
             return ExportMarker(kind: kind, elapsed: event.elapsed, date: manifest.clock.date(elapsed: event.elapsed))
         }
-        let metadata = ExportMetadata(title: title, markers: markers, summary: summary, sections: analysis.sections)
+        let metadata = ExportMetadata(
+            title: title, notes: notes, places: places, markers: markers, summary: summary, sections: analysis.sections
+        )
         return try export(kind, files: copy, metadata: metadata, into: directory)
     }
 }

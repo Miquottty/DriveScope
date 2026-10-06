@@ -53,6 +53,7 @@ class SessionFinisher(private val context: Context, private val store: SessionSt
         store.save(meta.copy(
             places = places,
             title = if (meta.titleIsUserEdited) meta.title else title,
+            autoTitle = title,
             geocodePending = places.any { !it.has("locality") && !it.has("administrativeArea") },
         ))
     }

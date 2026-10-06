@@ -33,6 +33,7 @@ struct IPadRouteThumbnail: View {
         .frame(width: size.width, height: size.height)
         .background(Theme.background, in: RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Theme.divider))
+        .overlay { if points.count < 2 { RouteThumbnail.noGPS(fontSize: 10 * size.width / 56) } }
         .accessibilityHidden(true)
     }
 }
