@@ -22,7 +22,28 @@ class RecordingNotification(private val context: Context) {
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL, context.getString(R.string.notification_channel_recording), NotificationManager.IMPORTANCE_LOW),
         )
+        manager.createNotificationChannel(
+            NotificationChannel(ALERTS, context.getString(R.string.notification_channel_alerts), NotificationManager.IMPORTANCE_HIGH),
+        )
     }
+
+    /** Watchdog stage "notified" (2 min without GPS / motion), as iOS's local notification (PLAN §9.3). */
+    fun alert(stream: Int, silenceSeconds: Double) {
+        val minutes = maxOf(1, (silenceSeconds / 60).toInt())
+        val (title, body) = if (stream == 0) {
+            context.getString(R.string.alert_gps_title) to context.getString(R.string.alert_gps_body, minutes)
+        } else {
+            context.getString(R.string.alert_motion_title) to context.getString(R.string.alert_motion_body, minutes)
+        }
+        val open = PendingIntent.getActivity(context, 3, Intent(context, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
+        manager.notify(
+            ALERT_ID + stream,
+            Notification.Builder(context, ALERTS).setSmallIcon(android.R.drawable.stat_notify_error)
+                .setContentTitle(title).setContentText(body).setContentIntent(open).setAutoCancel(true).build(),
+        )
+    }
+
+    fun cancelAlert(stream: Int) = manager.cancel(ALERT_ID + stream)
 
     fun build(state: RecorderState): Notification {
         val s = state.snapshot
@@ -67,7 +88,9 @@ class RecordingNotification(private val context: Context) {
 
     companion object {
         const val ID = 1
+        private const val ALERT_ID = 10
         private const val CHANNEL = "recording"
+        private const val ALERTS = "alerts"
         const val ACTION_STOP_FROM_NOTIFICATION = "stop"
     }
 }

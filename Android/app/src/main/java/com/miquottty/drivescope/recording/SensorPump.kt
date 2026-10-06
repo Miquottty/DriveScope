@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -38,6 +39,20 @@ class SensorPump(
     private val pressureWindow = mutableListOf<Float>()
     private var pressureWindowStart = 0L
     private var lastSatelliteFixNs = 0L
+    private var lastGnssEvent = 0L
+
+    /** Android only: satellites as a `gnssStatus` event every 30 s (value = top-4 C/N0, aux = used | visible << 16). */
+    private val gnssCallback = object : GnssStatus.Callback() {
+        override fun onSatelliteStatusChanged(status: GnssStatus) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - lastGnssEvent < 30_000) return
+            lastGnssEvent = now
+            val used = (0 until status.satelliteCount).filter { status.usedInFix(it) }
+            val top4 = used.map { status.getCn0DbHz(it).toDouble() }.sortedDescending().take(4)
+            val aux = (used.size and 0xFFFF) or (minOf(status.satelliteCount, 0xFFFF) shl 16)
+            DriveKitBridge.recordEvent(handle, EVENT_GNSS_STATUS, 3, aux, if (top4.isEmpty()) 0.0 else top4.average())
+        }
+    }
 
     private val gpsListener = LocationListener { onLocation(it) }
     private val networkListener = LocationListener { fix ->
@@ -62,6 +77,7 @@ class SensorPump(
         }
         register(Sensor.TYPE_PRESSURE, 1_000_000)
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1_000L, 0f, gpsListener, handler.looper)
+        locationManager.registerGnssStatusCallback(gnssCallback, handler)
         if (locationManager.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1_000L, 0f, networkListener, handler.looper)
         }
@@ -71,6 +87,12 @@ class SensorPump(
         sensorManager.unregisterListener(this)
         locationManager.removeUpdates(gpsListener)
         locationManager.removeUpdates(networkListener)
+        locationManager.unregisterGnssStatusCallback(gnssCallback)
+    }
+
+    companion object {
+        /** DriveKit `EventKind.gnssStatus`. */
+        const val EVENT_GNSS_STATUS = 24
     }
 
     private fun register(type: Int, periodUs: Int) {

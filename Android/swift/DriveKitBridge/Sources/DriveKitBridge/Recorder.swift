@@ -98,7 +98,10 @@ final class AndroidRecording: Sendable {
     let snapshot: Locked<TelemetrySnapshot>
     let watchdog: Locked<[RecordingWatchdog.Action]>
 
-    init(files: SessionFiles, manifest: SessionManifest, hasGyroscope: Bool, hasBarometer: Bool, fastWatchdog: Bool) throws {
+    init(
+        files: SessionFiles, manifest: SessionManifest, statistics: SessionStatistics? = nil, hasGyroscope: Bool,
+        hasBarometer: Bool, fastWatchdog: Bool
+    ) throws {
         let clock = AndroidClock()
         let location = PushStream<LocationSample>(), motion = PushStream<MotionEvent>(), altitude = PushStream<AltitudeSample>()
         let snapshot = Locked(TelemetrySnapshot()), watchdog = Locked<[RecordingWatchdog.Action]>([])
@@ -123,7 +126,7 @@ final class AndroidRecording: Sendable {
         )
         let policy = RecordingWatchdog.Policy()
         engine = TelemetryEngine(
-            suite: suite, writer: writer, files: files, manifest: manifest,
+            suite: suite, writer: writer, files: files, manifest: manifest, statistics: statistics,
             watchdogPolicy: fastWatchdog ? policy.accelerated(by: 10) : policy,
             onSnapshot: { value in snapshot.withLock { $0 = value } },
             onWatchdog: { action in watchdog.withLock { $0.append(action) } }
@@ -188,6 +191,46 @@ public func recorderStart(
             fastWatchdog: fastWatchdog != 0
         )
         blocking { await recording.engine.start() }
+        return jlong(Int(bitPattern: Unmanaged.passRetained(recording).toOpaque()))
+    } catch {
+        return 0
+    }
+}
+
+/// How long after its last sample an unfinished session may still be continued (iOS `RecordingController.resumeWindow`).
+private let resumeWindow: TimeInterval = 30 * 60
+
+/// `recorderResume(sessionDir, automatic, hasGyroscope, hasBarometer, fastWatchdog)` → handle, or 0 when the session can't
+/// continue: another boot (the elapsedRealtime clock restarted) or, when `automatic` (the service restarted after the
+/// process died), more than 30 minutes since its last sample — iOS `RecordingController.continueSession`. Appends to
+/// the same streams and records `sessionResumed` (+ `autoResumed`) with the gap.
+@_cdecl("Java_com_miquottty_drivescope_bridge_DriveKitBridge_recorderResume")
+public func recorderResume(
+    env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: jstring?, automatic: jboolean, hasGyroscope: jboolean,
+    hasBarometer: jboolean, fastWatchdog: jboolean
+) -> jlong {
+    let files = SessionFiles(directory: URL(filePath: env.string(session), directoryHint: .isDirectory))
+    let clock = AndroidClock()
+    guard let manifest = try? files.readManifest(),
+          let (statistics, lastElapsed) = try? SessionStatistics.compute(files: files, manifest: manifest),
+          clock.uptime >= manifest.clock.startUptime
+    else { return 0 }
+    let lastSample = manifest.clock.startedAt.addingTimeInterval(lastElapsed)
+    if automatic != 0, clock.now.timeIntervalSince(lastSample) > resumeWindow { return 0 }
+    do {
+        let recording = try AndroidRecording(
+            files: files, manifest: manifest, statistics: statistics, hasGyroscope: hasGyroscope != 0,
+            hasBarometer: hasBarometer != 0, fastWatchdog: fastWatchdog != 0
+        )
+        blocking {
+            await recording.engine.start()
+            let elapsed = await recording.engine.elapsed
+            let gap = elapsed - lastElapsed
+            await recording.engine.record(EventRecord(kind: .sessionResumed, source: .system, elapsed: elapsed, value: gap))
+            if automatic != 0 {
+                await recording.engine.record(EventRecord(kind: .autoResumed, source: .system, elapsed: elapsed, value: gap))
+            }
+        }
         return jlong(Int(bitPattern: Unmanaged.passRetained(recording).toOpaque()))
     } catch {
         return 0

@@ -13,7 +13,7 @@ android {
         minSdk = 34
         targetSdk = 37
         versionCode = 1
-        versionName = "0.0.1-spike"
+        versionName = "1.0"
         // DriveKitBridge is built for arm64 only (Pixel 7).
         ndk {
             abiFilters += "arm64-v8a"

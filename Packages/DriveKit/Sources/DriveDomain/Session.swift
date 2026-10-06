@@ -147,6 +147,9 @@ public enum EventKind: UInt16, Codable, Sendable, CaseIterable {
     /// The first satellite fix of a run (START or resume); value = seconds since that run began. Until then Core
     /// Location may deliver Wi‑Fi / cell fixes only, without speed (PLAN §9.3).
     case satelliteAcquired = 23
+    /// Android only (iOS has no API for it): satellites every 30 s. value = mean C/N0 of the four strongest used
+    /// (dB-Hz), aux = used count (low 16 bits) | visible count << 16.
+    case gnssStatus = 24
 }
 
 /// Maps each stream's native clock to session elapsed time (PLAN §3).

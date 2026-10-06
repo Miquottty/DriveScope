@@ -18,13 +18,26 @@ import kotlin.coroutines.resume
  * sections (`analyze`), then places — DriveKit picks the points, Android's Geocoder names them — and the automatic title.
  */
 class SessionFinisher(private val context: Context, private val store: SessionStore) {
-    suspend fun finish(id: String, preset: CapturePreset, stop: JSONObject) {
+    /**
+     * An unfinished run that can't continue (process died, another boot, > 30 min): statistics from the files alone,
+     * then the same analysis and places as a normal stop; the session is marked RECOVERED (iOS "Recover session").
+     */
+    suspend fun recover(id: String) {
+        val dir = store.directory(id)
+        DriveKitBridge.configure(context.cacheDir.absolutePath)
+        val result = JSONObject(DriveKitBridge.recompute(dir.absolutePath))
+        if (!result.has("summary")) return
+        val endedAt = startedAt(dir) + result.optDouble("lastSample", 0.0)
+        finish(id, CapturePreset.fromRaw(store.meta(id)?.preset), result.put("sessionID", id).put("endedAt", endedAt), SessionMeta.State.RECOVERED)
+    }
+
+    suspend fun finish(id: String, preset: CapturePreset, stop: JSONObject, state: SessionMeta.State = SessionMeta.State.STOPPED) {
         if (id.isEmpty()) return
         val dir = store.directory(id)
         val preview = stop.optJSONArray("routePreview") ?: JSONArray()
         var meta = SessionMeta(
             id = id,
-            state = SessionMeta.State.STOPPED,
+            state = state,
             preset = preset.raw,
             startedAt = startedAt(dir),
             endedAt = stop.optDouble("endedAt").takeUnless { it.isNaN() },

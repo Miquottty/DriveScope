@@ -59,6 +59,11 @@ iOS と同じエンジンが `.bin` を書くので、イベントの意味(衛�
 - テストは少数・高価値: Kotlin の JVM テスト(センサー変換、`session.json` の読み書き、SYNC 音の時刻換算)と、
   DriveKit 側に Android 形式の小さなセッション(`platform: android` の manifest)を読む 1 件。
 
+## 進み具合(2026-10-07)
+- A-S0: #41 マージ済み。A-S1: #42(机上・屋外歩行で確認、実車は次回)。A-S2: #43。A-S3: この PR。
+- 計画からの変更: SYNC 音は AAudio ではなく `AudioTrack`(低遅延モード)+ `getTimestamp`。国土地理院の地図は明るい配色のまま選択肢に置いた。
+  Watchdog の 2 段目(デッドマン通知)は Android では入れない(START_STICKY と復旧ダイアログで代える)。
+
 ## A-S0(A-S1 の最初の PR): 試作から main へ
 - 試作(#39)から使うもの: `Android/` の Gradle 一式・センサー変換・記録サービスの骨格・JNI の橋渡しとビルドスクリプト、
   DriveKit の Android 対応(約 60 行)、`SessionExporter.exportDerivingMetadata`、`drivekit-cli`。

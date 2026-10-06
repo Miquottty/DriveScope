@@ -62,6 +62,7 @@ import com.miquottty.drivescope.settings.Prefs
 import com.miquottty.drivescope.store.SessionMeta
 import com.miquottty.drivescope.store.SessionStore
 import java.util.Locale
+import kotlinx.coroutines.launch
 
 /** START's look before recording (#38): green READY once the Home search has satellites; START stays usable while amber. */
 enum class StartReadiness { UNKNOWN, SEARCHING, READY }
@@ -118,6 +119,10 @@ fun HomeScreen(store: SessionStore, onOpenSettings: () -> Unit, onOpenSession: (
             ) { Text("⚙", color = Theme.textSecondary, fontSize = 20.sp) }
         }
         SensorCard(hasLocation, satellites, readiness, preset)
+        BatterySuggestion(preset) {
+            preset = it
+            prefs.preset = it
+        }
         Column(Modifier.fillMaxWidth().padding(vertical = 28.dp), horizontalAlignment = Alignment.CenterHorizontally) {
             StartButton(readiness) {
                 val needed = listOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.POST_NOTIFICATIONS)
@@ -146,6 +151,7 @@ private fun SensorCard(hasLocation: Boolean, s: com.miquottty.drivescope.probe.G
     val context = LocalContext.current
     val sensors = remember { context.getSystemService(SensorManager::class.java) }
     val battery = remember { context.getSystemService(BatteryManager::class.java) }
+    val notificationsOn = granted(context, Manifest.permission.POST_NOTIFICATIONS)
     Column(
         Modifier.fillMaxWidth().padding(top = 22.dp).background(Theme.surface, RoundedCornerShape(16.dp)).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -179,7 +185,76 @@ private fun SensorCard(hasLocation: Boolean, s: com.miquottty.drivescope.probe.G
                 if (battery.isCharging) stringResource(R.string.charging) else null, Modifier.weight(1f),
             )
         }
+        // iOS shows the background location permission; Android keeps recording through the foreground service, whose
+        // notification is only hidden when notifications are off.
+        Row(Modifier.fillMaxWidth()) {
+            Text(stringResource(R.string.home_background), color = Theme.textSecondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
+            Text(
+                stringResource(if (notificationsOn) R.string.home_background_ok else R.string.home_background_no_notifications),
+                color = if (notificationsOn) Theme.good else Theme.accent, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            )
+        }
     }
+}
+
+/** Unplugged and below 20 %: suggest Eco or GPS Only (PLAN §2.2.1 — a suggestion only, never switched by itself). */
+@Composable
+private fun BatterySuggestion(preset: CapturePreset, onSelect: (CapturePreset) -> Unit) {
+    val context = LocalContext.current
+    val battery = remember { context.getSystemService(BatteryManager::class.java) }
+    var dismissed by remember { mutableStateOf(false) }
+    val level = battery.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY)
+    if (dismissed || battery.isCharging || level !in 0 until 20 || preset == CapturePreset.ECO || preset == CapturePreset.GPS_ONLY) return
+    Column(
+        Modifier.fillMaxWidth().padding(top = 12.dp).background(Theme.surface, RoundedCornerShape(16.dp)).padding(16.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(stringResource(R.string.battery_suggestion, level), color = Theme.accent, fontSize = 14.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            for (option in listOf(CapturePreset.ECO, CapturePreset.GPS_ONLY)) {
+                Text(
+                    option.label, color = Theme.background, fontSize = 13.sp, fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.background(Theme.accent, RoundedCornerShape(10.dp)).clickable { onSelect(option) }.padding(horizontal = 12.dp, vertical = 8.dp),
+                )
+            }
+            Text("✕", color = Theme.textSecondary, fontSize = 15.sp, modifier = Modifier.clickable { dismissed = true }.padding(8.dp))
+        }
+    }
+}
+
+/** A run the app never finished (iOS `RecoverySheet`): resume it in the same files, recover it, or discard it. */
+@Composable
+fun RecoveryDialog(store: SessionStore, unfinished: SessionMeta, onDone: () -> Unit) {
+    val context = LocalContext.current
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    var working by remember { mutableStateOf(false) }
+    androidx.compose.material3.AlertDialog(
+        onDismissRequest = {},
+        containerColor = Theme.surface,
+        title = { Text(stringResource(R.string.recovery_title)) },
+        text = { Text(SessionFormat.date(unfinished.startedAt) + " · " + unfinished.title, color = Theme.textSecondary) },
+        confirmButton = {
+            Column {
+                androidx.compose.material3.TextButton(enabled = !working, onClick = {
+                    RecordingService.resume(context, unfinished.id)
+                    onDone()
+                }) { Text(stringResource(R.string.recovery_resume)) }
+                androidx.compose.material3.TextButton(enabled = !working, onClick = {
+                    working = true
+                    scope.launch {
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            com.miquottty.drivescope.recording.SessionFinisher(context, store).recover(unfinished.id)
+                        }
+                        onDone()
+                    }
+                }) { Text(stringResource(R.string.recovery_recover)) }
+                androidx.compose.material3.TextButton(enabled = !working, onClick = {
+                    store.delete(unfinished.id)
+                    onDone()
+                }) { Text(stringResource(R.string.recovery_discard), color = Theme.rec) }
+            }
+        },
+    )
 }
 
 @Composable

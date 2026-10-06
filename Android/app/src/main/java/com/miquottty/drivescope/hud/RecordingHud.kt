@@ -120,7 +120,7 @@ private fun Portrait(s: Snapshot, state: RecorderState, saving: Boolean, actions
             GValue("LONG", s.longitudinalG, Theme.textPrimary, Modifier.weight(1f))
         }
         GMeter(s.lateralG, s.longitudinalG, Modifier.fillMaxWidth().weight(1f).padding(top = 8.dp))
-        if (!s.isCalibrated) Caption("GPS EST.")
+        CalibrationControl(s, saving)
         Row(Modifier.fillMaxWidth().padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             ActionButton("⚑", "MARK", !saving, Modifier.weight(1f), actions.onMark)
             ActionButton("★", "HIGHLIGHT", !saving, Modifier.weight(1f), actions.onHighlight)
@@ -155,7 +155,10 @@ private fun Landscape(s: Snapshot, state: RecorderState, saving: Boolean, action
                     GValue("LATERAL", s.lateralG, Theme.accent, Modifier, 30.sp)
                     GValue("LONG", s.longitudinalG, Theme.textPrimary, Modifier.padding(top = 8.dp), 30.sp)
                 }
-                GMeter(s.lateralG, s.longitudinalG, Modifier.weight(1f).fillMaxHeight().padding(8.dp))
+                Column(Modifier.weight(1f).fillMaxHeight(), horizontalAlignment = Alignment.CenterHorizontally) {
+                    GMeter(s.lateralG, s.longitudinalG, Modifier.weight(1f).fillMaxWidth().padding(8.dp))
+                    CalibrationControl(s, saving)
+                }
             }
         }
         Row(Modifier.fillMaxWidth().height(56.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -165,6 +168,43 @@ private fun Landscape(s: Snapshot, state: RecorderState, saving: Boolean, action
             StopButton(saving, Modifier.weight(1f).fillMaxHeight(), actions.onStop)
         }
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/** "CAL · 90°" once the mount is calibrated (manual rotation when auto picked the wrong axis, PLAN §7-4); "GPS EST." before. */
+@Composable
+private fun CalibrationControl(s: Snapshot, saving: Boolean) {
+    val context = LocalContext.current
+    if (s.isCalibrated) {
+        Text(
+            "⟳ CAL · 90°", color = Theme.textSecondary, fontSize = 11.sp, fontFamily = FontFamily.Monospace,
+            modifier = Modifier.border(1.dp, Theme.divider, RoundedCornerShape(12.dp))
+                .pointerInput(saving) { detectTapGestures { if (!saving) RecordingService.rotateMount(context) } }
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+        )
+    } else {
+        Caption("GPS EST.")
+    }
+}
+
+/** Unplugged and below 20 %: a hint for the next session; the preset never changes mid-run (PLAN §2.2.1). */
+@Composable
+private fun LowBatteryBanner() {
+    val context = LocalContext.current
+    val battery = remember { context.getSystemService(android.os.BatteryManager::class.java) }
+    var low by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            val level = battery.getIntProperty(android.os.BatteryManager.BATTERY_PROPERTY_CAPACITY)
+            low = !battery.isCharging && level in 0 until 20
+            delay(60_000)
+        }
+    }
+    if (low) {
+        Text(
+            stringResource(R.string.hud_low_battery), color = Theme.accent, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(top = 4.dp).background(Theme.surface, RoundedCornerShape(12.dp)).padding(horizontal = 10.dp, vertical = 4.dp),
+        )
     }
 }
 
@@ -179,6 +219,7 @@ private fun Header(s: Snapshot, state: RecorderState) {
         )
         GpsBadge(s)
     }
+    LowBatteryBanner()
     if (state.lastError != null) Text(state.lastError, color = Theme.rec, fontSize = 12.sp)
 }
 

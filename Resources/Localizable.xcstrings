@@ -3145,6 +3145,22 @@
         }
       }
     },
+    "Satellites": {
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Satellites"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "衛星"
+          }
+        }
+      }
+    },
     "Save": {
       "localizations": {
         "en": {
