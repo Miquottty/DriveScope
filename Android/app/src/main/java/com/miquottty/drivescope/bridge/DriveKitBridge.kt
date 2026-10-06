@@ -25,6 +25,9 @@ object DriveKitBridge {
         hasGyroscope: Boolean, hasBarometer: Boolean, fastWatchdog: Boolean,
     ): Long
 
+    /** Continues an unfinished session in its own files (0 = can't: another boot, or > 30 min when `automatic`). */
+    external fun recorderResume(sessionDir: String, automatic: Boolean, hasGyroscope: Boolean, hasBarometer: Boolean, fastWatchdog: Boolean): Long
+
     external fun recorderSessionID(handle: Long): String
 
     external fun pushLocation(

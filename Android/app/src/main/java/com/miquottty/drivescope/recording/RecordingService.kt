@@ -58,6 +58,7 @@ class RecordingService : Service() {
     private lateinit var notifications: RecordingNotification
     private var lastNotification = 0L
     private var lastBattery = 0L
+    private var lastWatchdog = 0L
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -68,7 +69,10 @@ class RecordingService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
+            // The system restarted the sticky service after the process died mid-run (iOS robust mode's relaunch).
+            null -> autoResume()
             ACTION_START -> start(CapturePreset.fromRaw(intent.getStringExtra(EXTRA_PRESET)))
+            ACTION_RESUME -> intent.getStringExtra(EXTRA_SESSION)?.let { resume(it, automatic = false) }
             ACTION_STOP -> post { stopRecording() }
             ACTION_MARK -> post { mark(intent.getIntExtra(EXTRA_KIND, 0), intent.getIntExtra(EXTRA_SOURCE, SOURCE_PHONE)) }
             ACTION_SYNC -> post {
@@ -85,7 +89,8 @@ class RecordingService : Service() {
             }
             ACTION_ROTATE -> post { DriveKitBridge.rotateMount(handle) }
         }
-        return START_NOT_STICKY
+        // Sticky while a run is on, so a killed process comes back and continues it.
+        return if (thread != null) START_STICKY else START_NOT_STICKY
     }
 
     private fun post(block: () -> Unit) {
@@ -93,9 +98,69 @@ class RecordingService : Service() {
     }
 
     private fun start(preset: CapturePreset) {
+        begin(preset, startedAtMillis = System.currentTimeMillis(), onFailure = {
+            state.update { it.copy(phase = RecorderState.Phase.IDLE, lastError = "DriveKit could not start the session") }
+        }) { sensors ->
+            DriveKitBridge.recorderStart(
+                SessionStore.forContext(this).root.absolutePath, preset.raw, appVersion(), Build.MODEL,
+                "Android ${Build.VERSION.RELEASE}", TimeZone.getDefault().id,
+                hasGyroscope = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE) != null,
+                hasBarometer = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE) != null,
+                fastWatchdog = Prefs(this).fastWatchdog,
+            )
+        }
+    }
+
+    /** The newest unfinished session, after the process died: continue it, or save it as recovered (iOS robust mode). */
+    private fun autoResume() {
+        val store = SessionStore.forContext(this).also { it.reload() }
+        val unfinished = store.sessions.value.firstOrNull { it.state == com.miquottty.drivescope.store.SessionMeta.State.RECORDING }
+        if (unfinished == null || handle != 0L || thread != null) {
+            if (thread == null) stopSelf()
+            return
+        }
+        resume(unfinished.id, automatic = true)
+    }
+
+    /** Continues `id` in its own files (DriveKit decides whether it still can); otherwise it is saved as recovered. */
+    private fun resume(id: String, automatic: Boolean) {
+        val store = SessionStore.forContext(this).also { it.reload() }
+        val meta = store.meta(id) ?: return
+        val preset = CapturePreset.fromRaw(meta.preset)
+        begin(preset, startedAtMillis = (meta.startedAt * 1000).toLong(), resumedID = id, onFailure = {
+            scope.launch {
+                SessionFinisher(this@RecordingService, store).recover(id)
+                state.value = RecorderState()
+            }
+        }) { sensors ->
+            DriveKitBridge.recorderResume(
+                store.directory(id).absolutePath, automatic,
+                hasGyroscope = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE) != null,
+                hasBarometer = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE) != null,
+                fastWatchdog = Prefs(this).fastWatchdog,
+            )
+        }
+    }
+
+    /**
+     * Foreground service + wake lock + the recorder thread, then `open` (DriveKit's start or resume) on that thread.
+     * A restart from the background may not be allowed to become a location service again: then the run is recovered.
+     */
+    private fun begin(
+        preset: CapturePreset, startedAtMillis: Long, resumedID: String? = null, onFailure: () -> Unit,
+        open: (SensorManager) -> Long,
+    ) {
         if (handle != 0L || thread != null) return
-        val startedAt = System.currentTimeMillis()
-        startForeground(RecordingNotification.ID, notifications.build(RecorderState(preset = preset, startedAtMillis = startedAt)), ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION)
+        try {
+            startForeground(
+                RecordingNotification.ID, notifications.build(RecorderState(preset = preset, startedAtMillis = startedAtMillis)),
+                ServiceInfo.FOREGROUND_SERVICE_TYPE_LOCATION,
+            )
+        } catch (e: Exception) {
+            onFailure()
+            stopSelf()
+            return
+        }
         wakeLock = getSystemService(PowerManager::class.java)
             .newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "DriveScope:recording")
             .apply { acquire(12 * 60 * 60 * 1000L) }
@@ -107,21 +172,21 @@ class RecordingService : Service() {
             DriveKitBridge.configure(cacheDir.absolutePath)
             val sensors = getSystemService(SensorManager::class.java)
             val locations = getSystemService(LocationManager::class.java)
-            handle = DriveKitBridge.recorderStart(
-                SessionStore.forContext(this).root.absolutePath, preset.raw, appVersion(), Build.MODEL,
-                "Android ${Build.VERSION.RELEASE}", TimeZone.getDefault().id,
-                hasGyroscope = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_GYROSCOPE) != null,
-                hasBarometer = sensors.getDefaultSensor(android.hardware.Sensor.TYPE_PRESSURE) != null,
-                fastWatchdog = Prefs(this).fastWatchdog,
-            )
+            handle = open(sensors)
             if (handle == 0L) {
-                state.update { it.copy(phase = RecorderState.Phase.IDLE, lastError = "DriveKit could not start the session") }
+                onFailure()
                 finish()
                 return@post
             }
             val sessionID = DriveKitBridge.recorderSessionID(handle)
+            if (resumedID == null) {
+                // Visible to the list and to recovery while it records (iOS creates the SwiftData row at START).
+                SessionStore.forContext(this).save(
+                    com.miquottty.drivescope.store.SessionMeta(id = sessionID, preset = preset.raw, startedAt = startedAtMillis / 1000.0),
+                )
+            }
             pump = SensorPump(handle, preset, sensors, locations, handler).also { it.start() }
-            state.value = RecorderState(RecorderState.Phase.RECORDING, preset, sessionID, startedAt)
+            state.value = RecorderState(RecorderState.Phase.RECORDING, preset, sessionID, startedAtMillis)
             recordDeviceState()
             registerDeviceEvents()
             handler.post(tick)
@@ -138,14 +203,31 @@ class RecordingService : Service() {
             if (now - lastNotification >= 2_000) {
                 lastNotification = now
                 notifications.update(state.value)
-                // Escalations are notified in A-S3; until then they only go to events.bin (the engine writes them).
-                DriveKitBridge.drainWatchdog(handle)
+            }
+            if (now - lastWatchdog >= 1_000) {
+                lastWatchdog = now
+                notifyWatchdog(DriveKitBridge.drainWatchdog(handle))
             }
             if (now - lastBattery >= 5 * 60_000) {
                 lastBattery = now
                 recordBattery()
             }
             handler?.postDelayed(this, 100)
+        }
+    }
+
+    /**
+     * PLAN §9.3 stage 1 as on iOS: 15 s the HUD says SEARCHING (from the snapshot), 120 s a notification; recovery
+     * removes it. [kind, stream, stage, seconds] × actions (Recorder.swift `drainWatchdog`).
+     */
+    private fun notifyWatchdog(actions: DoubleArray) {
+        for (i in actions.indices step 4) {
+            val kind = actions[i].toInt()
+            val stream = actions[i + 1].toInt()
+            when {
+                kind == 0 && actions[i + 2].toInt() == 3 -> notifications.alert(stream, actions[i + 3])
+                kind == 1 -> notifications.cancelAlert(stream)
+            }
         }
     }
 
@@ -167,6 +249,8 @@ class RecordingService : Service() {
         val store = SessionStore.forContext(this)
         scope.launch {
             SessionFinisher(this@RecordingService, store).finish(id, preset, result)
+            notifications.cancelAlert(0)
+            notifications.cancelAlert(1)
             state.value = RecorderState(lastError = null)
             finish()
         }
@@ -230,11 +314,12 @@ class RecordingService : Service() {
         val battery = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) ?: return
         val level = battery.getIntExtra(BatteryManager.EXTRA_LEVEL, -1)
         val scale = battery.getIntExtra(BatteryManager.EXTRA_SCALE, 100)
-        val state = when (battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1)) {
-            BatteryManager.BATTERY_STATUS_CHARGING -> 2
-            BatteryManager.BATTERY_STATUS_FULL -> 3
-            BatteryManager.BATTERY_STATUS_DISCHARGING, BatteryManager.BATTERY_STATUS_NOT_CHARGING -> 1
-            else -> 0
+        // By the cable, not the charge status: a Pixel holding at 80 % reports "not charging" while plugged in.
+        val plugged = battery.getIntExtra(BatteryManager.EXTRA_PLUGGED, 0) != 0
+        val state = when {
+            !plugged -> 1
+            battery.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_FULL -> 3
+            else -> 2
         }
         DriveKitBridge.recordEvent(handle, EVENT_BATTERY, SOURCE_SYSTEM, state, if (level >= 0) level.toDouble() / scale else -1.0)
     }
@@ -253,6 +338,8 @@ class RecordingService : Service() {
 
     companion object {
         private const val ACTION_START = "start"
+        private const val ACTION_RESUME = "resume"
+        private const val EXTRA_SESSION = "session"
         private const val ACTION_STOP = "stop"
         const val ACTION_MARK = "mark"
         private const val ACTION_SYNC = "sync"
@@ -292,6 +379,13 @@ class RecordingService : Service() {
             if (state.value.phase != RecorderState.Phase.IDLE) return
             state.value = RecorderState(RecorderState.Phase.RECORDING, preset)
             context.startForegroundService(Intent(context, RecordingService::class.java).setAction(ACTION_START).putExtra(EXTRA_PRESET, preset.raw))
+        }
+
+        /** Recovery prompt: continue an unfinished session (iOS "Resume recording"). */
+        fun resume(context: Context, id: String) {
+            if (state.value.phase != RecorderState.Phase.IDLE) return
+            state.value = RecorderState(RecorderState.Phase.RECORDING, sessionID = id)
+            context.startForegroundService(Intent(context, RecordingService::class.java).setAction(ACTION_RESUME).putExtra(EXTRA_SESSION, id))
         }
 
         fun stop(context: Context) = send(context, Intent(context, RecordingService::class.java).setAction(ACTION_STOP))

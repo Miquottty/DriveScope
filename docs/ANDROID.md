@@ -58,3 +58,9 @@ scripts/xc.sh swift run --package-path Packages/DriveKit drivekit-cli export jso
 - スクロールする画面の中の MapLibre は既定の SurfaceView だと描かれない(真っ白)。詳細画面の地図は `textureMode = true`。
 - ルートの線は iOS と同じく誤差 50 m 以内の位置だけで描く(リプレイのフレームに GPS の誤差を含めて Android 側で選ぶ)。
 - 書き出しは `cache/exports` に書いて FileProvider(`${applicationId}.files`)で共有メニューへ渡す。
+- 記録中のサービスは START_STICKY。プロセスが落ちるとシステムが再起動し、同じ起動中・最後のサンプルから 30 分以内なら同じセッションに追記して
+  再開する(`recorderResume`、iOS の堅牢モードと同じ規則)。ただし「繰り返し停止しています」のダイアログを閉じた後(`adb shell am crash`)は
+  再起動しない。メモリ不足での終了は root 無しでは再現できないので、自動再開は実際の利用で確かめる。再開できなかった記録は、次にアプリを開いたときの
+  復旧ダイアログ(再開 / 復元 / 破棄)で扱う。
+- 電池の状態は充電ケーブルの有無で判定する(Pixel は 80% で充電を止め、その間は「充電していない」と報告する)。
+- 衛星の状態(使用数 / 見えている数、上位 4 本の信号の強さ)を 30 秒ごとに `gnssStatus` イベントとして記録する(Android だけ。iOS の品質画面でも読める)。

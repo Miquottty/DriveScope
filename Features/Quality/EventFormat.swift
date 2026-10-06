@@ -33,6 +33,7 @@ struct EventFormat {
         case .mountChanged: "Mount changed"
         case .syncBeep: "SYNC beep"
         case .satelliteAcquired: "Satellite fix acquired"
+        case .gnssStatus: "Satellites"
         }
     }
 
@@ -60,6 +61,8 @@ struct EventFormat {
             default: language.string("Other output")
             }
             return "\(route) · +\(Int((event.value * 1000).rounded())) ms"
+        case .gnssStatus:
+            return "\(event.aux & 0xFFFF)/\(event.aux >> 16) · \(Int(event.value.rounded())) dB-Hz"
         case .thermalStateChanged:
             return thermalState(Int(event.aux))
         case .lowPowerModeChanged:

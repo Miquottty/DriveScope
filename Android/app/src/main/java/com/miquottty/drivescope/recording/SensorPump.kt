@@ -5,6 +5,7 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import android.location.GnssStatus
 import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
@@ -17,7 +18,8 @@ import com.miquottty.drivescope.bridge.DriveKitBridge
  *
  * - motion: the raw accelerometer at 200 Hz drives the preset's grid; device-motion presets subtract the fused
  *   gravity (which itself never runs faster than ~59 Hz) for the user acceleration
- * - pressure: one record per second, the mean of that second (the barometer ignores a 1 Hz request and sends ~36 Hz)
+ * - pressure: one record per second of the boot clock, the mean of that second (the barometer ignores a 1 Hz request
+ *   and sends 9–36 Hz)
  * - location: GPS fixes; network (Wi‑Fi / cell) fixes only while the satellites are silent, without speed — what
  *   Core Location delivers before a lock
  */
@@ -36,8 +38,22 @@ class SensorPump(
     private var magneticAccuracy = -1
     private var firstPressure: Float? = null
     private val pressureWindow = mutableListOf<Float>()
-    private var pressureWindowStart = 0L
+    private var pressureSecond = -1L
     private var lastSatelliteFixNs = 0L
+    private var lastGnssEvent = 0L
+
+    /** Android only: satellites as a `gnssStatus` event every 30 s (value = top-4 C/N0, aux = used | visible << 16). */
+    private val gnssCallback = object : GnssStatus.Callback() {
+        override fun onSatelliteStatusChanged(status: GnssStatus) {
+            val now = android.os.SystemClock.elapsedRealtime()
+            if (now - lastGnssEvent < 30_000) return
+            lastGnssEvent = now
+            val used = (0 until status.satelliteCount).filter { status.usedInFix(it) }
+            val top4 = used.map { status.getCn0DbHz(it).toDouble() }.sortedDescending().take(4)
+            val aux = (used.size and 0xFFFF) or (minOf(status.satelliteCount, 0xFFFF) shl 16)
+            DriveKitBridge.recordEvent(handle, EVENT_GNSS_STATUS, 3, aux, if (top4.isEmpty()) 0.0 else top4.average())
+        }
+    }
 
     private val gpsListener = LocationListener { onLocation(it) }
     private val networkListener = LocationListener { fix ->
@@ -62,6 +78,7 @@ class SensorPump(
         }
         register(Sensor.TYPE_PRESSURE, 1_000_000)
         locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1_000L, 0f, gpsListener, handler.looper)
+        locationManager.registerGnssStatusCallback(gnssCallback, handler)
         if (locationManager.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
             locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1_000L, 0f, networkListener, handler.looper)
         }
@@ -71,6 +88,12 @@ class SensorPump(
         sensorManager.unregisterListener(this)
         locationManager.removeUpdates(gpsListener)
         locationManager.removeUpdates(networkListener)
+        locationManager.unregisterGnssStatusCallback(gnssCallback)
+    }
+
+    companion object {
+        /** DriveKit `EventKind.gnssStatus`. */
+        const val EVENT_GNSS_STATUS = 24
     }
 
     private fun register(type: Int, periodUs: Int) {
@@ -117,15 +140,20 @@ class SensorPump(
         }
     }
 
+    /**
+     * Fixed one-second windows: a window that closed on "1 s since its first sample" also took the next sample's
+     * interval, so the records drifted to 1.12 s apart at the barometer's ~9 Hz.
+     */
     private fun onPressure(timestampNs: Long, hPa: Float) {
-        if (pressureWindow.isEmpty()) pressureWindowStart = timestampNs
+        val second = timestampNs / 1_000_000_000L
+        if (second != pressureSecond && pressureWindow.isNotEmpty()) {
+            val mean = pressureWindow.average().toFloat()
+            pressureWindow.clear()
+            val first = firstPressure ?: mean.also { firstPressure = it }
+            DriveKitBridge.pushAltitude(handle, pressureSecond + 0.5, SensorManager.getAltitude(first, mean), Conventions.toKPa(mean))
+        }
+        pressureSecond = second
         pressureWindow += hPa
-        if (timestampNs - pressureWindowStart < 1_000_000_000L) return
-        val mean = pressureWindow.average().toFloat()
-        val mid = pressureWindowStart + (timestampNs - pressureWindowStart) / 2
-        pressureWindow.clear()
-        val first = firstPressure ?: mean.also { firstPressure = it }
-        DriveKitBridge.pushAltitude(handle, mid / 1e9, SensorManager.getAltitude(first, mean), Conventions.toKPa(mean))
     }
 
     private fun onLocation(fix: Location) {

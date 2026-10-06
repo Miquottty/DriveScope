@@ -33,6 +33,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.miquottty.drivescope.bridge.DriveKitBridge
 import com.miquottty.drivescope.home.HomeScreen
+import com.miquottty.drivescope.home.RecoveryDialog
+import com.miquottty.drivescope.quality.QualityScreen
+import com.miquottty.drivescope.store.SessionMeta
 import com.miquottty.drivescope.hud.RecordingHud
 import com.miquottty.drivescope.map.ReplayScreen
 import com.miquottty.drivescope.sessions.SessionDetailScreen
@@ -81,6 +84,7 @@ private sealed interface Route {
 private enum class Tab(val icon: String, val label: Int) {
     RECORD("◉", R.string.tab_record),
     SESSIONS("☰", R.string.tab_sessions),
+    QUALITY("∿", R.string.tab_quality),
 }
 
 @Composable
@@ -111,9 +115,16 @@ private fun AppRoot(store: SessionStore) {
                             onShowAllSessions = { tab = Tab.SESSIONS },
                         )
                         Tab.SESSIONS -> SessionsScreen(store) { route = Route.Detail(it.id) }
+                        Tab.QUALITY -> QualityScreen(store)
                     }
                 }
                 TabBar(tab) { tab = it }
+                // A run the app never finished (process killed, reboot) — offered once per launch, as iOS's sheet.
+                val sessions by store.sessions.collectAsState()
+                var handled by remember { mutableStateOf(setOf<String>()) }
+                sessions.firstOrNull { it.state == SessionMeta.State.RECORDING && it.id !in handled }?.let { unfinished ->
+                    RecoveryDialog(store, unfinished) { handled = handled + unfinished.id }
+                }
             }
             Route.Settings -> SettingsScreen(onBack = { route = Route.Tabs }, onOpenProbe = { route = Route.Probe })
             Route.Probe -> DeveloperProbe(onOpenMap = { route = Route.Replay(it, null) }, onBack = { route = Route.Settings })
