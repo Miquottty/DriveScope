@@ -14,6 +14,12 @@
 役割分担: センサー・画面・通知・地名・音は Kotlin、記録エンジン・計算・補間・書き出しは DriveKit(Swift)。
 記録データは iOS と同じ形式(`manifest.json` + `.bin`)。
 
+記録の流れ(A-S1): `RecordingService`(位置情報タイプのフォアグラウンドサービス + wake lock)が `SensorPump` でセンサーを読み、
+iOS の決まり(`Conventions`)に変換して `DriveKitBridge.push*` で DriveKit の `TelemetryEngine` に流す。エンジンは JNI の
+`Push*Source` と elapsedRealtime の時計(`AndroidClock`)で動き、`.bin` の書き込み・統計・マウント補正・衛星判定・watchdog を
+iOS と同じコードで行う。HUD は `snapshot` を 10 Hz で読む。STOP 後は `SessionFinisher` が `analyze` → `placeCandidates` →
+Geocoder → `sessionTitle` で `session.json`(iOS の SwiftData `DriveSession` に相当)を書く。
+
 ## 必要なもの(この Mac では導入済み)
 
 - Android Studio(付属の Java を `JAVA_HOME` に使う)と Android SDK 37、NDK r30(30.0.16248370、SDK Manager の NDK (Side by side))
@@ -44,5 +50,8 @@ scripts/xc.sh swift run --package-path Packages/DriveKit drivekit-cli export jso
 - 50 Hz を指定しても 59.3 Hz で届く。重力・重力除去の加速度は 59 Hz 止まり → 生の加速度 200 Hz から 20 ms の格子を作る。
 - 気圧は 1 Hz を指定しても約 36 Hz → 1 秒ごとの平均。
 - 画面 OFF で CPU が眠るとセンサーが止まるので、記録中は PARTIAL_WAKE_LOCK。
+- SYNC 音の出力時刻は `AudioTrack.getTimestamp`(`System.nanoTime` の時計)から elapsedRealtime に換算する。出力先は再生した機器
+  (`routedDevice`)で判定する。Pixel 7 の本体スピーカーでの出力までの遅れは約 170 ms。
+- `PowerManager.addThermalStatusListener` は登録した直後に現在の状態を 1 回知らせてくる(開始時に自分で記録しない)。
 - 端末を回すと Activity が作り直される(`configChanges` を指定済み)。
 - 国土地理院のスタイルは PMTiles を GL JS の書き方で指定しているので、MapLibre Native 向けに `url` に書き換えて読む。

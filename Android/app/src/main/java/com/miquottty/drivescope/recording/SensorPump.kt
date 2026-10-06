@@ -1,0 +1,150 @@
+package com.miquottty.drivescope.recording
+
+import android.annotation.SuppressLint
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.location.Location
+import android.location.LocationListener
+import android.location.LocationManager
+import android.os.Handler
+import com.miquottty.drivescope.bridge.DriveKitBridge
+
+/**
+ * Reads the sensors for one run, converts every value to the iOS conventions (`Conventions`) and pushes it into
+ * DriveKit's engine (`handle`). All callbacks run on `handler`'s thread.
+ *
+ * - motion: the raw accelerometer at 200 Hz drives the preset's grid; device-motion presets subtract the fused
+ *   gravity (which itself never runs faster than ~59 Hz) for the user acceleration
+ * - pressure: one record per second, the mean of that second (the barometer ignores a 1 Hz request and sends ~36 Hz)
+ * - location: GPS fixes; network (Wi‑Fi / cell) fixes only while the satellites are silent, without speed — what
+ *   Core Location delivers before a lock
+ */
+class SensorPump(
+    private val handle: Long,
+    private val preset: CapturePreset,
+    private val sensorManager: SensorManager,
+    private val locationManager: LocationManager,
+    private val handler: Handler,
+) : SensorEventListener {
+    private val grid = preset.motion.hz.takeIf { it > 0 }?.let { Conventions.Grid(it) }
+    private var gravity: FloatArray? = null
+    private var rotationRate = FloatArray(3)
+    private var attitude = floatArrayOf(1f, 0f, 0f, 0f)
+    private var magnetic = FloatArray(3)
+    private var magneticAccuracy = -1
+    private var firstPressure: Float? = null
+    private val pressureWindow = mutableListOf<Float>()
+    private var pressureWindowStart = 0L
+    private var lastSatelliteFixNs = 0L
+
+    private val gpsListener = LocationListener { onLocation(it) }
+    private val networkListener = LocationListener { fix ->
+        if (fix.elapsedRealtimeNanos - lastSatelliteFixNs >= 5_000_000_000L) {
+            fix.removeSpeed()
+            fix.removeBearing()
+            onLocation(fix)
+        }
+    }
+
+    @SuppressLint("MissingPermission") // The service starts only with fine location granted.
+    fun start() {
+        when (preset.motion) {
+            is CapturePreset.Motion.DeviceMotion -> {
+                register(Sensor.TYPE_ACCELEROMETER, 5_000)
+                for (type in listOf(Sensor.TYPE_GRAVITY, Sensor.TYPE_GYROSCOPE, Sensor.TYPE_ROTATION_VECTOR, Sensor.TYPE_MAGNETIC_FIELD)) {
+                    register(type, 10_000)
+                }
+            }
+            is CapturePreset.Motion.Accelerometer -> register(Sensor.TYPE_ACCELEROMETER, 20_000)
+            CapturePreset.Motion.None -> Unit
+        }
+        register(Sensor.TYPE_PRESSURE, 1_000_000)
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1_000L, 0f, gpsListener, handler.looper)
+        if (locationManager.allProviders.contains(LocationManager.NETWORK_PROVIDER)) {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 1_000L, 0f, networkListener, handler.looper)
+        }
+    }
+
+    fun stop() {
+        sensorManager.unregisterListener(this)
+        locationManager.removeUpdates(gpsListener)
+        locationManager.removeUpdates(networkListener)
+    }
+
+    private fun register(type: Int, periodUs: Int) {
+        sensorManager.getDefaultSensor(type)?.let { sensorManager.registerListener(this, it, periodUs, handler) }
+    }
+
+    override fun onSensorChanged(event: SensorEvent) {
+        val v = event.values
+        when (event.sensor.type) {
+            Sensor.TYPE_GRAVITY -> gravity = v.copyOf(3)
+            Sensor.TYPE_GYROSCOPE -> rotationRate = v.copyOf(3)
+            Sensor.TYPE_ROTATION_VECTOR -> attitude = Conventions.quaternion(v)
+            Sensor.TYPE_MAGNETIC_FIELD -> magnetic = v.copyOf(3)
+            Sensor.TYPE_ACCELEROMETER -> onAccelerometer(event.timestamp, v)
+            Sensor.TYPE_PRESSURE -> onPressure(event.timestamp, v[0])
+        }
+    }
+
+    override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {
+        if (sensor.type == Sensor.TYPE_MAGNETIC_FIELD) magneticAccuracy = Conventions.magneticAccuracy(accuracy)
+    }
+
+    private fun onAccelerometer(timestampNs: Long, v: FloatArray) {
+        val grid = grid ?: return
+        val boot = timestampNs / 1e9
+        when (preset.motion) {
+            is CapturePreset.Motion.Accelerometer -> if (grid.take(timestampNs)) {
+                DriveKitBridge.pushAccel(handle, boot, Conventions.toCoreMotion(v[0]), Conventions.toCoreMotion(v[1]), Conventions.toCoreMotion(v[2]))
+            }
+            is CapturePreset.Motion.DeviceMotion -> {
+                val gravity = gravity ?: return // nothing to subtract until the fusion has started
+                if (!grid.take(timestampNs)) return
+                val values = FloatArray(16)
+                for (i in 0..2) {
+                    values[i] = Conventions.toCoreMotion(v[i] - gravity[i])
+                    values[3 + i] = Conventions.toCoreMotion(gravity[i])
+                    values[6 + i] = rotationRate[i]
+                    values[13 + i] = magnetic[i]
+                }
+                attitude.copyInto(values, 9)
+                DriveKitBridge.pushMotion(handle, boot, values, magneticAccuracy)
+            }
+            CapturePreset.Motion.None -> Unit
+        }
+    }
+
+    private fun onPressure(timestampNs: Long, hPa: Float) {
+        if (pressureWindow.isEmpty()) pressureWindowStart = timestampNs
+        pressureWindow += hPa
+        if (timestampNs - pressureWindowStart < 1_000_000_000L) return
+        val mean = pressureWindow.average().toFloat()
+        val mid = pressureWindowStart + (timestampNs - pressureWindowStart) / 2
+        pressureWindow.clear()
+        val first = firstPressure ?: mean.also { firstPressure = it }
+        DriveKitBridge.pushAltitude(handle, mid / 1e9, SensorManager.getAltitude(first, mean), Conventions.toKPa(mean))
+    }
+
+    private fun onLocation(fix: Location) {
+        if (fix.provider == LocationManager.GPS_PROVIDER) lastSatelliteFixNs = fix.elapsedRealtimeNanos
+        val msl = fix.hasMslAltitude()
+        DriveKitBridge.pushLocation(
+            handle,
+            boot = fix.elapsedRealtimeNanos / 1e9,
+            latitude = fix.latitude,
+            longitude = fix.longitude,
+            altitude = if (msl) fix.mslAltitudeMeters else fix.altitude,
+            speed = if (fix.hasSpeed()) fix.speed else -1f,
+            // Core Location reports no course when stopped.
+            course = if (fix.hasBearing() && fix.speed > 0.5f) fix.bearing else -1f,
+            horizontalAccuracy = if (fix.hasAccuracy()) fix.accuracy else -1f,
+            verticalAccuracy = if (fix.hasVerticalAccuracy()) fix.verticalAccuracyMeters else -1f,
+            speedAccuracy = if (fix.hasSpeedAccuracy()) fix.speedAccuracyMetersPerSecond else -1f,
+            courseAccuracy = if (fix.hasBearingAccuracy()) fix.bearingAccuracyDegrees else -1f,
+            flags = if (fix.isMock) 1 else 0, // LocationSample.Flags.simulatedBySoftware
+        )
+    }
+}
