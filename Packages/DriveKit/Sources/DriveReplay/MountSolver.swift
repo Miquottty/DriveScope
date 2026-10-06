@@ -1,6 +1,8 @@
 import DriveDomain
 import Foundation
+#if canImport(simd)
 import simd
+#endif
 
 /// Solves the mount from a whole recording after STOP (PLAN §7). The orientation the phone held for most of the
 /// drive is the mount; gravity there is "up"; forward is the horizontal direction that best explains the GPS

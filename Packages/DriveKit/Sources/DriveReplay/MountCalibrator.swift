@@ -1,6 +1,8 @@
 import DriveDomain
 import Foundation
+#if canImport(simd)
 import simd
+#endif
 
 /// Finds the device → vehicle rotation of a phone in an unknown mount (PLAN §7).
 ///

@@ -1,4 +1,9 @@
+#if canImport(Accelerate)
 import Accelerate
+#endif
+#if canImport(Android)
+import Android
+#endif
 import DriveDomain
 import Foundation
 
@@ -24,6 +29,8 @@ public enum SessionArchiver {
     public enum ArchiveError: Error, Equatable {
         case badArchive
         case verificationFailed
+        /// LZFSE and vImage are Apple-only; Android never archives (and gets iOS sessions raw).
+        case unsupportedPlatform
     }
 
     /// Tests only: stop after a step to leave the files as a crash would.
@@ -77,10 +84,15 @@ public enum SessionArchiver {
         let data = try Data(contentsOf: url, options: .alwaysMapped)
         let rawSize = try header(of: data)
         let body = data.subdata(in: headerSize..<data.count)
+        #if canImport(Accelerate)
         guard let shuffled = try? (body as NSData).decompressed(using: .lzfse) as Data, shuffled.count == rawSize else {
             throw ArchiveError.badArchive
         }
         return try reorder(shuffled, toPlanes: false)
+        #else
+        _ = (body, rawSize)
+        throw ArchiveError.unsupportedPlatform
+        #endif
     }
 
     /// Raw size recorded in an archive's header (reads 16 bytes).
@@ -111,7 +123,12 @@ public enum SessionArchiver {
 
     private static func writeArchive(of raw: URL, to archive: URL) throws {
         let bytes = try Data(contentsOf: raw, options: .alwaysMapped)
+        #if canImport(Accelerate)
         let compressed = try (reorder(bytes, toPlanes: true) as NSData).compressed(using: .lzfse) as Data
+        #else
+        let compressed = Data()
+        throw ArchiveError.unsupportedPlatform
+        #endif
         var header = Data(count: headerSize)
         header.withUnsafeMutableBytes { buffer in
             var w = RecordWriter(buffer, at: 0)
@@ -133,6 +150,7 @@ public enum SessionArchiver {
         try FileManager.default.moveItem(at: temporary, to: archive)
     }
 
+    #if canImport(Accelerate)
     /// Records ⇄ byte planes. The stream's own header (which gives the record size) and a torn trailing record
     /// stay as they are.
     private static func reorder(_ data: Data, toPlanes: Bool) throws -> Data {
@@ -164,6 +182,7 @@ public enum SessionArchiver {
         guard error == kvImageNoError else { throw ArchiveError.badArchive }
         return out
     }
+    #endif
 
     private static func syncDirectory(_ directory: URL) throws {
         let fd = open(directory.path, O_RDONLY)

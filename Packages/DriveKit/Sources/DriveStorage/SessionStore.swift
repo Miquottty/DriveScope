@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import DriveDomain
 import Foundation
 import SwiftData
@@ -101,3 +102,4 @@ public final class SessionStore {
         }
     }
 }
+#endif

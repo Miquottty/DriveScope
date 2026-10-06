@@ -3,7 +3,14 @@ import Foundation
 
 #if canImport(Darwin)
 import Darwin
+#elseif canImport(Android)
+import Android
 #endif
+
+/// `close(2)`, out of reach inside `StreamFile`, whose own `close()` shadows it.
+private func closeDescriptor(_ fd: Int32) {
+    _ = close(fd)
+}
 
 /// One open `.bin` stream, appended with `write(2)` (PLAN §4.1). Not thread-safe; owned by `SampleWriter`.
 final class StreamFile {
@@ -30,7 +37,7 @@ final class StreamFile {
             guard pread(fd, &headerBytes, StreamHeader.size, 0) == StreamHeader.size else { throw Self.closeAndError(fd) }
             let header = try headerBytes.withUnsafeBytes { try StreamHeader(decoding: $0) }
             guard header.kind == kind else {
-                Darwin.close(fd)
+                closeDescriptor(fd)
                 throw StreamFormatError.wrongStream(expected: kind, found: header.kind)
             }
             recordCount = (size - StreamHeader.size) / kind.recordSize
@@ -47,7 +54,7 @@ final class StreamFile {
     }
 
     deinit {
-        if fd >= 0 { Darwin.close(fd) }
+        if fd >= 0 { closeDescriptor(fd) }
     }
 
     /// Appends whole records. `bytes.count` must be a multiple of the record size.
@@ -62,7 +69,7 @@ final class StreamFile {
     }
 
     func close() {
-        if fd >= 0 { Darwin.close(fd) }
+        if fd >= 0 { closeDescriptor(fd) }
         fd = -1
     }
 
@@ -82,7 +89,7 @@ final class StreamFile {
 
     private static func closeAndError(_ fd: Int32) -> POSIXError {
         let error = POSIXError(.init(rawValue: errno) ?? .EIO)
-        Darwin.close(fd)
+        closeDescriptor(fd)
         return error
     }
 }
