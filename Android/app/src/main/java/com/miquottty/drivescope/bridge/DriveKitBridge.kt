@@ -130,3 +130,37 @@ data class Snapshot(
         }
     }
 }
+
+/** `DriveKitBridge.snapshot`, decoded (Recorder.swift `SnapshotField`). */
+data class Snapshot(
+    val elapsed: Double = 0.0,
+    val speed: Double? = null,
+    val altitude: Double? = null,
+    val course: Double? = null,
+    val distance: Double = 0.0,
+    val horizontalAccuracy: Double? = null,
+    val gpsStatus: GpsStatus = GpsStatus.ACQUIRING,
+    val lateralG: Double = 0.0,
+    val longitudinalG: Double = 0.0,
+    val locationCount: Int = 0,
+    val motionCount: Int = 0,
+    val isCalibrated: Boolean = false,
+    val satelliteFixAfter: Double? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+) {
+    enum class GpsStatus { ACQUIRING, GOOD, SEARCHING }
+
+    companion object {
+        fun decode(v: DoubleArray): Snapshot {
+            if (v.size < 15) return Snapshot()
+            fun opt(i: Int) = v[i].takeUnless { it.isNaN() }
+            return Snapshot(
+                elapsed = v[0], speed = opt(1), altitude = opt(2), course = opt(3), distance = v[4],
+                horizontalAccuracy = opt(5), gpsStatus = GpsStatus.entries[v[6].toInt().coerceIn(0, 2)],
+                lateralG = v[7], longitudinalG = v[8], locationCount = v[9].toInt(), motionCount = v[10].toInt(),
+                isCalibrated = v[11] != 0.0, satelliteFixAfter = opt(12), latitude = opt(13), longitude = opt(14),
+            )
+        }
+    }
+}
