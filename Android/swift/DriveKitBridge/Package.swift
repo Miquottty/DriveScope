@@ -21,6 +21,8 @@ let package = Package(
                 .product(name: "DriveStorage", package: "DriveKit"),
                 .product(name: "DriveReplay", package: "DriveKit"),
                 .product(name: "DriveExport", package: "DriveKit"),
+                .product(name: "DriveSensors", package: "DriveKit"),
+                .product(name: "DriveRecording", package: "DriveKit"),
             ]
         ),
     ]

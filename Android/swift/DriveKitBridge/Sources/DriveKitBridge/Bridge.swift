@@ -8,20 +8,6 @@ import Foundation
 // JNI entry points for com.miquottty.drivescope.bridge.DriveKitBridge. Each takes and returns Java strings; errors
 // come back as "error: …" so the spike screen can show them.
 
-private extension UnsafeMutablePointer where Pointee == JNIEnv? {
-    var functions: JNINativeInterface { pointee!.pointee }
-
-    func string(_ value: jstring?) -> String {
-        guard let value, let chars = functions.GetStringUTFChars(self, value, nil) else { return "" }
-        defer { functions.ReleaseStringUTFChars(self, value, chars) }
-        return String(cString: chars)
-    }
-
-    func jstring(_ value: String) -> CJNI.jstring? {
-        value.withCString { functions.NewStringUTF(self, $0) }
-    }
-}
-
 /// `exportJson(sessionDir, title, workDir, outDir)` → the written file's path.
 @_cdecl("Java_com_miquottty_drivescope_bridge_DriveKitBridge_exportJson")
 public func exportJson(
@@ -64,14 +50,6 @@ public func quality(env: UnsafeMutablePointer<JNIEnv?>, type: jclass?, session: 
         result = "error: \(error)"
     }
     return env.jstring(result)
-}
-
-private extension UnsafeMutablePointer where Pointee == JNIEnv? {
-    func doubleArray(_ values: [Double]) -> jdoubleArray? {
-        guard let array = functions.NewDoubleArray(self, jsize(values.count)) else { return nil }
-        values.withUnsafeBufferPointer { functions.SetDoubleArrayRegion(self, array, 0, jsize(values.count), $0.baseAddress) }
-        return array
-    }
 }
 
 /// Fields per frame in `replayFrames`.

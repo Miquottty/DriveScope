@@ -1,3 +1,4 @@
+#if canImport(SwiftData)
 import DriveDomain
 import DriveReplay
 import DriveSensors
@@ -398,3 +399,4 @@ public final class RecordingController {
         try SessionStatistics.compute(files: files, manifest: manifest)
     }
 }
+#endif

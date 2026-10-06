@@ -146,6 +146,11 @@ public actor TelemetryEngine {
         elapsed + (systemUptime - ProcessInfo.processInfo.systemUptime)
     }
 
+    /// Session elapsed at an instant of the suite's own clock (Android: elapsedRealtime, the clock its beep times use).
+    public func elapsed(clockUptime: TimeInterval) -> TimeInterval {
+        clockUptime - manifest.clock.startUptime
+    }
+
     public func currentStatistics() -> SessionStatistics { statistics }
 
     // MARK: - Streams
