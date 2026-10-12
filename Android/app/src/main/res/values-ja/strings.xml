@@ -50,6 +50,11 @@
     <string name="delete_title">このドライブを削除しますか?</string>
     <string name="delete_body">記録データはこのデバイスから削除されます。</string>
     <string name="delete">削除</string>
+    <string name="delete_all">すべて削除</string>
+    <string name="delete_all_body">すべての記録データがこのデバイスから削除されます。この操作は取り消せません。</string>
+    <plurals name="delete_all_title">
+        <item quantity="other">%d 件のドライブをすべて削除しますか?</item>
+    </plurals>
     <string name="cancel">キャンセル</string>
     <string name="metric_time">時間</string>
     <string name="metric_distance">距離</string>

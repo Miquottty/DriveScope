@@ -51,6 +51,12 @@
     <string name="delete_title">Delete this drive?</string>
     <string name="delete_body">The recorded data is removed from this device.</string>
     <string name="delete">Delete</string>
+    <string name="delete_all">Delete all</string>
+    <string name="delete_all_body">All recorded data is removed from this device. This cannot be undone.</string>
+    <plurals name="delete_all_title">
+        <item quantity="one">Delete %d drive?</item>
+        <item quantity="other">Delete all %d drives?</item>
+    </plurals>
     <string name="cancel">Cancel</string>
     <string name="metric_time">Time</string>
     <string name="metric_distance">Distance</string>

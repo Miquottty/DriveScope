@@ -14,6 +14,7 @@ struct SessionsView: View {
     private var sections: SectionedResults<DriveSession, String>
 
     @State private var pendingDelete: DriveSession?
+    @State private var confirmingDeleteAll = false
     @State private var deleteError: String?
 
     var body: some View {
@@ -62,15 +63,39 @@ struct SessionsView: View {
     private func header(_ format: SessionFormat) -> some View {
         let count = sections.reduce(0) { $0 + $1.count }
         let meters = sections.reduce(0.0) { total, section in total + section.reduce(0.0) { $0 + $1.distance } }
-        return HStack(alignment: .firstTextBaseline) {
-            Text("Sessions")
-                .font(.system(size: 28, weight: .semibold))
-                .foregroundStyle(Theme.textPrimary)
-            Spacer()
-            if count > 0 {
-                Text(verbatim: appLanguage.string("\(count) drives") + " · " + format.distance(meters: meters).text)
-                    .font(.hudNumber(size: 12))
-                    .foregroundStyle(Theme.textSecondary)
+        return HStack(spacing: 12) {
+            HStack(alignment: .firstTextBaseline) {
+                Text("Sessions")
+                    .font(.system(size: 28, weight: .semibold))
+                    .foregroundStyle(Theme.textPrimary)
+                Spacer()
+                if count > 0 {
+                    Text(verbatim: appLanguage.string("\(count) drives") + " · " + format.distance(meters: meters).text)
+                        .font(.hudNumber(size: 12))
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            if !deletableSessions.isEmpty {
+                Button {
+                    confirmingDeleteAll = true
+                } label: {
+                    Image(systemName: "trash")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Theme.textTertiary)
+                        .frame(width: 34, height: 34)
+                        .background(Theme.surface, in: Circle())
+                }
+                .accessibilityLabel("Delete all sessions")
+                .accessibilityIdentifier("deleteAllSessionsButton")
+                .confirmationDialog(
+                    "Delete all \(deletableSessions.count) sessions?",
+                    isPresented: $confirmingDeleteAll,
+                    titleVisibility: .visible
+                ) {
+                    Button("Delete All", role: .destructive) { deleteAll() }
+                } message: {
+                    Text("All recorded data is removed from this device. This cannot be undone.")
+                }
             }
         }
         .padding(.horizontal, 20)
@@ -135,12 +160,32 @@ struct SessionsView: View {
         .padding(.bottom, 60)
     }
 
+    /// Every session except the one being recorded right now, which keeps its files (as the swipe action does).
+    private var deletableSessions: [DriveSession] {
+        sections.flatMap { $0 }.filter { recorder.session?.id != $0.id }
+    }
+
     private func delete(_ session: DriveSession) {
         do {
             try model.store.delete(session, filesRoot: model.filesRoot)
         } catch {
             deleteError = String(describing: error)
         }
+    }
+
+    private func deleteAll() {
+        // A detail left pushed on iPad would read a deleted model.
+        navigation.path.removeAll()
+        var firstError: Error?
+        for session in deletableSessions {
+            do {
+                try model.store.delete(session, filesRoot: model.filesRoot)
+            } catch {
+                // Keep going: one unreadable folder shouldn't keep the rest.
+                firstError = firstError ?? error
+            }
+        }
+        if let firstError { deleteError = String(describing: firstError) }
     }
 }
 
